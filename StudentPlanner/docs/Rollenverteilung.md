@@ -1,25 +1,25 @@
 # Rollenverteilung
 
-## Product Owner + Projektmanager
+### Product Owner + Projektmanager
+
+**Verantwortlichkeit: Daniela Maier**
 
 Definiert Anforderungen, priorisiert, entscheidet, was gebaut wird + Organisiert Ablauf, Termine, Kommunikation.
 
-Verantwortlichkeit: Daniela Maier
+### Entwicklung (Front-/Back-End)
 
-## Entwicklung (Front-/Back-End)
+**Verantwortlichkeit: Niklas Brietenhahn**
 
 UI, Interaktion, alles sichtbar im Client (z. B. React) / Logik, APIs, Server, Datenverarbeitung (z. B. Next.js als Fullstack-Ansatz).
 
-Verantwortlichkeit: Niklas Brietenhahn
+### QA / Tester
 
-## QA / Tester
+**Verantwortlichkeit:**
 
 Testet Funktionen, findet Fehler, sichert Qualität.
 
-Verantwortlichkeit:
+### UX/UI Designer
 
-## UX/UI Designer
+**Verantwortlichkeit: Alexia Dinu**
 
 Struktur, Nutzerführung, Designentscheidungen.
-
-Verantwortlichkeit: Alexia Dinu
