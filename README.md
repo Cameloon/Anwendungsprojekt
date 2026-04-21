@@ -1,22 +1,31 @@
 # Anwendungsprojekt
 
-To install dependencies:
+.
 
-```bash
-bun install
-```
+.
 
-To start a development server:
+### Bun Commands
 
-```bash
-bun dev
-```
+    To install dependencies:
+    ```bash
+    bun install
+    ```
 
-To run for production:
+    Development - full-stack dev server with hot reload
+        bun dev
 
-```bash
-bun start
-```
+
+    Static Site - build optimized assets to disk (no backend)
+        bun run build
+
+
+    Production - serve a full-stack production build
+        bun start
+
+
+.
+
+.
 
 # Namenszuordnung github
 
