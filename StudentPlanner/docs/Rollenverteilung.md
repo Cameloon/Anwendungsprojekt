@@ -1,40 +1,16 @@
 # Rollenverteilung
 
-## Product Owner
+## Product Owner + Projektmanager
 
-Definiert Anforderungen, priorisiert, entscheidet, was gebaut wird.
+Definiert Anforderungen, priorisiert, entscheidet, was gebaut wird + Organisiert Ablauf, Termine, Kommunikation.
 
-Verantwortlichkeit:
+Verantwortlichkeit: Daniela Maier
 
-## Projektmanager / Scrum Master
+## Entwicklung (Front-/Back-End)
 
-Organisiert Ablauf, Termine, Kommunikation, entfernt Blocker.
+UI, Interaktion, alles sichtbar im Client (z. B. React) / Logik, APIs, Server, Datenverarbeitung (z. B. Next.js als Fullstack-Ansatz).
 
-Verantwortlichkeit:
-
-## Frontend-Entwickler
-
-UI, Interaktion, alles sichtbar im Client (z. B. React).
-
-Verantwortlichkeit:
-
-## Backend-Entwickler
-
-Logik, APIs, Server, Datenverarbeitung (z. B. Next.js als Fullstack-Ansatz).
-
-Verantwortlichkeit:
-
-## Fullstack-Entwickler
-
-Macht Frontend + Backend gleichzeitig (Standard in kleinen Teams).
-
-Verantwortlichkeit:
-
-## DevOps / Infrastruktur
-
-Deployment, Hosting, CI/CD, Umgebung.
-
-Verantwortlichkeit:
+Verantwortlichkeit: Niklas Brietenhahn
 
 ## QA / Tester
 
