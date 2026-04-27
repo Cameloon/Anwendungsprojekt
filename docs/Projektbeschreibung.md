@@ -12,7 +12,7 @@ Beschreibung der Projektidee mit Zielgruppe, Problem/Nutzen, Kernfunktionen und 
 
 ### Zielgruppe
 
-Studierende der dhbw Lörrach
+Studierende der DHBW Lörrach
 
 ### Nutzen
 
