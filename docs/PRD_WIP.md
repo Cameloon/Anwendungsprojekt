@@ -1,6 +1,7 @@
 # PRD — Meilenstein 2
 
 Erstellt: 2026-05-10
+Letze Änderung: 2026-05-17
 
 ## Zweck
 
@@ -17,22 +18,35 @@ Dieses Dokument listet die verbindlichen Must‑have‑Funktionen und die zentra
 
 ## Zentrale User‑Flows
 
-Flow A — Anmeldung & Dashboard
+### 1. Zugang & Identität (Onboarding)
 
-1. Nutzer öffnet App → Login Screen
-2. Nach Login wird Dashboard geladen (Kurse + nächste Deadlines)
-3. Nutzer sieht hervorgehobene nächste Deadline
+**Flow:** Landingpage → Login/Registrierung → Identitätsprüfung → Dashboard
+**Zweck:** Sicherstellen, dass der Nutzer Zugriff auf seine privaten Daten (Stundenplan, Notizen) hat.
+**Nutzer-Intent:** „Ich möchte schnell und sicher zu meiner Lernübersicht.“
 
-Flow B — Aufgabe erstellen
+### 2. Organisation (Lern-Planer)
 
-1. Auf Dashboard/Kursseite: "Neue Aufgabe" → Formular öffnen
-2. Formular ausfüllen (Titel, Beschreibung, Kurs, Abgabedatum) → Speichern
-3. Aufgabe erscheint in Kursliste und Dashboard
+**Flow:** Dashboard → Planer-Ansicht → Termin/Aufgabe hinzufügen → Speichern & Bestätigung
+**Zweck:** Die Kernfunktion zur Strukturierung des Studiums.
+**Nutzer-Intent:** „Ich muss wissen, was heute ansteht und neue Fristen eintragen.“
 
-Flow C — Aufgabe als erledigt markieren
+### 3. Wissensaustausch (Community & Forum)
 
-1. Nutzer markiert Aufgabe als "erledigt"
-2. Status ändert sich; Dashboard‑Anzeige passt sich an
+**Flow:** Forum-Übersicht → Kategorie wählen → Beitrag öffnen → Interaktion (Antworten/Posten)
+**Zweck:** Vernetzung und gegenseitige Hilfe bei Fachfragen.
+**Nutzer-Intent:** „Ich habe eine Frage zu einem Modul und suche Hilfe bei Kommilitonen.“
+
+### 4. Ressourcen-Abruf (Materialien)
+
+**Flow:** Skripte-Bereich → Suche/Filter → Dokument auswählen → Download/Ansicht
+**Zweck:** Zentraler Zugriff auf alle prüfungsrelevanten Unterlagen.
+**Nutzer-Intent:** „Ich brauche sofort das Skript für die Vorlesung von letzter Woche.“
+
+### 5. Navigation & Kontextwechsel
+
+**Flow:** Aktuelle Seite → Hauptmenü → Zielseite (z. B. Profil oder Dashboard)
+**Zweck:** Nahtloser Wechsel zwischen den Werkzeugen (Planer, Forum, Skripte).
+**Nutzer-Intent:** „Ich möchte zwischen meinen Aufgaben und den passenden Lernmaterialien hin- und herspringen.“
 
 ## UI‑Struktur (Seitenübersicht)
 
