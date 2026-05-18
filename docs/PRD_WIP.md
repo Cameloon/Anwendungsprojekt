@@ -9,7 +9,7 @@ Dieses Dokument listet die verbindlichen Must‑have‑Funktionen und die zentra
 
 ## Funktionale Anforderungen mit Priorisierung
 
-Siehe detaillierte Anforderungen und Ergänzungen in [docs/Funktionale_Anforderungen.md](docs/Funktionale_Anforderungen.md).
+Siehe detaillierte Anforderungen und Ergänzungen in docs/Funktionale_Anforderungen.md
 
 ## Zentrale User‑Flows
 
@@ -54,8 +54,8 @@ Siehe detaillierte Anforderungen und Ergänzungen in [docs/Funktionale_Anforderu
 
 ## Deliverables (für Meilenstein 2)
 
-- `docs/PRD.md` (dieses Dokument) mit klarer Must‑have‑Liste
-- Annotierte Mockups oder Link zum Prototyp (`docs/mockups/` oder Figma Link) ODER implementierter Prototyp in `src/` mit Dummy‑Daten (Commits im Repo)
+- `docs/PRD.md` (dieses Dokument)
+- Link zum aktuellen Stand der Anwendung: 
 - Aktualisierte `docs/Rollenverteilung.md` und sichtbare Aufgabenverteilung im GitHub Project
 
 ---
