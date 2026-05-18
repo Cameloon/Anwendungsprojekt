@@ -1,5 +1,7 @@
 # Rollenverteilung
 
+Status 18.05.2026 - DM zu Test hinzugefügt
+
 ### Product Owner + Projektmanager
 
 **Verantwortlichkeit: Daniela Maier**
@@ -14,7 +16,7 @@ UI, Interaktion, alles sichtbar im Client (z. B. React) / Logik, APIs, Server, D
 
 ### QA / Tester
 
-**Verantwortlichkeit: Sofia Antropova**
+**Verantwortlichkeit: Sofia Antropova, Daniela Maier**
 
 Testet Funktionen, findet Fehler, sichert Qualität.
 
