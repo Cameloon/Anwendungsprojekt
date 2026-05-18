@@ -15,7 +15,7 @@ Kurzform der Must-/Should-/Could-/Wont‑Have‑Anforderungen für das Anwendung
 - Zentrale Ablage für benötigte Dokumente
 - Authentifizierung & Rollen
   - Login / Logout (grundlegende Authentifizierung, simuliert für Prototyp zulässig)
-  - Rollen: Admin vs. normaler Nutzer; Admin darf Kurse und Nutzer verwalten
+  - Rollen: Admin vs. normaler Nutzer; Admin darf Kurse und Nutzer verwalten (Überprüfung von Matrikelnummern, Erteilung von Freischaltungen, Moderation (Bann / Timeout bei Spam) und ggf. Benutzerrollen)
 - Datenpersistenz & Demo‑Daten
   - Primäre Persistenz: Convex; für Prototypen sind Dummy‑Daten zulässig
   - Datenmodell für Aufgaben: Pflichtfelder: Titel, Beschreibung, Kurs, Abgabedatum, Status (offen/erledigt)
@@ -23,14 +23,14 @@ Kurzform der Must-/Should-/Could-/Wont‑Have‑Anforderungen für das Anwendung
   - Suche nach Titel/Beschreibung
   - Filter nach Kurs, Status, Deadline, Priorität
   - Sortierung nach Deadline, Priorität oder Erstellungsdatum
+- Kursverwaltung (CRUD)
+  - Kurse erstellen, bearbeiten, löschen und anzeigen (CRUD)
+- Aufgabenverwaltung (CRUD)
+  - Aufgaben pro Kurs erstellen, bearbeiten, löschen und anzeigen; Pflichtfelder: Titel, Beschreibung, Kurszuordnung, Abgabedatum, Status
 
 ## Should‑Have
 
 - Möglichkeit, Dokumente privat oder kursweit hochzuladen (inkl. Benachrichtigungen)
-- Nutzer können Veranstaltungen (Kurse) selbst anlegen
-- Admin für Erstanmeldungen und Benutzerverwaltung
-  - Überprüfung von Matrikelnummern und Erteilung von Freischaltungen
-  - Moderation (Bann / Timeout bei Spam) und ggf. Benutzerrollen
 - Datei‑Uploads & Limits
   - Erlaubte Formate: PDF, DOCX, PPTX, PNG, JPG (empfohlen)
   - Maximale Dateigröße: z.B. 10 MB pro Datei (konfigurierbar)
