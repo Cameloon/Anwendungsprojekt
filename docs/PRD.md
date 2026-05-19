@@ -1,7 +1,7 @@
 # PRD — Meilenstein 2
 
 Erstellt: 2026-05-10
-Letze Änderung: 2026-05-17
+Letze Änderung: 2026-05-18
 
 ## Zweck
 
@@ -55,7 +55,7 @@ Siehe detaillierte Anforderungen und Ergänzungen in docs/Funktionale_Anforderun
 ## Deliverables (für Meilenstein 2)
 
 - `docs/PRD.md` (dieses Dokument)
-- Link zum aktuellen Stand der Anwendung: 
-- Aktualisierte `docs/Rollenverteilung.md` und sichtbare Aufgabenverteilung im GitHub Project
+- Anwendung ist jetzt von Lovable in das Repository übernommen
+- Aktualisierte `docs/Rollenverteilung.md`
 
 ---
