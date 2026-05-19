@@ -15,21 +15,27 @@ Siehe detaillierte Anforderungen und Ergänzungen in docs/Funktionale_Anforderun
 
 ### 1. Zugang & Identität (Onboarding)
 
-- **Flow:** Landingpage → Login/Registrierung → Identitätsprüfung → Dashboard
-- **Zweck:** Sicherstellen, dass der Nutzer Zugriff auf seine privaten Daten (Stundenplan, Notizen) hat.
-- **Nutzer-Intent:** „Ich möchte schnell und sicher zu meiner Lernübersicht.“
+- **Flow:** Landing-Page → [Login/Registrierung] → Identitätsprüfung → Dashboard
+- **Login:** Email + Passwort eingeben → Validierung → Token speichern → Dashboard
+- **Registrierung:** Email, Passwort, Matrikelnummer → Validierung → Admin-Freischaltung erforderlich → Warte-Screen
+- **Fehler: Falsche Credentials, Email bereits registriert, Passwort zu schwach, Nutzer nicht freigeschaltet
 
 ### 2. Organisation (Lern-Planer)
 
-- **Flow:** Dashboard → Planer-Ansicht → Termin/Aufgabe hinzufügen → Speichern
-- **Zweck:** Die Kernfunktion zur Strukturierung des Studiums.
-- **Nutzer-Intent:** „Ich muss wissen, was heute ansteht und neue Fristen eintragen.“
+- **Flow:** Planner-Seite → Aufgabenliste mit Filtern → [Neue Aufgabe / Bearbeiten / Löschen / Markieren als erledigt]
+- **Neue Aufgabe:** Titel, Beschreibung, Kurs, Abgabedatum, Priorität → Speichern → In Liste einsortiert
+- **Bearbeiten/Löschen:** Click auf Aufgabe → Edit-Dialog / Bestätigung → Aktualisieren/Löschen → Liste aktualisiert
+- **Filter & Sortierung:** Nach Kurs, Status (offen/erledigt), Deadline, Priorität
+- **Fehler:** Felder leer, ungültiges Datum, Kurs nicht vorhanden
 
 ### 3. Wissensaustausch (Community & Forum)
 
-- **Flow:** Forum-Übersicht → Kategorie wählen → Beitrag öffnen → Interaktion (Antworten/Posten)
-- **Zweck:** Vernetzung und gegenseitige Hilfe bei Fachfragen.
-- **Nutzer-Intent:** „Ich habe eine Frage zu einem Modul und suche Hilfe bei Kommilitonen.“
+- **Flow:** Forum-Seite → Forum/Kategorie wählen → Beitrag öffnen → [Lesen / Antworten / Posten]
+- **Neuer Beitrag:** Titel + Text eingeben → Validierung → Posten → Wird in Liste angezeigt
+- **Antworten:** Text eingeben → Validierung → Posten → Wird unter Beitrag angezeigt
+- **Filter & Suche:** Nach Titel, Status (offen/gelöst), Datum
+Bearbeiten/Löschen: Nur Autor oder Admin können ihre Beiträge bearbeiten/löschen
+- **Fehler:** Titel/Text leer, Text zu kurz
 
 ### 4. Ressourcen-Abruf (Materialien)
 
