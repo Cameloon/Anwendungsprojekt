@@ -1,0 +1,37 @@
+import { useEffect, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { IS_DEMO, demoStore, DemoProfile } from "@/lib/demoMode";
+
+export interface AppProfile {
+  display_name: string | null;
+  studienfach: string | null;
+  matrikelnummer: string | null;
+  hochschule: string | null;
+  jahrgang: string | null;
+  avatar_url: string | null;
+  created_at: string | null;
+}
+
+const useDemoProfile = (): AppProfile | null => {
+  const [p, setP] = useState<DemoProfile | null>(() => demoStore.getProfile());
+  useEffect(() => demoStore.subscribe(() => setP(demoStore.getProfile())), []);
+  return p;
+};
+
+const useConvexProfile = (): AppProfile | null => {
+  const data = useQuery(api.profiles.getMine, {});
+  if (!data) return null;
+  return {
+    display_name: data.displayName ?? null,
+    studienfach: data.studienfach ?? null,
+    matrikelnummer: data.matrikelnummer ?? null,
+    hochschule: data.hochschule ?? null,
+    jahrgang: data.jahrgang ?? null,
+    avatar_url: data.avatarUrl ?? null,
+    created_at: data.createdAt ? new Date(data.createdAt).toISOString() : null,
+  };
+};
+
+export const useProfile = (): AppProfile | null =>
+  IS_DEMO ? useDemoProfile() : useConvexProfile();

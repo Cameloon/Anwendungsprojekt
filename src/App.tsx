@@ -1,24 +1,111 @@
-import { APITester } from "./APITester";
-import "./index.css";
+import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import SplashScreen from "@/components/SplashScreen";
+import FeedbackButton from "@/components/FeedbackButton";
+import Index from "./pages/Index.tsx";
+import DashboardPage from "./pages/DashboardPage.tsx";
+import PlannerPage from "./pages/PlannerPage.tsx";
+import ForumPage from "./pages/ForumPage.tsx";
+import ForumDetailPage from "./pages/ForumDetailPage.tsx";
+import PostDetailPage from "./pages/PostDetailPage.tsx";
+import SkriptePage from "./pages/SkriptePage.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
+import NotFound from "./pages/NotFound.tsx";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
+const queryClient = new QueryClient();
 
-export function App() {
+const App = () => {
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setBooting(false), 1600);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <div className="app">
-      <div className="logo-container">
-        <img src={logo} alt="Bun Logo" className="logo bun-logo" />
-        <img src={reactLogo} alt="React Logo" className="logo react-logo" />
-      </div>
-
-      <h1>Bun + React</h1>
-      <p>
-        Edit <code>src/App.tsx</code> and save to test HMR
-      </p>
-      <APITester />
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AnimatePresence>{booting && <SplashScreen />}</AnimatePresence>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/planner"
+                element={
+                  <ProtectedRoute>
+                    <PlannerPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/forum"
+                element={
+                  <ProtectedRoute>
+                    <ForumPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/forum/:forumId"
+                element={
+                  <ProtectedRoute>
+                    <ForumDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/forum/:forumId/post/:postId"
+                element={
+                  <ProtectedRoute>
+                    <PostDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/skripte"
+                element={
+                  <ProtectedRoute>
+                    <SkriptePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <FeedbackButton />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
-}
+};
 
 export default App;
