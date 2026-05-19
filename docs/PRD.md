@@ -1,7 +1,7 @@
 # PRD — Meilenstein 2
 
 Erstellt: 2026-05-10
-Letze Änderung: 2026-05-18
+Letze Änderung: 2026-05-19
 
 ## Zweck
 
