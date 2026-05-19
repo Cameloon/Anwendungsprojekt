@@ -12,31 +12,29 @@
 
     To install dependencies:
 
-        bun install
+        bun install / npm install
 
 
     Development - full-stack dev server with hot reload
-        bun dev
-
-
-    Production - serve a full-stack production build
-        bun start
+        bun dev / npm run dev
 
 ### Project Structure
 
-    ├── src/
-    │   ├── index.tsx       # (Backend) Server entry point (API)
-    │   ├── frontend.tsx    # Frontend entry point
-    │   └── App.tsx         # Main React component
-    │
-    ├── package.json        # bun scripts definitions
-    ├── tsconfig.json       # TypeScript configuration
-    ├── bunfig.toml         # Bun configuration
-    └── bun.lock            # bun dependencies
+//OLD-RENEW!!!!
+├── src/
+│ ├── index.tsx # (Backend) Server entry point (API)
+│ ├── frontend.tsx # Frontend entry point
+│ └── App.tsx # Main React component
+│
+├── package.json # bun scripts definitions
+├── tsconfig.json # TypeScript configuration
+├── bunfig.toml # Bun configuration
+└── bun.lock # bun dependencies
+//////////////////////////////////////////
 
-### Backend Dashboard:
+### Backend Dashboard
 
-https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/
+<https://dashboard.convex.dev/t/daniel-beljaew/studentplanner/vivid-antelope-341>
 
 ## Zu prüfende Tickets
 
