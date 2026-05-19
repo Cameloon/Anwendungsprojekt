@@ -1,54 +1,89 @@
 # Funktionale Anforderungen
 
-Kurzform der Must-/Should-/Could-/Wont‑Have‑Anforderungen für das Anwendungsprojekt.
+Diese Datei beschreibt die funktionalen Anforderungen in Must/Should/Could/Wont‑Have‑Kategorien mit konkreten Merkmalen und Akzeptanzkriterien. Sie basiert auf dem aktuellen Stand der Anwendung (u. a. Forum, Dashboard, Aufgabenverwaltung, Skripte‑Bereich, Convex‑Schema).
 
-## Must‑Have
+## Must‑Have (detailliert)
 
-- Thematisch sortierte Foren für den Austausch zu jeweiligen Vorlesungen
-- Dashboard mit persönlicher Lernübersicht
-  - Prozentuale Anzahl der fertiggestellten Wochenaufgaben
-  - Visuelle Darstellung von Abgaben (offen / erledigt / nächste Deadline)
-- Aufgaben/Projekte je Vorlesung, sortiert nach Abgabeterminen
-  - Offene Aufgaben und Projekte klar sichtbar und nach Deadlines geordnet
-  - Abgabetermine sofort ersichtlich, ohne aufwendiges Navigieren
-  - Einfache, schnelle Navigation (nicht stark verschachtelt)
-- Zentrale Ablage für benötigte Dokumente
-- Authentifizierung & Rollen
-  - Login / Logout (grundlegende Authentifizierung, simuliert für Prototyp zulässig)
-  - Rollen: Admin vs. normaler Nutzer; Admin darf Kurse und Nutzer verwalten (Überprüfung von Matrikelnummern, Erteilung von Freischaltungen, Moderation (Bann / Timeout bei Spam) und ggf. Benutzerrollen)
-- Datenpersistenz & Demo‑Daten
-  - Primäre Persistenz: Convex; für Prototypen sind Dummy‑Daten zulässig
-  - Datenmodell für Aufgaben: Pflichtfelder: Titel, Beschreibung, Kurs, Abgabedatum, Status (offen/erledigt)
-- Suche, Filter & Sortierung
-  - Suche nach Titel/Beschreibung
-  - Filter nach Kurs, Status, Deadline, Priorität
-  - Sortierung nach Deadline, Priorität oder Erstellungsdatum
-- Kursverwaltung (CRUD)
-  - Kurse erstellen, bearbeiten, löschen und anzeigen (CRUD)
-- Aufgabenverwaltung (CRUD)
-  - Aufgaben pro Kurs erstellen, bearbeiten, löschen und anzeigen; Pflichtfelder: Titel, Beschreibung, Kurszuordnung, Abgabedatum, Status
+- **Authentifizierung & Rollen**
+  - Beschreibung: Nutzer müssen sich anmelden/abmelden können. Rollen: `admin`, `user`. Admins verwalten Kurse, Nutzerfreischaltungen und Moderation.
+  - Pflichtfelder/Validierung: E‑Mail (valides Format), Name (nicht leer). Matrikelnummer (optional, numerisch, Mindestlänge konfigurierbar).
+  - Akzeptanzkriterien: 1) Nicht authentifizierte Nutzer werden von `ProtectedRoute` auf Login geleitet. 2) Admin‑Funktionen sind nur sichtbar/ausführbar, wenn `role=admin`.
 
-## Should‑Have
+- **Dashboard — Persönliche Lernübersicht**
+  - Beschreibung: Anzeige von Fortschritt (Prozent erledigt), offene Aufgaben, anstehende Deadlines, visuelle Hervorhebungen (z. B. Fortschrittsbalken, Karten für Deadlines).
+  - Datenquellen: Aufgaben‑Collection, Kurszugehörigkeit des Nutzers.
+  - Akzeptanzkriterien: 1) Berechnung der Fertigstellungsquote = erledigte Aufgaben / Gesamtaufgaben (für angemeldeten Nutzer). 2) Klick auf eine Aufgabenkarte öffnet Detailansicht.
 
-- Möglichkeit, Dokumente privat oder kursweit hochzuladen (inkl. Benachrichtigungen)
-- Datei‑Uploads & Limits
-  - Erlaubte Formate: PDF, DOCX, PPTX, PNG, JPG (empfohlen)
-  - Maximale Dateigröße: z.B. 10 MB pro Datei (konfigurierbar)
-  - Zugriffskontrolle: Nur Kursmitglieder oder Upload‑Besitzer sehen private Dateien
+- **Aufgaben & Projekte (CRUD)**
+  - Beschreibung: Aufgaben zu Kursen anlegen, bearbeiten, löschen, anzeigen. Aufgaben besitzen: `id`, `title`, `description`, `courseId`, `dueDate` (ISO), `status` (open/done), `priority` (low/med/high), `attachments`.
+  - Validierung: `title` & `courseId` & `dueDate` sind Pflicht; `dueDate` darf nicht in der Vergangenheit liegen (bei Erstellung); `title` max. 200 Zeichen.
+  - Akzeptanzkriterien: 1) Erstellen einer Aufgabe speichert alle Pflichtfelder und erscheint sofort im Dashboard. 2) Statusänderung (open→done) aktualisiert Fortschrittsanzeige.
 
-## Could‑Have
+- **Foren / Diskussionen**
+  - Beschreibung: Kursbasierte Foren, Threads mit Posts und Kommentaren, Anzeige von Autor, Zeitstempel, evtl. Edit/Remove‑Funktionen.
+  - Rechte: Nur Kursmitglieder dürfen in kursinternen Foren posten, Moderatoren/Admins können Posts moderieren.
+  - Akzeptanzkriterien: 1) Ein Thread zeigt korrekt alle Kommentare in chronologischer Reihenfolge. 2) Editieren/Löschen nur durch Autor oder Moderator möglich; Moderationsaktionen werden protokolliert.
 
-- Skript‑Bibliothek mit Skripten, Übungsblättern und Vorlesungsmaterialien
-- Auswahl zwischen Light‑ und Dark‑Mode
-- Erweiterung der Foren (z.B. jahrgangsübergreifende Foren oder bei Bedarf entstehende Foren)
-- Zusätzliche Features: Whiteboard, Erinnerungs‑/Push‑Benachrichtigungen, persönlicher Notizen‑Upload
+- **Materialablage / Datei‑Uploads**
+  - Beschreibung: An Attachments zu Aufgaben/Postings anhängen; zentrale Skriptbibliothek für Kursmaterialien.
+  - Technische Regeln: Erlaubte Formate: PDF, DOCX, PPTX, PNG, JPG; Max‑Size konfigurierbar (z. B. Default 10 MB). Sichtbarkeit: `private` (nur Ersteller), `course` (Kursmitglieder), `public`.
+  - Akzeptanzkriterien: 1) Upload verweigert mit erklärender Fehlermeldung bei falschem Format oder Überschreitung der Größe. 2) Zugriffskontrolle verhindert unberechtigten Download.
+
+- **Kursverwaltung (CRUD)**
+  - Beschreibung: Admins erstellen/bearbeiten/löschen Kurse (Felder: `courseId`, `title`, `semester`, `description`, `instructors`).
+  - Akzeptanzkriterien: 1) Neuer Kurs ist nach Erstellung in der Kursliste sichtbar. 2) Kurslöschung ist nur nach Bestätigung möglich und löst keine Dateninkonsistenzen in Aufgaben/Foren aus (Referentielle Integrität wird geprüft).
+
+- **Datenpersistenz & Integrität**
+  - Beschreibung: Convex dient als primäre Persistenz; Schemas definieren Felder und Typen (siehe `convex/schema.ts`). Demo‑Daten sind zulässig für Prototyp.
+  - Akzeptanzkriterien: 1) Alle CRUD‑Operationen sind atomar; 2) Backend validiert Eingaben und lehnt ungültige Anfragen ab.
+
+- **Suche, Filter & Sortierung**
+  - Beschreibung: Volltext‑Suche (Titel/Beschreibung), Filter (Kurs, Status, Priorität, Deadline‑Bereich), Sortierung (Deadline auf-/absteigend, Priorität).
+  - Akzeptanzkriterien: 1) Filterkombinationen sind kumulativ. 2) Paging/Virtualization bei >50 Items vorhanden.
+
+## Should‑Have (detailliert)
+
+- **Dateien privat/kursweit teilen & Benachrichtigungen**
+  - Beschreibung: Uploads können als privat oder kursweit markiert werden. Freigaben generieren Benachrichtigungen an Kursmitglieder.
+  - Akzeptanzkriterien: 1) Bei Kurs‑Upload erhalten Kursmitglieder eine Benachrichtigung (in‑app). 2) Private Dateien sind für andere Nutzer unsichtbar.
+
+- **Erweiterte Upload‑Regeln & Management**
+  - Beschreibung: Admin konfiguriert erlaubte Formate, Max‑Größe, Quota pro Nutzer/Kurs.
+  - Akzeptanzkriterien: 1) Admin‑UI zum Anpassen von Limits vorhanden (oder Config‑File). 2) System weist Nutzer bei Erreichen von Quota verständlich an.
+
+- **Erweiterte Forenfunktionen**
+  - Beschreibung: Pinnen, Markieren als wichtig, Tags/Hashtags, Sortierung nach Aktivität.
+  - Akzeptanzkriterien: 1) Gepinnte Beiträge bleiben oben; 2) Tags sind filterbar.
+
+## Could‑Have (detailliert)
+
+- **Skript‑Bibliothek & Metadaten**
+  - Beschreibung: Kategorisierte Sammlung von Skripten/Übungsblättern mit Metadaten (Jahr, Dozent, Modul). Nutzer können Material bewerten.
+  - Akzeptanzkriterien: 1) Suche nach Metadaten liefert passende Ergebnisse; 2) Bewertungen sind aggregierbar.
+
+- **Personalisierung / Theme**
+  - Beschreibung: Light/Dark Mode, Option zur Anzeige von kompakten/ausführlichen Listen.
+  - Akzeptanzkriterien: 1) UI‑Theme persistiert für den Nutzer (lokal oder im Profil).
+
+- **Whiteboard (Basisfunktionen)**
+  - Beschreibung: Gemeinsames Whiteboard mit einfachen Zeichenwerkzeugen, Speichern/Exportieren.
+  - Akzeptanzkriterien: 1) Board kann als Bild exportiert werden; 2) Mehrere Nutzer sehen den letzten gespeicherten Zustand.
 
 ## Wont‑Have (Out‑of‑Scope)
 
-- Detaillierter Terminplaner (z.B. ähnlich Google Calendar)
-- Lernapp im Sinne „Karteikarten erstellen und lernen“
-- Notiz‑App (umfangreiche Notizverwaltung ist nicht geplant)
-- Plattform für Professoren
-- Nutzer außerhalb der DHBW
-- Unterstützung weiterer Sprachen (außer Deutsch und Englisch)
-- Off‑topic‑Austausch (z.B. private Treffen) — Fokus liegt auf vorlesungsrelevanten Inhalten
+- Detaillierter Terminplaner im Stil von Google Calendar (komplexe Kalenderfunktionen)
+- Vollwertige Lern‑/Karteikarten‑App
+- Umfangreiche Notizverwaltung und externe Professoren‑Management‑Plattform
+- Externe Nutzer außerhalb DHBW (keine öffentliche Registrierung ohne Freischaltung)
+
+## Nicht‑funktionale Anforderungen (Kurz)
+
+- **Performance**: Seiten mit Standarddaten (<50 Einträge) laden <1s lokal; Pagination/Virtualization bei großen Listen.
+- **Sicherheit**: RBAC, HTTPS, Minimale Speicherung persönlicher Daten, Audit‑Logs für Admin/Moderation.
+- **Zuverlässigkeit**: Atomare CRUD‑Operationen, konsistente Fehlerbehandlung, Wiederherstellbarkeit bei fehlgeschlagenen Uploads.
+- **Testbarkeit**: Kernflows mit Unit/Integration Tests (Vitest) abgedeckt.
+- **Barrierefreiheit**: Grundlegende a11y‑Standards (ARIA, Tastaturnavigation) umgesetzt.
+
+---
+
+Aktualisierungen bitte per Review; auf Wunsch priorisiere ich die Must‑Haves als MVP und generiere Issues/AC‑Tests.
