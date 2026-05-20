@@ -15,10 +15,10 @@ Siehe detaillierte Anforderungen und Ergänzungen in docs/Funktionale_Anforderun
 
 ### 1. Zugang & Identität (Onboarding)
 
-- **Flow:** Landing-Page → [Login/Registrierung] → Identitätsprüfung → Dashboard
+- **Flow:** Landing-Page → Login/Registrierung → Identitätsprüfung → Dashboard
 - **Login:** Email + Passwort eingeben → Validierung → Token speichern → Dashboard
 - **Registrierung:** Email, Passwort, Matrikelnummer → Validierung → Admin-Freischaltung erforderlich → Warte-Screen
-- **Fehler: Falsche Credentials, Email bereits registriert, Passwort zu schwach, Nutzer nicht freigeschaltet
+- **Fehler:** Falsche Credentials, Email bereits registriert, Passwort zu schwach, Nutzer nicht freigeschaltet
 
 ### 2. Organisation (Lern-Planer)
 
@@ -39,15 +39,49 @@ Bearbeiten/Löschen: Nur Autor oder Admin können ihre Beiträge bearbeiten/lös
 
 ### 4. Ressourcen-Abruf (Materialien)
 
-- **Flow:** Skripte-Bereich → Suche/Filter → Dokument auswählen → Download/Ansicht
-- **Zweck:** Zentraler Zugriff auf alle prüfungsrelevanten Unterlagen.
-- **Nutzer-Intent:** „Ich brauche sofort das Skript für die Vorlesung von letzter Woche.“
+- **Flow:** Skripte-Seite → [Suchen / Filtern] → Dokument klicken → [Herunterladen / Vorschau / Teilen]
+- **Suche:** Suchbegriff eingeben → API durchsucht Titel/Beschreibung → Ergebnisse filtern
+- **Filter:** Nach Kurs, Dateityp (PDF, Word, etc.), Datum
+- **Download:** Click → PDF/Datei wird heruntergeladen (Warnung bei Dateigröße > 10 MB)
+- **Vorschau:** PDF im Browser öffnen (andere Formate: Download empfohlen)
+- **Fehler:** Datei nicht gefunden, Vorschau nicht unterstützt, zu großes Dateivolumen
 
 ### 5. Navigation & Kontextwechsel
 
-- **Flow:** Aktuelle Seite → Hauptmenü → Zielseite (z.B. Profil oder Dashboard)
-- **Zweck:** Nahtloser Wechsel zwischen den Werkzeugen ( Planer, Forum, Skripte).
-- **Nutzer-Intent:** „Ich möchte zwischen meinen Aufgaben und den passenden Lernmaterialien hin- und herspringen.“
+- **Flow:**  Menü-Item klicken → Zu neuer Seite navigieren
+- **Navbar/Menu:** Persistent mit Links zu Dashboard, Planner, Forum, Skripte, Profil
+- **Aktuelle Seite:** Wird in Menü hervorgehoben
+- **Daten-Persistenz:** Scroll-Position und Filter werden gespeichert; Warning bei ungespeicherten Änderungen
+- **Profil-Dropdown:** Profil → Einstellungen → Dark Mode → Logout
+- **Fehler:** Seite nicht gefunden (404), Session abgelaufen
+
+### 6. Profil & Einstellungen
+
+- **Flow:** Avatar/Profil → Profil-Seite mit zwei Tabs: "Profil-Info" & "Einstellungen"
+- **Profil bearbeiten:** Vorname, Nachname, Avatar, Bio ändern → Speichern
+- **Passwort ändern:** Aktuelles PW + Neues PW (2x) → Validierung → Speichern
+- **Einstellungen:** Theme (Dark/Light), Sprache, Benachrichtigungen, Datenschutz → Live speichern
+- **Logout:** Bestätigung → Session beenden → Login-Seite
+- **Account löschen (optional):** Bestätigungs-Dialog mit "BESTÄTIGUNG"-Eingabe → Alle Daten löschen → Logout
+- **Fehler:**Falsches aktuelles Passwort, Datei zu groß, Passwort zu schwach
+
+
+
+### 7. Gruppen-Management
+
+- **Flow:**
+- **Neue Gruppe:**
+- **Beiterten:** 
+- **
+
+
+
+
+### 8. Admin-Panel (Kursverwaltung & Moderation)
+
+- **Flow:** Admin-Menü → Admin-Panel mit 4 Tabs: "Kursverwaltung", "Nutzer-Management", "Moderation", "Statistiken"
+
+
 
 ## UI‑Struktur (Seitenübersicht)
 
