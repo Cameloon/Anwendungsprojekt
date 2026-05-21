@@ -33,6 +33,20 @@ Diese Datei beschreibt die funktionalen Anforderungen in Must/Should/Could/Wont�
   - Beschreibung: Admins erstellen/bearbeiten/löschen Kurse (Felder: `courseId`, `title`, `semester`, `description`, `instructors`).
   - Akzeptanzkriterien: 1) Neuer Kurs ist nach Erstellung in der Kursliste sichtbar. 2) Kurslöschung ist nur nach Bestätigung möglich und löst keine Dateninkonsistenzen in Aufgaben/Foren aus (Referentielle Integrität wird geprüft).
 
+  - **Vorlesungen & Kurs‑Instanzen (neues Must‑Have)**
+    - Beschreibung: Es gibt eine übergreifende Entität `Vorlesung`, die Vorlesungsangebote (Titel, Semester, Dozent:innen, zugehörige `courseId`/Kurse, DHBW‑Standort) abbildet. Studierende geben beim Registrieren ihren `course` (z. B. `TIF25B`) und ihren DHBW‑Standort (z. B. `DHBW Lörrach`) an. Ausgehend von offiziellen Vorlesungsplänen (extern oder importierbar) werden die relevanten Vorlesungen pro Semester als feste Auswahloptionen bereitgestellt.
+    - Zweck: Vorlesungen dienen als gemeinsame Referenz in Terminen, Foren und Skripten, sodass Nutzer vorlesungsbasiert filtern, Inhalte zuordnen und Einladungen/Abonnements auf Vorlesungen/Kurse aussprechen können.
+    - Felder/Modelle (Beispiel): `lectureId`, `title`, `semester`, `courseId`, `instructors`, `location` (DHBW‑Standort), `startDate`, `endDate`, `tags`.
+    - Verhalten/Flows:
+      - Bei Registrierung: Nutzer wählen `course` und `hochschule` → Account speichert `courseId` und `standort`.
+      - Systemseitig: Vorlesungspläne werden importiert/verwaltet und veröffentlichen für einen `course` die zugehörigen `Vorlesungen` für ein Semester.
+      - In Formularen (Termin/Forum/Skript): `Vorlesung` ist Pflichtfeld oder optionales Tag, auswählbar aus den systemweiten Vorlesungen (gefiltert nach Kurs/Standort/Semester).
+      - Einladungen: Nutzer können ihre `course` (Jahrgang) oder einzelne `Vorlesungen` zur Teilnahme einladen; Einladungen erscheinen in den Benachrichtigungen.
+    - Validierung & Akzeptanzkriterien:
+      1. Beim Erstellen/Bearbeiten von Terminen/Foren/Skripten kann eine `Vorlesung` ausgewählt werden; die Auswahl zeigt nur Vorlesungen, die für den Nutzer (Kurs/Standort/Semester) relevant sind.
+      2. Ein Nutzer kann sein ganzes `course` (Jahrgang) einladen — Empfänger werden korrekt in Notifications angezeigt und können beitreten.
+      3. Vorlesungsdaten sind administrierbar (Import/CRUD) und werden als Auswahl in allen relevanten Formularen angeboten.
+
 - **Datenpersistenz & Integrität**
   - Beschreibung: Convex dient als primäre Persistenz; Schemas definieren Felder und Typen (siehe `convex/schema.ts`). Demo‑Daten sind zulässig für Prototyp.
   - Akzeptanzkriterien: 1) Alle CRUD‑Operationen sind atomar; 2) Backend validiert Eingaben und lehnt ungültige Anfragen ab.
