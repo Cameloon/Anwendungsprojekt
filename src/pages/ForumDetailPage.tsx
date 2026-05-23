@@ -78,6 +78,7 @@ const ForumDetailPage = () => {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteNames, setInviteNames] = useState("");
+  // errors derived from inputs so they clear when corrected
 
   useEffect(() => subscribeForums(() => setForums(loadForums())), []);
   useEffect(() => subscribe(() => setPosts(loadPosts())), []);
@@ -102,12 +103,18 @@ const ForumDetailPage = () => {
   const isMember = forum.isDefault || forum.members.includes(me);
   const isOwner = forum.ownerName === me;
 
+  const titleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
+  const contentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
+  const inviteError = inviteNames.trim().length === 0 ? "Mindestens eine Person angeben." : "";
+
   const forumPosts = posts.filter((p) =>
     forum.isDefault ? !p.groupId : p.groupId === forum.id
   );
 
   const handlePost = () => {
-    if (!title.trim() || !content.trim()) return;
+    const nextTitleError = title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
+    const nextContentError = content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
+    if (nextTitleError || nextContentError) return;
     addPost({
       id: Date.now().toString(),
       author: me,
@@ -280,6 +287,7 @@ const ForumDetailPage = () => {
               {showPostForm && isMember && (
                 <div className="glass-card p-4 space-y-3">
                   <Input placeholder="Titel" value={title} onChange={(e) => setTitle(e.target.value)} />
+                  {titleError && <p className="text-xs text-destructive">{titleError}</p>}
                   <Textarea
                     placeholder="Was möchtest du teilen?"
                     value={content}
@@ -287,6 +295,7 @@ const ForumDetailPage = () => {
                     rows={4}
                     className="resize-none"
                   />
+                  {contentError && <p className="text-xs text-destructive">{contentError}</p>}
                   <div className="flex flex-wrap gap-2">
                     {(["frage", "lerngruppe", "material", "diskussion"] as const).map((t) => (
                       <button
@@ -465,6 +474,7 @@ const ForumDetailPage = () => {
             value={inviteNames}
             onChange={(e) => setInviteNames(e.target.value)}
           />
+          {inviteError && <p className="text-xs text-destructive -mt-1">{inviteError}</p>}
           <p className="text-[11px] text-muted-foreground -mt-2">Komma-getrennt</p>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Abbrechen</Button>

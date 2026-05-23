@@ -153,6 +153,7 @@ const ForumPage = () => {
   const [fJahrgangOnly, setFJahrgangOnly] = useState(true);
   const [fInvitees, setFInvitees] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  // derived validation messages so errors disappear when inputs are corrected
 
   // List filters
   const [search, setSearch] = useState("");
@@ -187,7 +188,9 @@ const ForumPage = () => {
   );
 
   const addPost = () => {
-    if (!title.trim() || !content.trim()) return;
+    const nextTitleError = title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
+    const nextContentError = content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
+    if (nextTitleError || nextContentError) return;
     const next: Post = {
       id: Date.now().toString(),
       author: me,
@@ -261,8 +264,8 @@ const ForumPage = () => {
   };
 
   const handleCreateForum = () => {
-    if (!fName.trim()) {
-      toast.error("Bitte einen Namen vergeben");
+    if (fName.trim().length < 3) {
+      toast.error("Bitte einen längeren Forum-Namen vergeben");
       return;
     }
     const f = createForum({
@@ -293,6 +296,7 @@ const ForumPage = () => {
   };
 
   const handleJoinByCode = () => {
+    if (joinCode.trim().length !== 6) return;
     const f = joinForumByCode(joinCode.trim(), me);
     if (!f) {
       toast.error("Code ungültig");
@@ -335,6 +339,12 @@ const ForumPage = () => {
 
   const isMember = activeForum.isDefault || activeForum.members.includes(me);
   const isOwner = activeForum.ownerName === me;
+
+  // derived validation messages
+  const postTitleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
+  const postContentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
+  const forumNameError = fName.trim().length > 0 && fName.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+  const joinCodeError = joinCode.trim().length > 0 && joinCode.trim().length !== 6 ? "Der Einladungscode hat 6 Zeichen." : "";
 
   // Sidebar item renderer
   const ForumItem = ({ f }: { f: Forum }) => {
@@ -586,6 +596,7 @@ const ForumPage = () => {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                       />
+                      {postTitleError && <p className="text-xs text-destructive">{postTitleError}</p>}
                       <Textarea
                         placeholder="Was möchtest du teilen?"
                         value={content}
@@ -593,6 +604,7 @@ const ForumPage = () => {
                         rows={4}
                         className="resize-none"
                       />
+                      {postContentError && <p className="text-xs text-destructive">{postContentError}</p>}
                       <div>
                         <p className="text-xs text-muted-foreground mb-2">Kategorie</p>
                         <div className="flex flex-wrap gap-2">
@@ -882,6 +894,7 @@ const ForumPage = () => {
           </DialogHeader>
           <div className="space-y-4">
             <Input placeholder="Name des Forums (z. B. Mathe 2 – Prof. Müller)" value={fName} onChange={(e) => setFName(e.target.value)} />
+            {forumNameError && <p className="text-xs text-destructive">{forumNameError}</p>}
             <Textarea
               placeholder="Kurzbeschreibung (optional)"
               value={fDesc}
@@ -1011,6 +1024,7 @@ const ForumPage = () => {
             className="font-mono text-center text-lg tracking-widest"
             maxLength={6}
           />
+          {joinCodeError && <p className="text-xs text-destructive">{joinCodeError}</p>}
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setJoinOpen(false)}>
               Abbrechen

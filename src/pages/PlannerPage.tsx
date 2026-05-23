@@ -118,6 +118,7 @@ const PlannerPage = () => {
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [inviteesInput, setInviteesInput] = useState("");
   const [allowedKurseInput, setAllowedKurseInput] = useState("");
+  // derived validation so errors update/clear automatically
 
   const resetForm = () => {
     setTitle("");
@@ -130,13 +131,16 @@ const PlannerPage = () => {
     setAllowedKurseInput("");
     setEditingId(null);
     setShowForm(false);
+    // derived errors will clear when inputs are reset
   };
 
   const parseList = (s: string) =>
     s.split(",").map((x) => x.trim()).filter(Boolean);
 
   const submitDeadline = () => {
-    if (!title || !date) return;
+    const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+    const nextDateError = date ? "" : "Bitte ein Datum wählen.";
+    if (nextTitleError || nextDateError) return;
     const invitees = parseList(inviteesInput);
     const allowedKurse = parseList(allowedKurseInput);
     let targetId = editingId;
@@ -256,7 +260,7 @@ const PlannerPage = () => {
   };
 
   const addMessage = (id: string) => {
-    if (!newMessage.trim()) return;
+    if (newMessage.trim().length < 5) return;
     const text = newMessage.trim();
     const msg: ForumMessage = {
       id: Date.now().toString(),
@@ -318,6 +322,11 @@ const PlannerPage = () => {
   ];
 
   const activeDeadline = deadlines.find((d) => d.id === openId) || null;
+
+  // derived validation messages
+  const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+  const dateError = !date ? "Bitte ein Datum wählen." : "";
+  const messageError = newMessage.trim().length > 0 && newMessage.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -392,6 +401,8 @@ const PlannerPage = () => {
                       onChange={(e) => setDate(e.target.value)}
                     />
                   </div>
+                  {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                  {dateError && <p className="text-xs text-destructive">{dateError}</p>}
                   <div className="flex flex-wrap gap-2">
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
                       <button
@@ -863,6 +874,7 @@ const PlannerPage = () => {
                       rows={2}
                       className="resize-none"
                     />
+                    {messageError && <p className="text-xs text-destructive">{messageError}</p>}
                     <Button
                       onClick={() => addMessage(activeDeadline.id)}
                       disabled={!newMessage.trim()}

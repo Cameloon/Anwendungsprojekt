@@ -45,10 +45,12 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
   const [hochschule, setHochschule] = useState("");
   const [jahrgang, setJahrgang] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  // derive profile field errors from current inputs so messages clear on correction
 
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [savingPw, setSavingPw] = useState(false);
+  // password error rendered from inputs below
 
   useEffect(() => {
     if (!open) return;
@@ -59,10 +61,26 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
     setJahrgang(profile?.jahrgang ?? "");
   }, [open, profile]);
 
+  // derived validation messages so they clear automatically when inputs change
+  const displayNameError = displayName.trim().length > 0 && displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const studienfachError = studienfach.trim().length > 0 && studienfach.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const matrikelnummerError = matrikelnummer && !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
+  const hochschuleError = !hochschule ? "Bitte einen DHBW-Standort wählen." : "";
+  const jahrgangError = jahrgang.trim().length > 0 && jahrgang.trim().length < 4 ? "Mindestens 4 Zeichen." : "";
+  const passwordError = newPw.length > 0 && newPw.length < 6 ? "Mindestens 6 Zeichen." : newPw && confirmPw && newPw !== confirmPw ? "Die Passwörter stimmen nicht überein." : "";
+
   const saveProfile = async () => {
     if (!user) return;
+    const nextErrors: typeof profileErrors = {};
+    if (displayName.trim().length > 0 && displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
+    if (studienfach.trim().length > 0 && studienfach.trim().length < 2) nextErrors.studienfach = "Mindestens 2 Zeichen.";
+    if (!hochschule) nextErrors.hochschule = "Bitte einen DHBW-Standort wählen.";
+    if (jahrgang.trim().length > 0 && jahrgang.trim().length < 4) nextErrors.jahrgang = "Mindestens 4 Zeichen.";
     if (matrikelnummer && !/^\d{5,10}$/.test(matrikelnummer)) {
-      toast({ title: "Ungültige Matrikelnummer", description: "5–10 Ziffern.", variant: "destructive" });
+      nextErrors.matrikelnummer = "5–10 Ziffern.";
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      toast({ title: "Eingaben prüfen", description: "Bitte markierte Felder korrigieren.", variant: "destructive" });
       return;
     }
     setSavingProfile(true);
@@ -150,6 +168,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
             <div className="space-y-2">
               <Label htmlFor="dn">Anzeigename</Label>
               <Input id="dn" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+              {displayNameError && <p className="text-xs text-destructive">{displayNameError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="mn">Matrikelnummer</Label>
@@ -160,6 +179,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
                 value={matrikelnummer}
                 onChange={(e) => setMatrikelnummer(e.target.value.replace(/\D/g, ""))}
               />
+              {matrikelnummerError && <p className="text-xs text-destructive">{matrikelnummerError}</p>}
             </div>
             <div className="space-y-2">
               <Label>DHBW-Standort</Label>
@@ -175,10 +195,12 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
                   ))}
                 </SelectContent>
               </Select>
+              {hochschuleError && <p className="text-xs text-destructive">{hochschuleError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="sf">Studiengang</Label>
               <Input id="sf" value={studienfach} onChange={(e) => setStudienfach(e.target.value)} />
+              {studienfachError && <p className="text-xs text-destructive">{studienfachError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="jg">Studienjahrgang</Label>
@@ -189,6 +211,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
                 onChange={(e) => setJahrgang(e.target.value.toUpperCase())}
                 maxLength={8}
               />
+              {jahrgangError && <p className="text-xs text-destructive">{jahrgangError}</p>}
             </div>
             <Button onClick={saveProfile} disabled={savingProfile} className="w-full gap-2">
               {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -210,6 +233,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
                 <div className="space-y-2">
                   <Label>Neues Passwort bestätigen</Label>
                   <Input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
+                  {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
                 </div>
                 <Button onClick={changePassword} disabled={savingPw} className="w-full gap-2">
                   {savingPw ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}

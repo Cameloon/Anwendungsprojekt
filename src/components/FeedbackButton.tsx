@@ -32,6 +32,7 @@ const FeedbackButton = () => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  // live validation: derive message error so it disappears when corrected
 
   const reset = () => {
     setRating(null);
@@ -48,7 +49,7 @@ const FeedbackButton = () => {
 
   const submit = async () => {
     if (message.trim().length < 5) {
-      toast.error("Bitte schreibe ein paar Worte mehr.");
+      toast.error("Bitte schreibe mindestens 5 Zeichen.");
       return;
     }
     setSending(true);
@@ -217,6 +218,9 @@ const FeedbackButton = () => {
                             className="resize-none"
                             maxLength={500}
                           />
+                          {message.trim().length > 0 && message.trim().length < 5 && (
+                            <p className="mt-1 text-xs font-medium text-destructive">Bitte schreibe mindestens 5 Zeichen.</p>
+                          )}
                           <p className="text-[10px] text-muted-foreground text-right mt-1">
                             {message.length}/500
                           </p>
