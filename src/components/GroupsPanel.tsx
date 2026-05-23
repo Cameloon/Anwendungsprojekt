@@ -28,11 +28,15 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"info" | "whiteboard">("info");
+  // derive validation messages from inputs so they clear on change
 
   useEffect(() => subscribeGroups(() => setGroups(loadGroups())), []);
 
+  const nameError = name.trim().length > 0 && name.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+  const codeError = code.trim().length > 0 && code.trim().length !== 6 ? "Der Einladungscode hat 6 Zeichen." : "";
+
   const handleCreate = () => {
-    if (!name.trim()) return;
+    if (name.trim().length < 3) return;
     const g = createGroup(name.trim(), desc.trim());
     setGroups(loadGroups());
     setActive(g);
@@ -43,6 +47,7 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
   };
 
   const handleJoin = () => {
+    if (code.trim().length !== 6) return;
     const g = joinGroup(code.trim());
     if (!g) return toast.error("Code ungültig");
     setGroups(loadGroups());
@@ -126,6 +131,7 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
           {view === "create" && (
             <motion.div key="create" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
               <Input placeholder="Name (z.B. Mathe-Lerngruppe)" value={name} onChange={(e) => setName(e.target.value)} />
+              {nameError && <p className="text-xs text-destructive">{nameError}</p>}
               <Textarea placeholder="Worum geht's? (optional)" value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} />
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setView("list")}>Zurück</Button>
@@ -144,6 +150,7 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
                 className="font-mono text-center text-lg tracking-widest"
                 maxLength={6}
               />
+              {codeError && <p className="text-xs text-destructive">{codeError}</p>}
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setView("list")}>Zurück</Button>
                 <Button onClick={handleJoin}>Beitreten</Button>

@@ -90,11 +90,11 @@ const Index = () => {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-6 relative overflow-hidden">
+      <section className="pt-20 md:pt-32 pb-12 md:pb-20 px-4 sm:px-6 relative overflow-hidden">
         {/* Gradient background blobs */}
         <div className="absolute inset-0 -z-0 pointer-events-none">
-          <div className="absolute top-10 left-1/4 w-[480px] h-[480px] rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-accent" />
-          <div className="absolute top-40 right-10 w-[380px] h-[380px] rounded-full blur-3xl opacity-25 bg-gradient-to-tr from-accent to-primary" />
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 sm:left-1/4 sm:translate-x-0 w-44 sm:w-[380px] md:w-[480px] h-44 sm:h-[380px] md:h-[480px] rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-accent" />
+          <div className="absolute top-36 right-4 sm:right-10 w-36 sm:w-[300px] md:w-[380px] h-36 sm:h-[300px] md:h-[380px] rounded-full blur-3xl opacity-25 bg-gradient-to-tr from-accent to-primary" />
         </div>
 
         <div className="container mx-auto max-w-4xl text-center relative z-10">
@@ -112,7 +112,7 @@ const Index = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-heading text-5xl md:text-7xl font-bold mb-6 leading-[1.05] tracking-tight"
+            className="font-heading text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-[1.05] tracking-tight"
           >
             Dein Studium an der<br />
             <span className="text-gradient">DHBW</span>, organisiert
@@ -122,7 +122,7 @@ const Index = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
+            className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 md:mb-10"
           >
             Klausuren, Praxisphasen, Skripte und Austausch mit deinem Kurs –
             alles an einem Ort, gemacht für Duale Studierende.
@@ -150,7 +150,7 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="grid grid-cols-3 gap-6 mt-16 max-w-xl mx-auto"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 sm:mt-16 max-w-xl mx-auto"
           >
             {stats.map((s) => (
               <div key={s.label}>
@@ -277,13 +277,6 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-8 px-6">
-        <div className="container mx-auto max-w-5xl text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} StudentPlanner · Mit ❤️ für Studierende gebaut
-        </div>
-      </footer>
 
       {/* Ambient decoration */}
       <div className="fixed top-1/4 -left-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />

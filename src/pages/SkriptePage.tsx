@@ -41,6 +41,7 @@ const SkriptePage = () => {
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  // derive validation messages from current input so they disappear when corrected
 
   useEffect(() => subscribeScripts(() => setScripts(loadScripts())), []);
 
@@ -50,7 +51,10 @@ const SkriptePage = () => {
   }, [scripts]);
 
   const addScript = () => {
-    if (!title || !subject) return;
+    const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+    const nextSubjectError = subject.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+    const nextDescriptionError = description.trim().length > 0 && description.trim().length < 10 ? "Mindestens 10 Zeichen oder leer lassen." : "";
+    if (nextTitleError || nextSubjectError || nextDescriptionError) return;
     const next: Script = {
       id: Date.now().toString(),
       title,
@@ -108,6 +112,11 @@ const SkriptePage = () => {
       color: "text-success",
     },
   ];
+
+  // derived validation messages (live) so they update/clear automatically
+  const titleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+  const subjectError = subject.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const descriptionError = description.trim().length > 0 && description.trim().length < 10 ? "Mindestens 10 Zeichen oder leer lassen." : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -182,6 +191,8 @@ const SkriptePage = () => {
                       onChange={(e) => setSubject(e.target.value)}
                     />
                   </div>
+                  {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                  {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
                   <Textarea
                     placeholder="Kurze Beschreibung zum Inhalt"
                     value={description}
@@ -189,6 +200,7 @@ const SkriptePage = () => {
                     rows={3}
                     className="resize-none"
                   />
+                  {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
                   <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
                     <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
                     <p className="font-medium text-foreground">Datei hierher ziehen</p>

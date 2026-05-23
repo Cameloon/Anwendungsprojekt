@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SplashScreen from "@/components/SplashScreen";
 import FeedbackButton from "@/components/FeedbackButton";
+import GlobalFooter from "@/components/GlobalFooter";
 import Index from "./pages/Index.tsx";
 import DashboardPage from "./pages/DashboardPage.tsx";
 import PlannerPage from "./pages/PlannerPage.tsx";
@@ -18,6 +19,7 @@ import ForumDetailPage from "./pages/ForumDetailPage.tsx";
 import PostDetailPage from "./pages/PostDetailPage.tsx";
 import SkriptePage from "./pages/SkriptePage.tsx";
 import ProfilePage from "./pages/ProfilePage.tsx";
+import { DatenschutzPage, ImpressumPage, NutzungsordnungPage } from "./pages/LegalPages.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,66 +41,74 @@ const App = () => {
         <AnimatePresence>{booting && <SplashScreen />}</AnimatePresence>
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/planner"
-                element={
-                  <ProtectedRoute>
-                    <PlannerPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/forum"
-                element={
-                  <ProtectedRoute>
-                    <ForumPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/forum/:forumId"
-                element={
-                  <ProtectedRoute>
-                    <ForumDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/forum/:forumId/post/:postId"
-                element={
-                  <ProtectedRoute>
-                    <PostDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/skripte"
-                element={
-                  <ProtectedRoute>
-                    <SkriptePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <div className="min-h-screen flex flex-col">
+              <div className="flex-1 pb-24">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/planner"
+                    element={
+                      <ProtectedRoute>
+                        <PlannerPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/forum"
+                    element={
+                      <ProtectedRoute>
+                        <ForumPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/forum/:forumId"
+                    element={
+                      <ProtectedRoute>
+                        <ForumDetailPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/forum/:forumId/post/:postId"
+                    element={
+                      <ProtectedRoute>
+                        <PostDetailPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/skripte"
+                    element={
+                      <ProtectedRoute>
+                        <SkriptePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/impressum" element={<ImpressumPage />} />
+                  <Route path="/datenschutz" element={<DatenschutzPage />} />
+                  <Route path="/nutzungsordnung" element={<NutzungsordnungPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <GlobalFooter />
+            </div>
             <FeedbackButton />
           </AuthProvider>
         </BrowserRouter>
