@@ -36,7 +36,9 @@
 
 <https://dashboard.convex.dev/t/daniel-beljaew/studentplanner/vivid-antelope-341>
 
-## Zu prüfende Tickets
+## Projektmanagement Hinweise
+
+### Zu prüfende Tickets (Aufgabe vom 11.05.2026)
 
 Wir haben fünf Issues (Tickets) vorbereitet, die Sie im GitHub Projekt vorfinden:
 
