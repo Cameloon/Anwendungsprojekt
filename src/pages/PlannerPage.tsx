@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -39,6 +39,11 @@ import { addPost as addForumPost } from "@/lib/forumStore";
 import { inviteToDeadline } from "@/lib/notificationsStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+
+
+
+import { LanguageContext } from "@/App";
+const language = useContext(LanguageContext);
 
 interface Attachment {
   id: string;
@@ -97,6 +102,14 @@ const formatBytes = (b: number) => {
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 };
+
+
+
+
+
+
+
+
 
 const PlannerPage = () => {
   const { user } = useAuth();
@@ -191,7 +204,13 @@ const PlannerPage = () => {
       inviteToDeadline(targetId, title, newInvitees, me);
       toast({
         title: `${newInvitees.length} Einladung(en) gesendet`,
-        description: "Eingeladene Personen werden benachrichtigt.",
+        //description: "Eingeladene Personen werden benachrichtigt.",
+        description: language.match(
+          {
+            english: () => {return "Invited people will get notified"},
+            german: () => {return "Eingeladene Personen werden benachrichtigt"},
+          }
+        ),
       });
     }
     resetForm();
@@ -344,13 +363,26 @@ const PlannerPage = () => {
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
                   <CalendarDays className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm text-muted-foreground">Termine & Deadlines</span>
+                <span className="text-sm text-muted-foreground">
+                  {language.match(
+                    {
+                      english: () => {return "Appointments & Deadlines"},
+                      german: () => {return "Termine & Deadlines"},
+                    }
+                  )}
+                </span>
               </div>
               <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
                 Termin-<span className="text-gradient">Planner</span>
               </h1>
               <p className="text-muted-foreground mt-1">
-                Behalte alle Abgaben und Prüfungen im Blick
+                {language.match(
+                  {
+                    english: () => {return "Keep an eye on all of your Tests and Assignments"},
+                    german: () => {return "Behalte alle Abgaben und Prüfungen im Blick"},
+                  }
+                )}
+
               </p>
             </div>
             <Button onClick={() => (showForm ? resetForm() : setShowForm(true))} className="gap-2">
