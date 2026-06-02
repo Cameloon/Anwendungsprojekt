@@ -1,0 +1,31 @@
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import { ThemeProvider } from "@/hooks/useTheme";
+
+describe("AdminDashboardPage", () => {
+  it("renders the admin overview sections", () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <AdminDashboardPage />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: /Moderation, Freischaltungen und Vorlesungsverwaltung an einem Ort/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Nutzerfreischaltungen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Moderationsprotokoll/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: /Vorlesungsverwaltung/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Material- und Upload-Regeln/i),
+    ).toBeInTheDocument();
+  });
+});

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, MessageSquare, FileText, GraduationCap, LogIn } from "lucide-react";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  MessageSquare,
+  FileText,
+  GraduationCap,
+  LogIn,
+  ShieldCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,6 +18,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import NotificationsBell from "@/components/NotificationsBell";
 
 const navItems = [
+  { label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck },
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Planner", path: "/planner", icon: CalendarDays },
   { label: "Forum", path: "/forum", icon: MessageSquare },
@@ -27,7 +36,9 @@ const Navbar = () => {
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <GraduationCap className="h-7 w-7 text-primary" />
-            <span className="font-heading font-bold text-lg text-foreground">StudentPlanner</span>
+            <span className="font-heading font-bold text-lg text-foreground">
+              StudentPlanner
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
@@ -41,7 +52,7 @@ const Navbar = () => {
                     "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                     active
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary",
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -79,7 +90,9 @@ const Navbar = () => {
                 to={item.path}
                 className={cn(
                   "p-2 rounded-lg transition-colors",
-                  active ? "text-primary bg-primary/10" : "text-muted-foreground"
+                  active
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5" />
