@@ -1,10 +1,10 @@
 # Rollenverteilung
 
-Status 18.05.2026 - DM zu Test hinzugefügt
+Status 26.05.2026 - AD zu Projektmanagement hinzugefügt
 
 ### Product Owner + Projektmanager
 
-**Verantwortlichkeit: Daniela Maier**
+**Verantwortlichkeit: Daniela Maier, Alexia Dinu**
 
 Definiert Anforderungen, priorisiert, entscheidet, was gebaut wird + Organisiert Ablauf, Termine, Kommunikation.
 
