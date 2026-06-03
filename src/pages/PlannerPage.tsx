@@ -43,8 +43,9 @@ import { validateTitle, validateDate, validateMessage } from "@/lib/validation";
 
 
 
-import { LanguageContext } from "@/App";
-const language = useContext(LanguageContext);
+
+import { languageSetting } from "@/lib/Enum";
+
 
 interface Attachment {
   id: string;
@@ -112,7 +113,7 @@ const formatBytes = (b: number) => {
 
 
 
-const PlannerPage = () => {
+const PlannerPage = (props: {language: languageSetting}) => {
   const { user } = useAuth();
   const profile = useProfile();
   const me = profile?.display_name || "Du";
@@ -206,7 +207,7 @@ const PlannerPage = () => {
       toast({
         title: `${newInvitees.length} Einladung(en) gesendet`,
         //description: "Eingeladene Personen werden benachrichtigt.",
-        description: language.match(
+        description: props.language.match(
           {
             english: () => {return "Invited people will get notified"},
             german: () => {return "Eingeladene Personen werden benachrichtigt"},
@@ -365,7 +366,7 @@ const PlannerPage = () => {
                   <CalendarDays className="h-5 w-5 text-primary" />
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {language.match(
+                  {props.language.match(
                     {
                       english: () => {return "Appointments & Deadlines"},
                       german: () => {return "Termine & Deadlines"},
@@ -377,7 +378,7 @@ const PlannerPage = () => {
                 Termin-<span className="text-gradient">Planner</span>
               </h1>
               <p className="text-muted-foreground mt-1">
-                {language.match(
+                {props.language.match(
                   {
                     english: () => {return "Keep an eye on all of your Tests and Assignments"},
                     german: () => {return "Behalte alle Abgaben und Prüfungen im Blick"},

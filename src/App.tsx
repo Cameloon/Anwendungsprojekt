@@ -31,16 +31,10 @@ import NotFound from "./pages/NotFound.tsx";
 
 import Enum from "./lib/Enum";
 import type { languageSetting } from "./lib/Enum";
+
 import { create } from "domain";
 
 const queryClient = new QueryClient();
-
-let currentLanguageBase: languageSetting = Enum.variant("german", {});
-let [currentLanguage, setLanguage] = useState(currentLanguageBase);
-
-
-export const LanguageContext = createContext(currentLanguage)
-
 
 
 
@@ -48,12 +42,17 @@ export const LanguageContext = createContext(currentLanguage)
 const App = () => {
   const [booting, setBooting] = useState(true);
 
+let languageBase: languageSetting = Enum.variant("german", {});
+let [language, setLanguage] = useState(languageBase);
+
+
   useEffect(() => {
     const t = setTimeout(() => setBooting(false), 1600);
     return () => clearTimeout(t);
   }, []);
 
   return (
+<<<<<<< HEAD
     <LanguageContext.Provider value={currentLanguage}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
@@ -64,86 +63,86 @@ const App = () => {
             <BrowserRouter>
               <AuthProvider>
                 <EnsureProfile>
-              <div className="min-h-screen flex flex-col">
-                <div className="flex-1">
-                  <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route
-                        path="/dashboard"
-                        element={
-                          <ProtectedRoute>
-                            <DashboardPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                      path="/admin-dashboard"
-                      element={
-                        <AdminRoute><AdminDashboardPage /></AdminRoute>
-                      }
-                    />
-                    <Route
-                        path="/planner"
-                        element={
-                          <ProtectedRoute>
-                            <PlannerPage/>
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/forum"
-                        element={
-                          <ProtectedRoute>
-                            <ForumPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/forum/:forumId"
-                        element={
-                          <ProtectedRoute>
-                            <ForumDetailPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/forum/:forumId/post/:postId"
-                        element={
-                          <ProtectedRoute>
-                            <PostDetailPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/skripte"
-                        element={
-                          <ProtectedRoute>
-                            <SkriptePage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/profile"
-                        element={
-                          <ProtectedRoute>
-                            <ProfilePage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="/impressum" element={<ImpressumPage />} />
-                    <Route path="/datenschutz" element={<DatenschutzPage />} />
-                    <Route
-                      path="/nutzungsordnung"
-                      element={<NutzungsordnungPage />}
-                    />
-                    <Route path="*" element={<NotFound />} />
-                    </Routes>
+                  <div className="min-h-screen flex flex-col">
+                    <div className="flex-1">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route
+                          path="/dashboard"
+                          element={
+                            <ProtectedRoute>
+                              <DashboardPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin-dashboard"
+                          element={
+                            <AdminRoute><AdminDashboardPage /></AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/planner"
+                          element={
+                            <ProtectedRoute>
+                              <PlannerPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum"
+                          element={
+                            <ProtectedRoute>
+                              <ForumPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum/:forumId"
+                          element={
+                            <ProtectedRoute>
+                              <ForumDetailPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum/:forumId/post/:postId"
+                          element={
+                            <ProtectedRoute>
+                              <PostDetailPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/skripte"
+                          element={
+                            <ProtectedRoute>
+                              <SkriptePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/profile"
+                          element={
+                            <ProtectedRoute>
+                              <ProfilePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/impressum" element={<ImpressumPage />} />
+                        <Route path="/datenschutz" element={<DatenschutzPage />} />
+                        <Route
+                          path="/nutzungsordnung"
+                          element={<NutzungsordnungPage />}
+                        />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </div>
+                    <GlobalFooter />
                   </div>
-                <GlobalFooter />
-              </div>
-              <FeedbackButton />
+                  <FeedbackButton />
                 </EnsureProfile>
-            </AuthProvider>
+              </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>
