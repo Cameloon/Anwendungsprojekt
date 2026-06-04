@@ -16,6 +16,7 @@ import { loadPosts } from "@/lib/forumStore";
 
 const ProfilePage = () => {
   const { language, setLanguage } = useLanguage();
+  
   const { user } = useAuth();
   const profile = useProfile();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -109,7 +110,7 @@ const ProfilePage = () => {
           )}
         </motion.div>
       </main>
-      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} language={language} setLanguage={setLanguage} />
+      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen}  />
     </div>
   );
 };

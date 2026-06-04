@@ -31,16 +31,18 @@ import { toast } from "@/hooks/use-toast";
 import { IS_DEMO, demoStore } from "@/lib/demoMode";
 
 import Enum, { languageSetter } from "@/lib/Enum";
+import { useLanguage } from "@/hooks/useLanguage";
 import { languageSetting } from "@/lib/Enum";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  language: languageSetting;
-  setLanguage: languageSetter;
+
 }
 
-const AccountSettingsDialog = ({ open, onOpenChange, language, setLanguage }: Props) => {
+const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
+
+  const { language, setLanguage } = useLanguage();
   const { user } = useAuth();
   const profile = useProfile();
   // These are safe to call only when providers are mounted (i.e., !IS_DEMO).
