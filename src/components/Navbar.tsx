@@ -17,17 +17,19 @@ import AccountMenu from "@/components/AccountMenu";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationsBell from "@/components/NotificationsBell";
 
-const navItems = [
-  { label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck },
-  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Planner", path: "/planner", icon: CalendarDays },
-  { label: "Forum", path: "/forum", icon: MessageSquare },
-  { label: "Skripte", path: "/skripte", icon: FileText },
-];
-
 const Navbar = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+
+  const navItems = [
+    ...(isAdmin
+      ? [{ label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck }]
+      : []),
+    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { label: "Planner", path: "/planner", icon: CalendarDays },
+    { label: "Forum", path: "/forum", icon: MessageSquare },
+    { label: "Skripte", path: "/skripte", icon: FileText },
+  ];
   const [authOpen, setAuthOpen] = useState(false);
 
   return (

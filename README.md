@@ -3,7 +3,7 @@
 ## Team / Namenszuordnung GitHub
 
 - Sofia Antropova -> antropos-v
-- Daniel Beljaew -> Cameloon
+- Daniel Beljaew -> Cameloon, Dan
 - Niklas Brietenhahn -> niklas-b1
 - Alexia Dinu -> dinua23
 - Daniela Maier -> njela0
@@ -28,13 +28,17 @@ https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/
 
 ### Bun Commands
 
-    To install dependencies:
+To install dependencies:
 
-        bun install / npm install
+    bun install / npm install
 
+Development - full-stack dev server with hot reload
 
-    Development - full-stack dev server with hot reload
-        bun dev / npm run dev
+    bun dev / npm run dev
+
+To connect to convex db set .env variables and run:
+
+    npx convex
 
 ### Project Structure
 
@@ -49,10 +53,6 @@ https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/
 ├── bunfig.toml # Bun configuration
 └── bun.lock # bun dependencies
 //////////////////////////////////////////
-
-### Backend Dashboard
-
-<https://dashboard.convex.dev/t/daniel-beljaew/studentplanner/vivid-antelope-341>
 
 ## Projektmanagement Hinweise
 

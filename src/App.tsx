@@ -8,6 +8,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
+import EnsureProfile from "@/components/EnsureProfile";
 import SplashScreen from "@/components/SplashScreen";
 import FeedbackButton from "@/components/FeedbackButton";
 import GlobalFooter from "@/components/GlobalFooter";
@@ -46,6 +48,7 @@ const App = () => {
           <AnimatePresence>{booting && <SplashScreen />}</AnimatePresence>
           <BrowserRouter>
             <AuthProvider>
+              <EnsureProfile>
               <div className="min-h-screen flex flex-col">
                 <div className="flex-1 pb-24">
                   <Routes>
@@ -61,9 +64,7 @@ const App = () => {
                     <Route
                       path="/admin-dashboard"
                       element={
-                        <ProtectedRoute>
-                          <AdminDashboardPage />
-                        </ProtectedRoute>
+                        <AdminRoute><AdminDashboardPage /></AdminRoute>
                       }
                     />
                     <Route
@@ -126,6 +127,7 @@ const App = () => {
                 <GlobalFooter />
               </div>
               <FeedbackButton />
+              </EnsureProfile>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
