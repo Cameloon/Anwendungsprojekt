@@ -120,13 +120,14 @@ const statusTone = (state: string) => {
 
 const AdminDashboardPage = () => {
   const profiles = useQuery(api.admin.getAll, {});
-  const updateRole = useMutation(api.admin.updateRole);
+  const approveUser = useMutation(api.admin.approveUser);
+  const rejectUser = useMutation(api.admin.rejectUser);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handleApprove = async (userId: string) => {
     setUpdating(userId);
     try {
-      await updateRole({ userId, role: "user" });
+      await approveUser({ userId });
       toast({
         title: "Freigegeben",
         description: "Der Nutzer wurde erfolgreich freigegeben.",
@@ -142,10 +143,28 @@ const AdminDashboardPage = () => {
     }
   };
 
-  const openProfiles = profiles?.filter(
-    (p) => !p.role || p.role === "user",
+  const handleReject = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await rejectUser({ userId });
+      toast({
+        title: "Abgelehnt",
+        description: "Der Nutzer wurde abgelehnt.",
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Ablehnung fehlgeschlagen",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const pendingProfiles = profiles?.filter(
+    (p) => p.status === "pending",
   ) ?? [];
-  const pendingApproval = openProfiles.filter((p) => !p.displayName);
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,7 +197,7 @@ const AdminDashboardPage = () => {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem] lg:flex-1">
                 <MetricCard
                   label="Offene Freigaben"
-                  value={String(pendingApproval.length)}
+                  value={String(pendingProfiles.length)}
                   hint="Nutzer warten"
                 />
                 <MetricCard label="Meldungen" value="3" hint="Forum-Queue" />
@@ -227,12 +246,12 @@ const AdminDashboardPage = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {openProfiles.length === 0 && (
+                  {pendingProfiles.length === 0 && (
                     <p className="text-sm text-muted-foreground py-4 text-center">
                       Alle Nutzer wurden bereits freigegeben.
                     </p>
                   )}
-                  {openProfiles.map((p) => (
+                  {pendingProfiles.map((p) => (
                     <div
                       key={p._id}
                       className="rounded-2xl border border-border/60 bg-background/80 p-4"
@@ -245,20 +264,16 @@ const AdminDashboardPage = () => {
                             </p>
                             <Badge
                               variant="secondary"
-                              className={
-                                p.displayName
-                                  ? "bg-success/10 text-success"
-                                  : "bg-destructive/10 text-destructive"
-                              }
+                              className="bg-amber-500/10 text-amber-600"
                             >
-                              {p.displayName ? "freigegeben" : "offen"}
+                              ausstehend
                             </Badge>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {[
+                              p.matrikelnummer,
                               p.studienfach,
                               p.hochschule,
-                              p.email,
                             ]
                               .filter(Boolean)
                               .join(" · ") || "Keine Details"}
@@ -267,29 +282,28 @@ const AdminDashboardPage = () => {
                         <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
-                            disabled={!p.displayName}
+                            variant="destructive"
+                            disabled={updating === p.userId}
+                            onClick={() => handleReject(p.userId)}
+                          >
+                            {updating === p.userId ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Ablehnen"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-success hover:bg-success/90"
+                            disabled={updating === p.userId}
                             onClick={() => handleApprove(p.userId)}
                           >
                             {updating === p.userId ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              "Prüfen"
+                              "Freigeben"
                             )}
                           </Button>
-                          {!p.displayName && (
-                            <Button
-                              size="sm"
-                              disabled={updating === p.userId}
-                              onClick={() => handleApprove(p.userId)}
-                            >
-                              {updating === p.userId ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                "Freigeben"
-                              )}
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </div>
