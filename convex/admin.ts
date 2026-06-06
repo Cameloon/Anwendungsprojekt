@@ -36,3 +36,41 @@ export const updateRole = mutation({
     await ctx.db.patch(profile._id, { role: args.role, updatedAt: Date.now() });
   },
 });
+
+export const approveUser = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const caller = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (caller?.role !== "admin") throw new Error("Not authorized");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .unique();
+    if (!profile) throw new Error("Profile not found");
+    await ctx.db.patch(profile._id, { status: "active", role: "user", updatedAt: Date.now() });
+  },
+});
+
+export const rejectUser = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const caller = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (caller?.role !== "admin") throw new Error("Not authorized");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .unique();
+    if (!profile) throw new Error("Profile not found");
+    await ctx.db.patch(profile._id, { status: "rejected", updatedAt: Date.now() });
+  },
+});

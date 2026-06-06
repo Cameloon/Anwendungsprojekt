@@ -34,6 +34,32 @@ export const isComplete = query({
   },
 });
 
+export const getAccessStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return "no-identity";
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) return "no-profile";
+    if (profile.role === "admin") return "active";
+    const hasFields = !!(
+      profile.displayName &&
+      profile.studienfach &&
+      profile.matrikelnummer &&
+      profile.hochschule &&
+      profile.jahrgang
+    );
+    if (!hasFields) return "incomplete";
+    if (profile.status === "active") return "active";
+    if (profile.status === "pending") return "pending";
+    if (profile.status === "rejected") return "rejected";
+    return "incomplete";
+  },
+});
+
 export const upsertMine = mutation({
   args: {
     displayName: v.optional(v.string()),
@@ -105,6 +131,7 @@ export const complete = mutation({
       hochschule: args.hochschule.trim(),
       jahrgang: args.jahrgang.trim().toUpperCase(),
       role: "user" as const,
+      status: "pending" as const,
       updatedAt: now,
     };
 

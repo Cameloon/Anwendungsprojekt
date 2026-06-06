@@ -12,6 +12,7 @@ export default defineSchema({
     hochschule: v.optional(v.string()),
     jahrgang: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
+    status: v.optional(v.union(v.literal("pending"), v.literal("active"), v.literal("rejected"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),

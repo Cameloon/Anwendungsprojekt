@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -8,9 +10,11 @@ import {
   GraduationCap,
   LogIn,
   ShieldCheck,
+  FileEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { IS_DEMO } from "@/lib/demoMode";
 import { Button } from "@/components/ui/button";
 import AuthDialog from "@/components/AuthDialog";
 import AccountMenu from "@/components/AccountMenu";
@@ -20,16 +24,23 @@ import NotificationsBell from "@/components/NotificationsBell";
 const Navbar = () => {
   const location = useLocation();
   const { user, isAdmin } = useAuth();
+  const access = IS_DEMO ? "active" : useQuery(api.profiles.getAccessStatus, {});
+  const isActive = access === "active";
 
-  const navItems = [
-    ...(isAdmin
-      ? [{ label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck }]
-      : []),
-    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-    { label: "Planner", path: "/planner", icon: CalendarDays },
-    { label: "Forum", path: "/forum", icon: MessageSquare },
-    { label: "Skripte", path: "/skripte", icon: FileText },
-  ];
+  const navItems = isActive
+    ? [
+        ...(isAdmin
+          ? [{ label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck }]
+          : []),
+        { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Planner", path: "/planner", icon: CalendarDays },
+        { label: "Forum", path: "/forum", icon: MessageSquare },
+        { label: "Skripte", path: "/skripte", icon: FileText },
+      ]
+    : user
+      ? [{ label: "Zugang freischalten", path: "/dashboard", icon: FileEdit }]
+      : [];
+
   const [authOpen, setAuthOpen] = useState(false);
 
   return (

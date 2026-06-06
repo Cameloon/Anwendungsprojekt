@@ -1,14 +1,9 @@
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
-import { IS_DEMO } from "@/lib/demoMode";
 import { Loader2, ShieldOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import OnboardingDialog from "./OnboardingDialog";
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, loading } = useAuth();
-  const isComplete = IS_DEMO ? true : useQuery(api.profiles.isComplete, {});
 
   if (loading) {
     return (
@@ -37,20 +32,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (isComplete === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <OnboardingDialog open={!isComplete} />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 };
 
 export default AdminRoute;
