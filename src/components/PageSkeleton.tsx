@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const PageSkeleton = () => {
   return (
-    <div className="pt-32 md:pt-28 pb-12 px-6">
+    <div className="pt-32 md:pt-24 pb-12 px-6">
       <div className="container mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <Skeleton className="h-8 w-8 rounded-lg" />

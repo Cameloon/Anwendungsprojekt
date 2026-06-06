@@ -349,7 +349,7 @@ const DashboardPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="w-full px-4 pt-32 md:pt-28 pb-24 sm:px-6 lg:px-8">
+      <main className="w-full px-4 pt-32 md:pt-24 pb-24 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-7xl space-y-6">
           <motion.section
             initial={{ opacity: 0, y: 12 }}

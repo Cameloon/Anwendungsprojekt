@@ -104,6 +104,7 @@ export const complete = mutation({
       matrikelnummer: args.matrikelnummer.trim(),
       hochschule: args.hochschule.trim(),
       jahrgang: args.jahrgang.trim().toUpperCase(),
+      role: "user" as const,
       updatedAt: now,
     };
 

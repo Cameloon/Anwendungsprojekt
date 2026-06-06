@@ -90,7 +90,7 @@ const ForumDetailPage = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-32 md:pt-28 pb-16 px-6 container mx-auto max-w-3xl text-center">
+        <div className="pt-32 md:pt-24 pb-16 px-6 container mx-auto max-w-3xl text-center">
           <p className="text-muted-foreground mb-4">Forum nicht gefunden.</p>
           <Button onClick={() => navigate("/forum")} className="gap-2">
             <ArrowLeft className="h-4 w-4" /> Zurück
@@ -162,7 +162,7 @@ const ForumDetailPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-32 md:pt-28 pb-16 px-6">
+      <div className="pt-32 md:pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-6xl">
           <Button
             variant="ghost"
