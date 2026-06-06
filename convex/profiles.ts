@@ -14,6 +14,26 @@ export const getMine = query({
   },
 });
 
+export const isComplete = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) return false;
+    return !!(
+      profile.displayName &&
+      profile.studienfach &&
+      profile.matrikelnummer &&
+      profile.hochschule &&
+      profile.jahrgang
+    );
+  },
+});
+
 export const upsertMine = mutation({
   args: {
     displayName: v.optional(v.string()),
@@ -23,6 +43,7 @@ export const upsertMine = mutation({
     hochschule: v.optional(v.string()),
     jahrgang: v.optional(v.string()),
     email: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -55,6 +76,46 @@ export const upsertMine = mutation({
       jahrgang: args.jahrgang?.toUpperCase(),
       createdAt: now,
       updatedAt: now,
+    });
+  },
+});
+
+export const complete = mutation({
+  args: {
+    displayName: v.string(),
+    studienfach: v.string(),
+    matrikelnummer: v.string(),
+    hochschule: v.string(),
+    jahrgang: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+
+    const now = Date.now();
+    const patch = {
+      displayName: args.displayName.trim(),
+      studienfach: args.studienfach.trim(),
+      matrikelnummer: args.matrikelnummer.trim(),
+      hochschule: args.hochschule.trim(),
+      jahrgang: args.jahrgang.trim().toUpperCase(),
+      updatedAt: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, patch);
+      return existing._id;
+    }
+    return await ctx.db.insert("profiles", {
+      userId: identity.subject,
+      email: identity.email ?? undefined,
+      ...patch,
+      createdAt: now,
     });
   },
 });

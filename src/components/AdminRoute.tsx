@@ -2,12 +2,12 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
 import { IS_DEMO } from "@/lib/demoMode";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, ShieldOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import OnboardingDialog from "./OnboardingDialog";
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAdmin, loading } = useAuth();
   const isComplete = IS_DEMO ? true : useQuery(api.profiles.isComplete, {});
 
   if (loading) {
@@ -18,19 +18,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="pt-32 flex flex-col items-center justify-center text-center px-6">
           <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center mb-5">
-            <Lock className="h-6 w-6 text-muted-foreground" />
+            <ShieldOff className="h-6 w-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
-            Anmeldung erforderlich
+            Zugriff verweigert
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Melde dich oben rechts an, um diesen Bereich zu sehen.
+            Dieser Bereich ist nur für Administratoren zugänglich.
           </p>
         </div>
       </div>
@@ -53,4 +53,4 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export default ProtectedRoute;
+export default AdminRoute;

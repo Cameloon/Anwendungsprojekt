@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useUser, useClerk } from "@clerk/clerk-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { IS_DEMO, demoStore } from "@/lib/demoMode";
 
 export interface AppUser {
@@ -10,6 +12,7 @@ export interface AppUser {
 
 interface AuthContextValue {
   user: AppUser | null;
+  isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -19,14 +22,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => <>{childr
 // --- Demo mode hook (no Clerk dependency) ---
 const useDemoAuth = (): AuthContextValue => {
   const [user, setUser] = useState<AppUser | null>(() => demoStore.getUser());
-  useEffect(() => demoStore.subscribe(() => setUser(demoStore.getUser())), []);
+  const [profile, setProfile] = useState(() => demoStore.getProfile());
+  useEffect(
+    () =>
+      demoStore.subscribe(() => {
+        setUser(demoStore.getUser());
+        setProfile(demoStore.getProfile());
+      }),
+    [],
+  );
   return useMemo(
     () => ({
       user,
+      isAdmin: profile?.role === "admin",
       loading: false,
       signOut: async () => demoStore.signOut(),
     }),
-    [user]
+    [user, profile],
   );
 };
 
@@ -34,6 +46,7 @@ const useDemoAuth = (): AuthContextValue => {
 const useClerkBackedAuth = (): AuthContextValue => {
   const { isLoaded, isSignedIn, user } = useUser();
   const { signOut } = useClerk();
+  const profile = useQuery(api.profiles.getMine, {});
   return useMemo(() => {
     const mapped: AppUser | null =
       isSignedIn && user
@@ -45,15 +58,15 @@ const useClerkBackedAuth = (): AuthContextValue => {
         : null;
     return {
       user: mapped,
+      isAdmin: profile?.role === "admin",
       loading: !isLoaded,
       signOut: async () => {
         await signOut();
       },
     };
-  }, [isLoaded, isSignedIn, user, signOut]);
+  }, [isLoaded, isSignedIn, user, signOut, profile]);
 };
 
 export const useAuth = (): AuthContextValue => {
-  // Hook order is stable per build because IS_DEMO is evaluated at module load.
   return IS_DEMO ? useDemoAuth() : useClerkBackedAuth();
 };

@@ -23,6 +23,7 @@ export interface DemoProfile {
   jahrgang: string | null;
   avatar_url: string | null;
   created_at: string | null;
+  role?: "admin" | "user";
 }
 
 const listeners = new Set<() => void>();

@@ -1,8 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import { ThemeProvider } from "@/hooks/useTheme";
+
+vi.mock("@clerk/clerk-react", () => ({
+  useUser: () => ({ isLoaded: true, isSignedIn: false, user: null }),
+  useClerk: () => ({ signOut: vi.fn() }),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => null),
+  useMutation: vi.fn(() => vi.fn()),
+  ConvexProviderWithClerk: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
 
 describe("AdminDashboardPage", () => {
   it("renders the admin overview sections", () => {

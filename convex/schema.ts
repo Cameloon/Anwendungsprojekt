@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   profiles: defineTable({
-    userId: v.string(), // Clerk user id (subject)
+    userId: v.string(),
     email: v.optional(v.string()),
     displayName: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
@@ -11,6 +11,7 @@ export default defineSchema({
     matrikelnummer: v.optional(v.string()),
     hochschule: v.optional(v.string()),
     jahrgang: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),

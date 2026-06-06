@@ -61,24 +61,25 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
     setJahrgang(profile?.jahrgang ?? "");
   }, [open, profile]);
 
-  // derived validation messages so they clear automatically when inputs change
-  const displayNameError = displayName.trim().length > 0 && displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-  const studienfachError = studienfach.trim().length > 0 && studienfach.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-  const matrikelnummerError = matrikelnummer && !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
+  const displayNameError = !displayName.trim() ? "Erforderlich." : displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const studienfachError = !studienfach.trim() ? "Erforderlich." : studienfach.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const matrikelnummerError = !matrikelnummer ? "Erforderlich." : !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
   const hochschuleError = !hochschule ? "Bitte einen DHBW-Standort wählen." : "";
-  const jahrgangError = jahrgang.trim().length > 0 && jahrgang.trim().length < 4 ? "Mindestens 4 Zeichen." : "";
+  const jahrgangError = !jahrgang.trim() ? "Erforderlich." : jahrgang.trim().length < 4 ? "Mindestens 4 Zeichen." : "";
   const passwordError = newPw.length > 0 && newPw.length < 6 ? "Mindestens 6 Zeichen." : newPw && confirmPw && newPw !== confirmPw ? "Die Passwörter stimmen nicht überein." : "";
 
   const saveProfile = async () => {
     if (!user) return;
-    const nextErrors: typeof profileErrors = {};
-    if (displayName.trim().length > 0 && displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
-    if (studienfach.trim().length > 0 && studienfach.trim().length < 2) nextErrors.studienfach = "Mindestens 2 Zeichen.";
+    const nextErrors: Record<string, string> = {};
+    if (!displayName.trim()) nextErrors.displayName = "Erforderlich.";
+    else if (displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
+    if (!studienfach.trim()) nextErrors.studienfach = "Erforderlich.";
+    else if (studienfach.trim().length < 2) nextErrors.studienfach = "Mindestens 2 Zeichen.";
     if (!hochschule) nextErrors.hochschule = "Bitte einen DHBW-Standort wählen.";
-    if (jahrgang.trim().length > 0 && jahrgang.trim().length < 4) nextErrors.jahrgang = "Mindestens 4 Zeichen.";
-    if (matrikelnummer && !/^\d{5,10}$/.test(matrikelnummer)) {
-      nextErrors.matrikelnummer = "5–10 Ziffern.";
-    }
+    if (!jahrgang.trim()) nextErrors.jahrgang = "Erforderlich.";
+    else if (jahrgang.trim().length < 4) nextErrors.jahrgang = "Mindestens 4 Zeichen.";
+    if (!matrikelnummer) nextErrors.matrikelnummer = "Erforderlich.";
+    else if (!/^\d{5,10}$/.test(matrikelnummer)) nextErrors.matrikelnummer = "5–10 Ziffern.";
     if (Object.keys(nextErrors).length > 0) {
       toast({ title: "Eingaben prüfen", description: "Bitte markierte Felder korrigieren.", variant: "destructive" });
       return;
@@ -166,12 +167,12 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
               <Input value={user?.email ?? ""} disabled />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dn">Anzeigename</Label>
+              <Label htmlFor="dn">Anzeigename *</Label>
               <Input id="dn" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               {displayNameError && <p className="text-xs text-destructive">{displayNameError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mn">Matrikelnummer</Label>
+              <Label htmlFor="mn">Matrikelnummer *</Label>
               <Input
                 id="mn"
                 inputMode="numeric"
@@ -182,7 +183,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
               {matrikelnummerError && <p className="text-xs text-destructive">{matrikelnummerError}</p>}
             </div>
             <div className="space-y-2">
-              <Label>DHBW-Standort</Label>
+              <Label>DHBW-Standort *</Label>
               <Select value={hochschule} onValueChange={setHochschule}>
                 <SelectTrigger>
                   <SelectValue placeholder="Standort wählen" />
@@ -198,12 +199,12 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
               {hochschuleError && <p className="text-xs text-destructive">{hochschuleError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sf">Studiengang</Label>
+              <Label htmlFor="sf">Studiengang *</Label>
               <Input id="sf" value={studienfach} onChange={(e) => setStudienfach(e.target.value)} />
               {studienfachError && <p className="text-xs text-destructive">{studienfachError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="jg">Studienjahrgang</Label>
+              <Label htmlFor="jg">Studienjahrgang *</Label>
               <Input
                 id="jg"
                 placeholder="z. B. TIF25B"

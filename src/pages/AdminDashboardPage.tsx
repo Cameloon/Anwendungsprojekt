@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import {
   AlertTriangle,
   BookMarked,
@@ -7,6 +10,7 @@ import {
   Eye,
   GraduationCap,
   LayoutGrid,
+  Loader2,
   Shield,
   ShieldCheck,
   Users,
@@ -17,16 +21,7 @@ import {
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-type ApprovalState = "offen" | "freigegeben" | "abgelehnt";
-
-interface UserApproval {
-  name: string;
-  course: string;
-  campus: string;
-  email: string;
-  state: ApprovalState;
-}
+import { toast } from "@/hooks/use-toast";
 
 interface ReportItem {
   title: string;
@@ -43,30 +38,6 @@ interface LectureItem {
   campus: string;
   status: "aktiv" | "importiert" | "archiviert";
 }
-
-const approvalQueue: UserApproval[] = [
-  {
-    name: "Mia Schneider",
-    course: "TIF25B",
-    campus: "DHBW Lörrach",
-    email: "mia.schneider@dhbw.de",
-    state: "offen",
-  },
-  {
-    name: "Jonas Keller",
-    course: "WI23A",
-    campus: "DHBW Mannheim",
-    email: "jonas.keller@dhbw.de",
-    state: "freigegeben",
-  },
-  {
-    name: "Sara Weber",
-    course: "BWL24C",
-    campus: "DHBW Stuttgart",
-    email: "sara.weber@dhbw.de",
-    state: "offen",
-  },
-];
 
 const reportedPosts: ReportItem[] = [
   {
@@ -148,6 +119,34 @@ const statusTone = (state: string) => {
 };
 
 const AdminDashboardPage = () => {
+  const profiles = useQuery(api.admin.getAll, {});
+  const updateRole = useMutation(api.admin.updateRole);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const handleApprove = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await updateRole({ userId, role: "user" });
+      toast({
+        title: "Freigegeben",
+        description: "Der Nutzer wurde erfolgreich freigegeben.",
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Freigabe fehlgeschlagen",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const openProfiles = profiles?.filter(
+    (p) => !p.role || p.role === "user",
+  ) ?? [];
+  const pendingApproval = openProfiles.filter((p) => !p.displayName);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -179,7 +178,7 @@ const AdminDashboardPage = () => {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem] lg:flex-1">
                 <MetricCard
                   label="Offene Freigaben"
-                  value="2"
+                  value={String(pendingApproval.length)}
                   hint="Nutzer warten"
                 />
                 <MetricCard label="Meldungen" value="3" hint="Forum-Queue" />
@@ -222,39 +221,81 @@ const AdminDashboardPage = () => {
               icon={<Users className="h-4 w-4" />}
               description="Admins prüfen neue Registrierungen, geben Nutzer frei oder löschen Accounts."
             >
-              <div className="space-y-3">
-                {approvalQueue.map((user) => (
-                  <div
-                    key={user.email}
-                    className="rounded-2xl border border-border/60 bg-background/80 p-4"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">
-                            {user.name}
+              {profiles === undefined ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {openProfiles.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      Alle Nutzer wurden bereits freigegeben.
+                    </p>
+                  )}
+                  {openProfiles.map((p) => (
+                    <div
+                      key={p._id}
+                      className="rounded-2xl border border-border/60 bg-background/80 p-4"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">
+                              {p.displayName || p.email || "Unbekannt"}
+                            </p>
+                            <Badge
+                              variant="secondary"
+                              className={
+                                p.displayName
+                                  ? "bg-success/10 text-success"
+                                  : "bg-destructive/10 text-destructive"
+                              }
+                            >
+                              {p.displayName ? "freigegeben" : "offen"}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {[
+                              p.studienfach,
+                              p.hochschule,
+                              p.email,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || "Keine Details"}
                           </p>
-                          <Badge
-                            variant="secondary"
-                            className={statusTone(user.state)}
-                          >
-                            {user.state}
-                          </Badge>
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {user.course} · {user.campus} · {user.email}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline">
-                          Prüfen
-                        </Button>
-                        <Button size="sm">Freigeben</Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!p.displayName}
+                            onClick={() => handleApprove(p.userId)}
+                          >
+                            {updating === p.userId ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Prüfen"
+                            )}
+                          </Button>
+                          {!p.displayName && (
+                            <Button
+                              size="sm"
+                              disabled={updating === p.userId}
+                              onClick={() => handleApprove(p.userId)}
+                            >
+                              {updating === p.userId ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Freigeben"
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Panel>
 
             <Panel

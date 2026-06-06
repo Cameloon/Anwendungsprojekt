@@ -1,10 +1,11 @@
 # Anwendungsprojekt
 
-### Backend Dashboard:
-https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/
+### Backend Dashboard
+
+<https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/>
 
     Sofia Antropova -> antropos-v
-    Daniel Beljaew -> Cameloon
+    Daniel Beljaew -> Cameloon, Dan
     Niklas Brietenhahn -> niklas-b1
     Alexia Dinu -> dinua23
     Daniela Maier -> njela0
@@ -12,12 +13,14 @@ https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/
 ### Bun Commands
 
     To install dependencies:
-
         bun install / npm install
 
 
     Development - full-stack dev server with hot reload
         bun dev / npm run dev
+
+    To connect to convex db set .env variables and run:
+        npx convex
 
 ### Project Structure
 
