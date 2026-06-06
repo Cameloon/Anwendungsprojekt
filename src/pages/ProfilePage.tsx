@@ -37,7 +37,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-6 pt-24 pb-16 max-w-4xl">
+      <main className="container mx-auto px-6 pt-32 md:pt-28 pb-16 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
