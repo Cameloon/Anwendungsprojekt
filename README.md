@@ -20,7 +20,7 @@
         bun dev / npm run dev
 
     To connect to convex db set .env variables and run:
-        npx convex
+        npx convex dev
 
 ### Project Structure
 
