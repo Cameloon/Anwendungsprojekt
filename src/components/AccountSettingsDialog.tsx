@@ -21,7 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Combobox from "@/components/ui/combobox";
 import { DHBW_STANDORTE } from "@/lib/dhbw";
+import { STUDIENFAECHER } from "@/lib/studienfach";
+import { JAHRGAENGE } from "@/lib/jahrgang";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "@/hooks/use-toast";
@@ -62,10 +65,10 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
   }, [open, profile]);
 
   const displayNameError = !displayName.trim() ? "Erforderlich." : displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-  const studienfachError = !studienfach.trim() ? "Erforderlich." : studienfach.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
+  const studienfachError = !studienfach ? "Erforderlich." : "";
   const matrikelnummerError = !matrikelnummer ? "Erforderlich." : !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
   const hochschuleError = !hochschule ? "Bitte einen DHBW-Standort wählen." : "";
-  const jahrgangError = !jahrgang.trim() ? "Erforderlich." : jahrgang.trim().length < 4 ? "Mindestens 4 Zeichen." : "";
+  const jahrgangError = !jahrgang ? "Erforderlich." : "";
   const passwordError = newPw.length > 0 && newPw.length < 6 ? "Mindestens 6 Zeichen." : newPw && confirmPw && newPw !== confirmPw ? "Die Passwörter stimmen nicht überein." : "";
 
   const saveProfile = async () => {
@@ -73,11 +76,9 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
     const nextErrors: Record<string, string> = {};
     if (!displayName.trim()) nextErrors.displayName = "Erforderlich.";
     else if (displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
-    if (!studienfach.trim()) nextErrors.studienfach = "Erforderlich.";
-    else if (studienfach.trim().length < 2) nextErrors.studienfach = "Mindestens 2 Zeichen.";
+    if (!studienfach) nextErrors.studienfach = "Erforderlich.";
     if (!hochschule) nextErrors.hochschule = "Bitte einen DHBW-Standort wählen.";
-    if (!jahrgang.trim()) nextErrors.jahrgang = "Erforderlich.";
-    else if (jahrgang.trim().length < 4) nextErrors.jahrgang = "Mindestens 4 Zeichen.";
+    if (!jahrgang) nextErrors.jahrgang = "Erforderlich.";
     if (!matrikelnummer) nextErrors.matrikelnummer = "Erforderlich.";
     else if (!/^\d{5,10}$/.test(matrikelnummer)) nextErrors.matrikelnummer = "5–10 Ziffern.";
     if (Object.keys(nextErrors).length > 0) {
@@ -92,7 +93,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
           studienfach: studienfach || null,
           matrikelnummer: matrikelnummer || null,
           hochschule: hochschule || null,
-          jahrgang: jahrgang ? jahrgang.toUpperCase() : null,
+          jahrgang: jahrgang || null,
         });
       } else {
         await upsertProfile!({
@@ -100,7 +101,7 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
           studienfach: studienfach || undefined,
           matrikelnummer: matrikelnummer || undefined,
           hochschule: hochschule || undefined,
-          jahrgang: jahrgang ? jahrgang.toUpperCase() : undefined,
+          jahrgang: jahrgang || undefined,
           email: user.email ?? undefined,
         });
       }
@@ -199,18 +200,22 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
               {hochschuleError && <p className="text-xs text-destructive">{hochschuleError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sf">Studiengang *</Label>
-              <Input id="sf" value={studienfach} onChange={(e) => setStudienfach(e.target.value)} />
+              <Label>Studiengang *</Label>
+              <Combobox
+                value={studienfach}
+                onChange={setStudienfach}
+                options={STUDIENFAECHER}
+                placeholder="Studiengang wählen"
+              />
               {studienfachError && <p className="text-xs text-destructive">{studienfachError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="jg">Studienjahrgang *</Label>
-              <Input
-                id="jg"
-                placeholder="z. B. TIF25B"
+              <Label>Studienjahrgang *</Label>
+              <Combobox
                 value={jahrgang}
-                onChange={(e) => setJahrgang(e.target.value.toUpperCase())}
-                maxLength={8}
+                onChange={setJahrgang}
+                options={JAHRGAENGE}
+                placeholder="Jahrgang wählen"
               />
               {jahrgangError && <p className="text-xs text-destructive">{jahrgangError}</p>}
             </div>

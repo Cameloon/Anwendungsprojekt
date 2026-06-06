@@ -382,7 +382,7 @@ const ForumPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-32 md:pt-28 pb-16 px-6">
+      <div className="pt-32 md:pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
             {/* Sidebar */}

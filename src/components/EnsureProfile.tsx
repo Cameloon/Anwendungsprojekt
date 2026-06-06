@@ -14,7 +14,7 @@ const EnsureProfile = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!IS_DEMO && user && isAuthenticated && profile === null && !created.current && upsertProfile) {
       created.current = true;
-      upsertProfile({ email: user.email ?? undefined });
+      upsertProfile({ email: user.email ?? undefined, role: "user" });
     }
   }, [user, isAuthenticated, profile, upsertProfile]);
 
