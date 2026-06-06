@@ -90,7 +90,7 @@ const Index = () => {
       <Navbar />
 
       {/* Hero */}
-      <section className="pt-20 md:pt-32 pb-12 md:pb-20 px-4 sm:px-6 relative overflow-hidden">
+      <section className="pt-32 md:pt-28 pb-12 md:pb-20 px-4 sm:px-6 relative overflow-hidden">
         {/* Gradient background blobs */}
         <div className="absolute inset-0 -z-0 pointer-events-none">
           <div className="absolute top-6 left-1/2 -translate-x-1/2 sm:left-1/4 sm:translate-x-0 w-44 sm:w-[380px] md:w-[480px] h-44 sm:h-[380px] md:h-[480px] rounded-full blur-3xl opacity-30 bg-gradient-to-br from-primary to-accent" />

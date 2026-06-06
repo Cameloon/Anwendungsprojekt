@@ -121,7 +121,7 @@ const SkriptePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-32 md:pt-28 pb-16 px-6">
         <div className="container mx-auto max-w-6xl">
           {/* Header */}
           <motion.div
