@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import EnsureProfile from "@/components/EnsureProfile";
@@ -29,12 +30,14 @@ import {
 } from "./pages/LegalPages.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
-import Enum from "./lib/Enum";
-import type { languageSetting } from "./lib/Enum";
-
-import { create } from "domain";
-
 const queryClient = new QueryClient();
+
+let currentLanguageBase: languageSetting = Enum.variant("german", {});
+let [currentLanguage, setLanguage] = useState(currentLanguageBase);
+
+
+export const LanguageContext = createContext(currentLanguage)
+
 
 
 
@@ -42,20 +45,16 @@ const queryClient = new QueryClient();
 const App = () => {
   const [booting, setBooting] = useState(true);
 
-let languageBase: languageSetting = Enum.variant("german", {});
-let [language, setLanguage] = useState(languageBase);
-
-
   useEffect(() => {
     const t = setTimeout(() => setBooting(false), 1600);
     return () => clearTimeout(t);
   }, []);
 
   return (
-<<<<<<< HEAD
-    <LanguageContext.Provider value={currentLanguage}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
+
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <LanguageProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -145,10 +144,12 @@ let [language, setLanguage] = useState(languageBase);
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </LanguageContext.Provider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
+
+  
 };
 
 export default App;

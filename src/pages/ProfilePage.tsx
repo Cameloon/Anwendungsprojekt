@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import AccountSettingsDialog from "@/components/AccountSettingsDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useLanguage } from "@/hooks/useLanguage";
 import { loadScripts } from "@/lib/scriptsStore";
 import { loadPosts } from "@/lib/forumStore";
 
 const ProfilePage = () => {
+  const { language, setLanguage } = useLanguage();
   const { user } = useAuth();
   const profile = useProfile();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -107,7 +109,7 @@ const ProfilePage = () => {
           )}
         </motion.div>
       </main>
-      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} language={language} setLanguage={setLanguage} />
     </div>
   );
 };
