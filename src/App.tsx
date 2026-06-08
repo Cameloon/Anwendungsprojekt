@@ -32,14 +32,6 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
-let currentLanguageBase: languageSetting = Enum.variant("german", {});
-let [currentLanguage, setLanguage] = useState(currentLanguageBase);
-
-
-export const LanguageContext = createContext(currentLanguage)
-
-
-
 
 
 const App = () => {
