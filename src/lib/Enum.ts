@@ -28,6 +28,8 @@ export type languageSetting = Enum<{
   english: {},
 }>
 
+export type languageSetter = React.Dispatch<React.SetStateAction<languageSetting>>
+
 export default class Enum<T extends Record<string, any>> {
   private constructor(
     public readonly tag: keyof T,

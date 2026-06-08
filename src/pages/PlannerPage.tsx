@@ -44,7 +44,7 @@ import { validateTitle, validateDate, validateMessage } from "@/lib/validation";
 
 
 
-import { languageSetting } from "@/lib/Enum";
+import { useLanguage } from "@/hooks/useLanguage";
 
 
 interface Attachment {
@@ -113,9 +113,10 @@ const formatBytes = (b: number) => {
 
 
 
-const PlannerPage = (props: {language: languageSetting}) => {
+const PlannerPage = () => {
   const { user } = useAuth();
   const profile = useProfile();
+  const { language } = useLanguage();
   const me = profile?.display_name || "Du";
   const [deadlines, setDeadlines] = useState<Deadline[]>(initialDeadlines);
   const [title, setTitle] = useState("");
@@ -207,7 +208,7 @@ const PlannerPage = (props: {language: languageSetting}) => {
       toast({
         title: `${newInvitees.length} Einladung(en) gesendet`,
         //description: "Eingeladene Personen werden benachrichtigt.",
-        description: props.language.match(
+        description: language.match(
           {
             english: () => {return "Invited people will get notified"},
             german: () => {return "Eingeladene Personen werden benachrichtigt"},
@@ -366,7 +367,7 @@ const PlannerPage = (props: {language: languageSetting}) => {
                   <CalendarDays className="h-5 w-5 text-primary" />
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {props.language.match(
+                  {language.match(
                     {
                       english: () => {return "Appointments & Deadlines"},
                       german: () => {return "Termine & Deadlines"},
@@ -378,7 +379,7 @@ const PlannerPage = (props: {language: languageSetting}) => {
                 Termin-<span className="text-gradient">Planner</span>
               </h1>
               <p className="text-muted-foreground mt-1">
-                {props.language.match(
+                {language.match(
                   {
                     english: () => {return "Keep an eye on all of your Tests and Assignments"},
                     german: () => {return "Behalte alle Abgaben und Prüfungen im Blick"},
