@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import { Users, Plus, Copy, Check, LogIn, Trash2, Crown, Presentation } from "lucide-react";
+import { useState } from "react";
+import { Users, Plus, Copy, Check, LogIn, Trash2, Crown, Presentation, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { createGroup, joinGroup, loadGroups, saveGroups, subscribeGroups, type Group } from "@/lib/groupStore";
+import { useAuth } from "@/hooks/useAuth";
 import Whiteboard from "@/components/Whiteboard";
 
 interface GroupsPanelProps {
@@ -20,41 +23,63 @@ interface GroupsPanelProps {
 }
 
 const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
-  const [groups, setGroups] = useState<Group[]>(() => loadGroups());
+  const { user } = useAuth();
+  const rawGroups = useQuery(api.groups.listForUser);
+  const createGroupMut = useMutation(api.groups.create);
+  const joinByCodeMut = useMutation(api.groups.joinByCode);
+  const deleteGroupMut = useMutation(api.groups.deleteGroup);
+
+  const groups = rawGroups ?? [];
   const [view, setView] = useState<"list" | "create" | "join" | "detail">("list");
-  const [active, setActive] = useState<Group | null>(null);
+  const [activeId, setActiveId] = useState<Id<"groups"> | null>(null);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"info" | "whiteboard">("info");
-  // derive validation messages from inputs so they clear on change
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
 
-  useEffect(() => subscribeGroups(() => setGroups(loadGroups())), []);
+  const active = activeId ? groups.find((g) => g._id === activeId) ?? null : null;
 
   const nameError = name.trim().length > 0 && name.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
   const codeError = code.trim().length > 0 && code.trim().length !== 6 ? "Der Einladungscode hat 6 Zeichen." : "";
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (name.trim().length < 3) return;
-    const g = createGroup(name.trim(), desc.trim());
-    setGroups(loadGroups());
-    setActive(g);
-    setName("");
-    setDesc("");
-    setView("detail");
-    toast.success("Gruppe erstellt!");
+    setCreating(true);
+    try {
+      const result = await createGroupMut({ name: name.trim(), description: desc.trim() });
+      setName("");
+      setDesc("");
+      setActiveId(result.groupId as Id<"groups">);
+      setView("detail");
+      toast.success("Gruppe erstellt!");
+    } catch {
+      toast.error("Fehler beim Erstellen der Gruppe.");
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (code.trim().length !== 6) return;
-    const g = joinGroup(code.trim());
-    if (!g) return toast.error("Code ungültig");
-    setGroups(loadGroups());
-    setActive(g);
-    setCode("");
-    setView("detail");
-    toast.success(`Beigetreten: ${g.name}`);
+    setJoining(true);
+    try {
+      const result = await joinByCodeMut({ code: code.trim().toUpperCase() });
+      if (!result) {
+        toast.error("Code ungültig");
+        return;
+      }
+      setActiveId(result.groupId as Id<"groups">);
+      setCode("");
+      setView("detail");
+      toast.success(`Beigetreten: ${result.name}`);
+    } catch {
+      toast.error("Fehler beim Beitreten.");
+    } finally {
+      setJoining(false);
+    }
   };
 
   const handleCopy = (txt: string) => {
@@ -63,12 +88,16 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const deleteGroup = (id: string) => {
+  const handleDelete = async (id: Id<"groups">) => {
     if (!window.confirm("Gruppe wirklich löschen?")) return;
-    const next = groups.filter((g) => g.id !== id);
-    saveGroups(next);
-    setGroups(next);
-    setView("list");
+    try {
+      await deleteGroupMut({ groupId: id });
+      setView("list");
+      setActiveId(null);
+      toast.success("Gruppe gelöscht.");
+    } catch {
+      toast.error("Fehler beim Löschen.");
+    }
   };
 
   return (
@@ -93,7 +122,11 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
                 </Button>
               </div>
 
-              {groups.length === 0 ? (
+              {!rawGroups ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : groups.length === 0 ? (
                 <div className="text-center py-10 border border-dashed rounded-xl">
                   <Users className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
                   <p className="text-sm text-muted-foreground">Noch keine Gruppen</p>
@@ -103,9 +136,9 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
                 <ul className="space-y-2">
                   {groups.map((g) => (
                     <li
-                      key={g.id}
+                      key={g._id}
                       onClick={() => {
-                        setActive(g);
+                        setActiveId(g._id);
                         setTab("info");
                         setView("detail");
                       }}
@@ -135,7 +168,10 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
               <Textarea placeholder="Worum geht's? (optional)" value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} />
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setView("list")}>Zurück</Button>
-                <Button onClick={handleCreate}>Erstellen</Button>
+                <Button onClick={handleCreate} disabled={creating}>
+                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Erstellen
+                </Button>
               </div>
             </motion.div>
           )}
@@ -153,7 +189,10 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
               {codeError && <p className="text-xs text-destructive">{codeError}</p>}
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setView("list")}>Zurück</Button>
-                <Button onClick={handleJoin}>Beitreten</Button>
+                <Button onClick={handleJoin} disabled={joining}>
+                  {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Beitreten
+                </Button>
               </div>
             </motion.div>
           )}
@@ -203,11 +242,11 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
                     <p className="text-xs text-muted-foreground mb-2">Mitglieder ({active.members.length})</p>
                     <div className="flex flex-wrap gap-2">
                       {active.members.map((m) => (
-                        <span key={m} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-sm">
+                        <span key={m.userId} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-sm">
                           <span className="h-5 w-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center font-bold">
-                            {m[0]}
+                            {m.displayName[0]}
                           </span>
-                          {m}
+                          {m.displayName}
                         </span>
                       ))}
                     </div>
@@ -215,9 +254,11 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
 
                   <div className="flex gap-2 justify-between pt-2">
                     <Button variant="outline" onClick={() => setView("list")}>Zurück</Button>
-                    <Button variant="ghost" onClick={() => deleteGroup(active.id)} className="text-destructive gap-2">
-                      <Trash2 className="h-4 w-4" /> Löschen
-                    </Button>
+                    {user && active.ownerId === user.id && (
+                      <Button variant="ghost" onClick={() => handleDelete(active._id)} className="text-destructive gap-2">
+                        <Trash2 className="h-4 w-4" /> Löschen
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -225,7 +266,7 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
               {tab === "whiteboard" && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Gemeinsames Whiteboard für deine Gruppe — wird lokal gespeichert.</p>
-                  <Whiteboard storageKey={`group-${active.id}`} height={420} />
+                  <Whiteboard storageKey={`group-${active._id}`} height={420} />
                   <Button variant="outline" onClick={() => setView("list")} className="mt-3">Zurück</Button>
                 </div>
               )}

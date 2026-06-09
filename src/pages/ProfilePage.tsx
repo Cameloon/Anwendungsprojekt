@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { GraduationCap, Mail, Calendar, BookOpen, Hash, MapPin, Settings, FileText, MessageSquare, Users } from "lucide-react";
+import { Mail, Calendar, BookOpen, Hash, MapPin, Settings, FileText, MessageSquare, Users } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,14 +13,14 @@ import AccountSettingsDialog from "@/components/AccountSettingsDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useLanguage } from "@/hooks/useLanguage";
-import { loadScripts } from "@/lib/scriptsStore";
-import { loadPosts } from "@/lib/forumStore";
 
 const ProfilePage = () => {
   const { language, setLanguage } = useLanguage();
   
   const { user } = useAuth();
   const profile = useProfile();
+  const scriptsData = useQuery(api.scripts.listVisible);
+  const postsData = useQuery(api.posts.listRecent);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (!user) return null;
@@ -29,13 +31,8 @@ const ProfilePage = () => {
     ? new Date(user.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })
     : "";
 
-  // Best-effort local stats
-  const myScripts = (() => {
-    try { return loadScripts().filter((s: any) => s.uploader === name || s.uploader === "Du").length; } catch { return 0; }
-  })();
-  const myPosts = (() => {
-    try { return loadPosts().filter((p: any) => p.author === name || p.author === "Du").length; } catch { return 0; }
-  })();
+  const myScripts = scriptsData?.filter((s) => s.authorId === user.id).length ?? 0;
+  const myPosts = postsData?.filter((p) => p.authorId === user.id).length ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,7 +112,7 @@ const ProfilePage = () => {
   );
 };
 
-const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
+const InfoRow = ({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) => (
   <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/40">
     <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
     <div className="min-w-0">

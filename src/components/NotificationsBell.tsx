@@ -1,16 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell, Check, X, CalendarDays, MessageSquare, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  loadNotifications,
-  subscribeNotifications,
-  acceptNotification,
-  declineNotification,
-  removeNotification,
-  type InviteNotification,
-} from "@/lib/notificationsStore";
 import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const formatTime = (ts: number) => {
   const diff = Date.now() - ts;
@@ -22,13 +17,64 @@ const formatTime = (ts: number) => {
   return new Date(ts).toLocaleDateString("de-DE");
 };
 
+interface NotificationItem {
+  id: string;
+  type: "forum_invite" | "deadline_invite";
+  fromName: string;
+  recipientName: string;
+  title: string;
+  status: "pending" | "accepted" | "declined";
+  createdAt: number;
+}
+
 const NotificationsBell = () => {
-  const [items, setItems] = useState<InviteNotification[]>(() => loadNotifications());
+  const notificationsQuery = useQuery(api.notifications.listForUser);
+  const acceptMutation = useMutation(api.notifications.accept);
+  const declineMutation = useMutation(api.notifications.decline);
+  const removeMutation = useMutation(api.notifications.remove);
+
   const [open, setOpen] = useState(false);
 
-  useEffect(() => subscribeNotifications(() => setItems(loadNotifications())), []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw: any[] = (notificationsQuery ?? []) as any[];
+
+  const items: NotificationItem[] = raw.map((n: any) => ({
+    id: n._id,
+    type: n.type,
+    fromName: n.fromName,
+    recipientName: n.recipientName,
+    title: n.title,
+    status: n.status,
+    createdAt: n.createdAt,
+  }));
 
   const pending = items.filter((n) => n.status === "pending").length;
+
+  const acceptNotification = async (id: string) => {
+    try {
+      await acceptMutation({ notificationId: id as Id<"notifications"> });
+      toast.success("Einladung angenommen");
+    } catch {
+      toast.error("Fehler");
+    }
+  };
+
+  const declineNotification = async (id: string) => {
+    try {
+      await declineMutation({ notificationId: id as Id<"notifications"> });
+      toast("Abgelehnt");
+    } catch {
+      toast.error("Fehler");
+    }
+  };
+
+  const removeNotification = async (id: string) => {
+    try {
+      await removeMutation({ notificationId: id as Id<"notifications"> });
+    } catch {
+      toast.error("Fehler");
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -66,9 +112,9 @@ const NotificationsBell = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs leading-snug">
-                      <span className="font-semibold">{n.from}</span>
+                      <span className="font-semibold">{n.fromName}</span>
                       {" lädt "}
-                      <span className="font-semibold">{n.recipient}</span>
+                      <span className="font-semibold">{n.recipientName}</span>
                       {n.type === "forum_invite" ? " ins Forum " : " zum Termin "}
                       <span className="font-semibold">„{n.title}"</span>
                       {" ein."}
@@ -81,10 +127,7 @@ const NotificationsBell = () => {
                         <Button
                           size="sm"
                           className="h-7 text-xs gap-1 flex-1"
-                          onClick={() => {
-                            acceptNotification(n.id);
-                            toast.success("Einladung angenommen");
-                          }}
+                          onClick={() => acceptNotification(n.id)}
                         >
                           <Check className="h-3 w-3" /> Annehmen
                         </Button>
@@ -92,10 +135,7 @@ const NotificationsBell = () => {
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs gap-1 flex-1"
-                          onClick={() => {
-                            declineNotification(n.id);
-                            toast("Abgelehnt");
-                          }}
+                          onClick={() => declineNotification(n.id)}
                         >
                           <X className="h-3 w-3" /> Ablehnen
                         </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -7,7 +7,6 @@ import {
   Plus,
   ThumbsUp,
   Users,
-  Globe,
   Lock,
   Hash,
   FileText,
@@ -15,7 +14,6 @@ import {
   X,
   UserPlus,
   Copy,
-  Trash2,
   ExternalLink,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -31,62 +29,130 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
-import {
-  loadForums,
-  subscribeForums,
-  leaveForum,
-  deleteForum,
-  joinForum,
-  type Forum,
-} from "@/lib/forumsStore";
-import { addPost, loadPosts, subscribe, type SharedPost } from "@/lib/forumStore";
-import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
-import { inviteToForum } from "@/lib/notificationsStore";
 
-const tagStyles = {
+const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
   lerngruppe: "bg-primary/15 text-primary border-primary/20",
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
-const tagLabels = {
+const tagLabels: Record<string, string> = {
   frage: "Frage",
   lerngruppe: "Lerngruppe",
   material: "Material",
   diskussion: "Diskussion",
 };
 
+interface PostItem {
+  id: string;
+  _creationTime: number;
+  authorName: string;
+  authorId: string;
+  title: string;
+  content: string;
+  tag: string;
+  liked: boolean;
+  likeCount: number;
+  commentCount: number;
+  linkedScriptIds?: string[];
+}
+
+interface MemberItem {
+  userId: string;
+  displayName: string;
+}
+
+interface ForumDetailData {
+  id: string;
+  name: string;
+  description: string;
+  visibility: "public" | "private";
+  kurs?: string;
+  vorlesung?: string;
+  professor?: string;
+  standort?: string;
+  inviteCode: string;
+  ownerId: string;
+  members: MemberItem[];
+}
+
+interface ScriptItem {
+  _id: string;
+  title: string;
+  subject: string;
+}
+
+// ── Helpers ──
+
+function formatDate(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "gerade eben";
+  if (m < 60) return `vor ${m} Min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `vor ${h} Std`;
+  return new Date(ts).toLocaleDateString("de-DE");
+}
+
+// ── Convex production path ──
+
 const ForumDetailPage = () => {
   const { forumId } = useParams<{ forumId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const profile = useProfile();
-  const me = profile?.display_name || "Du";
+  const me = user?.id || "";
 
-  const [forums, setForums] = useState<Forum[]>(() => loadForums());
-  const [posts, setPosts] = useState<SharedPost[]>(() => loadPosts());
-  const [scripts, setScripts] = useState<Script[]>(() => publicScripts());
+  const forumQuery = useQuery(
+    api.forums.getById,
+    forumId ? { forumId: forumId as Id<"forums"> } : "skip"
+  );
+  const membersQuery = useQuery(
+    api.forums.getMembers,
+    forumId ? { forumId: forumId as Id<"forums"> } : "skip"
+  );
+  const isMemberQuery = useQuery(
+    api.forums.isMember,
+    forumId ? { forumId: forumId as Id<"forums"> } : "skip"
+  );
+  const postsQuery = useQuery(
+    api.posts.listByForum,
+    forumId ? { forumId: forumId as Id<"forums"> } : "skip"
+  );
+  const allScripts = useQuery(api.scripts.listPublic);
+
+  const joinMutation = useMutation(api.forums.join);
+  const leaveMutation = useMutation(api.forums.leave);
+  const createPostMutation = useMutation(api.posts.create);
+  const toggleLikeMutation = useMutation(api.posts.toggleLike);
+  const inviteMutation = useMutation(api.notifications.inviteToForum);
 
   const [showPostForm, setShowPostForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tag, setTag] = useState<SharedPost["tag"]>("diskussion");
+  const [tag, setTag] = useState("diskussion");
   const [linkedScriptIds, setLinkedScriptIds] = useState<string[]>([]);
   const [scriptPickerOpen, setScriptPickerOpen] = useState(false);
-
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteNames, setInviteNames] = useState("");
-  // errors derived from inputs so they clear when corrected
 
-  useEffect(() => subscribeForums(() => setForums(loadForums())), []);
-  useEffect(() => subscribe(() => setPosts(loadPosts())), []);
-  useEffect(() => subscribeScripts(() => setScripts(publicScripts())), []);
+  const loading = forumQuery === undefined || membersQuery === undefined || isMemberQuery === undefined || postsQuery === undefined;
 
-  const forum = useMemo(() => forums.find((f) => f.id === forumId), [forums, forumId]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-32 md:pt-24 pb-16 px-6 text-center">
+          <div className="h-6 w-6 animate-spin mx-auto text-muted-foreground border-2 border-current border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
 
-  if (!forum) {
+  if (!forumQuery) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -100,64 +166,237 @@ const ForumDetailPage = () => {
     );
   }
 
-  const isMember = forum.isDefault || forum.members.includes(me);
-  const isOwner = forum.ownerName === me;
+  const isMember = !!isMemberQuery;
+  const isOwner = forumQuery.ownerId === me;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawForum: any = forumQuery;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawMembers: any[] = membersQuery ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawPosts: any[] = postsQuery ?? [];
+
+  const forum: ForumDetailData = {
+    id: rawForum._id,
+    name: rawForum.name,
+    description: rawForum.description ?? "",
+    visibility: rawForum.visibility,
+    kurs: rawForum.kurs,
+    vorlesung: rawForum.vorlesung,
+    professor: rawForum.professor,
+    standort: rawForum.standort,
+    inviteCode: rawForum.inviteCode,
+    ownerId: rawForum.ownerId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    members: rawMembers.map((m: any) => ({ userId: m.userId, displayName: m.displayName })),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const posts: PostItem[] = rawPosts.map((p: any) => ({
+    id: p._id,
+    _creationTime: p._creationTime,
+    authorName: p.authorName,
+    authorId: p.authorId,
+    title: p.title,
+    content: p.content,
+    tag: p.tag,
+    liked: p.liked ?? false,
+    likeCount: p.likeCount ?? 0,
+    commentCount: (p.comments ?? []).length,
+    linkedScriptIds: p.linkedScriptIds,
+  }));
+
+  const scripts: ScriptItem[] = (allScripts ?? []).map((s: any) => ({
+    _id: s._id,
+    title: s.title,
+    subject: s.subject,
+  }));
 
   const titleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
   const contentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
   const inviteError = inviteNames.trim().length === 0 ? "Mindestens eine Person angeben." : "";
 
-  const forumPosts = posts.filter((p) =>
-    forum.isDefault ? !p.groupId : p.groupId === forum.id
-  );
-
-  const handlePost = () => {
+  const handlePost = async () => {
     const nextTitleError = title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
     const nextContentError = content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
     if (nextTitleError || nextContentError) return;
-    addPost({
-      id: Date.now().toString(),
-      author: me,
-      title: title.trim(),
-      content: content.trim(),
-      date: "gerade eben",
-      likes: 0,
-      replies: 0,
-      tag,
-      kurs: forum.kurs,
-      vorlesung: forum.vorlesung,
-      professor: forum.professor,
-      standort: forum.standort,
-      visibility: forum.visibility,
-      groupId: forum.isDefault ? undefined : forum.id,
-      linkedScriptIds: linkedScriptIds.length ? linkedScriptIds : undefined,
-    });
-    setTitle("");
-    setContent("");
-    setLinkedScriptIds([]);
-    setShowPostForm(false);
-    toast.success("Beitrag veröffentlicht");
+    try {
+      await createPostMutation({
+        forumId: forum.id as Id<"forums">,
+        title: title.trim(),
+        content: content.trim(),
+        tag: tag as "frage" | "lerngruppe" | "material" | "diskussion",
+        visibility: forum.visibility,
+        linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
+      });
+      setTitle("");
+      setContent("");
+      setLinkedScriptIds([]);
+      setShowPostForm(false);
+      toast.success("Beitrag veröffentlicht");
+    } catch {
+      toast.error("Fehler beim Veröffentlichen");
+    }
   };
 
-  const handleInvite = () => {
-    const recipients = inviteNames
+  const handleToggleLike = (postId: string) => {
+    if (!me) return;
+    toggleLikeMutation({ postId: postId as Id<"posts"> });
+  };
+
+  const handleJoin = async () => {
+    try {
+      await joinMutation({ forumId: forum.id as Id<"forums"> });
+      toast.success("Beigetreten");
+    } catch {
+      toast.error("Fehler beim Beitreten");
+    }
+  };
+
+  const handleLeave = async () => {
+    try {
+      await leaveMutation({ forumId: forum.id as Id<"forums"> });
+      navigate("/forum");
+    } catch {
+      toast.error("Fehler beim Verlassen");
+    }
+  };
+
+  const handleInvite = async () => {
+    const rawNames = inviteNames
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    if (recipients.length === 0) {
+    if (rawNames.length === 0) {
       toast.error("Mindestens eine Person angeben");
       return;
     }
-    inviteToForum(forum.id, forum.name, recipients, me);
-    toast.success(`${recipients.length} Einladung(en) gesendet`);
-    setInviteNames("");
-    setInviteOpen(false);
+    try {
+      await inviteMutation({
+        forumId: forum.id as Id<"forums">,
+        forumName: forum.name,
+        recipientIds: rawNames,
+        recipientNames: rawNames,
+        fromName: me,
+      });
+      toast.success(`${rawNames.length} Einladung(en) gesendet`);
+      setInviteNames("");
+      setInviteOpen(false);
+    } catch {
+      toast.error("Fehler beim Senden der Einladungen");
+    }
   };
 
   const toggleLink = (id: string) =>
     setLinkedScriptIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const Icon = forum.isDefault ? Globe : forum.visibility === "public" ? Hash : Lock;
+  return (
+    <ForumDetailLayout
+      forum={forum}
+      posts={posts}
+      me={me}
+      isMember={isMember}
+      isOwner={isOwner}
+      navigate={navigate}
+      showPostForm={showPostForm}
+      setShowPostForm={setShowPostForm}
+      title={title}
+      setTitle={setTitle}
+      content={content}
+      setContent={setContent}
+      tag={tag}
+      setTag={setTag}
+      linkedScriptIds={linkedScriptIds}
+      toggleLink={toggleLink}
+      scriptPickerOpen={scriptPickerOpen}
+      setScriptPickerOpen={setScriptPickerOpen}
+      scripts={scripts}
+      handlePost={handlePost}
+      handleToggleLike={handleToggleLike}
+      handleJoin={handleJoin}
+      handleLeave={handleLeave}
+      titleError={titleError}
+      contentError={contentError}
+      inviteOpen={inviteOpen}
+      setInviteOpen={setInviteOpen}
+      inviteNames={inviteNames}
+      setInviteNames={setInviteNames}
+      inviteError={inviteError}
+      handleInvite={handleInvite}
+    />
+  );
+}
+
+
+
+// ── Shared layout ──
+
+function ForumDetailLayout({
+  forum,
+  posts,
+  me,
+  isMember,
+  isOwner,
+  navigate,
+  showPostForm,
+  setShowPostForm,
+  title,
+  setTitle,
+  content,
+  setContent,
+  tag,
+  setTag,
+  linkedScriptIds,
+  toggleLink,
+  scriptPickerOpen,
+  setScriptPickerOpen,
+  scripts,
+  handlePost,
+  handleToggleLike,
+  handleJoin,
+  handleLeave,
+  titleError,
+  contentError,
+  inviteOpen,
+  setInviteOpen,
+  inviteNames,
+  setInviteNames,
+  inviteError,
+  handleInvite,
+}: {
+  forum: ForumDetailData;
+  posts: PostItem[];
+  me: string;
+  isMember: boolean;
+  isOwner: boolean;
+  navigate: ReturnType<typeof useNavigate>;
+  showPostForm: boolean;
+  setShowPostForm: (v: boolean) => void;
+  title: string;
+  setTitle: (v: string) => void;
+  content: string;
+  setContent: (v: string) => void;
+  tag: string;
+  setTag: (v: any) => void;
+  linkedScriptIds: string[];
+  toggleLink: (id: string) => void;
+  scriptPickerOpen: boolean;
+  setScriptPickerOpen: (v: boolean) => void;
+  scripts: ScriptItem[];
+  handlePost: () => void;
+  handleToggleLike: (id: string) => void;
+  handleJoin: () => void;
+  handleLeave: () => void;
+  titleError: string;
+  contentError: string;
+  inviteOpen: boolean;
+  setInviteOpen: (v: boolean) => void;
+  inviteNames: string;
+  setInviteNames: (v: string) => void;
+  inviteError: string;
+  handleInvite: () => void;
+}) {
+  const Icon = forum.visibility === "public" ? Hash : Lock;
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,39 +452,22 @@ const ForumDetailPage = () => {
                 )}
               </div>
               <div className="flex flex-col gap-2 shrink-0">
-                {!forum.isDefault && (
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInviteOpen(true)}>
-                    <UserPlus className="h-4 w-4" /> Einladen
-                  </Button>
-                )}
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInviteOpen(true)}>
+                  <UserPlus className="h-4 w-4" /> Einladen
+                </Button>
                 {forum.visibility === "public" && !isMember && (
-                  <Button size="sm" onClick={() => { joinForum(forum.id, me); toast.success("Beigetreten"); }}>
+                  <Button size="sm" onClick={handleJoin}>
                     Beitreten
                   </Button>
                 )}
-                {!isOwner && isMember && !forum.isDefault && (
-                  <Button size="sm" variant="ghost" onClick={() => { leaveForum(forum.id, me); navigate("/forum"); }}>
+                {!isOwner && isMember && (
+                  <Button size="sm" variant="ghost" onClick={handleLeave}>
                     Verlassen
-                  </Button>
-                )}
-                {isOwner && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive gap-1"
-                    onClick={() => {
-                      if (window.confirm("Forum wirklich löschen?")) {
-                        deleteForum(forum.id);
-                        navigate("/forum");
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Löschen
                   </Button>
                 )}
               </div>
             </div>
-            {forum.visibility === "private" && !forum.isDefault && (
+            {forum.visibility === "private" && (
               <div className="rounded-lg border bg-primary/5 p-2 mt-4 max-w-xs">
                 <p className="text-[10px] text-muted-foreground mb-1">Einladungscode</p>
                 <div className="flex items-center gap-1">
@@ -272,7 +494,7 @@ const ForumDetailPage = () => {
             {/* Posts */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-heading font-semibold">Beiträge ({forumPosts.length})</h2>
+                <h2 className="font-heading font-semibold">Beiträge ({posts.length})</h2>
                 <Button
                   size="sm"
                   className="gap-1.5"
@@ -323,7 +545,7 @@ const ForumDetailPage = () => {
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {linkedScriptIds.map((id) => {
-                          const s = scripts.find((x) => x.id === id);
+                          const s = scripts.find((x) => x._id === id);
                           if (!s) return null;
                           return (
                             <span key={id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-success/10 text-success">
@@ -350,22 +572,22 @@ const ForumDetailPage = () => {
                 </div>
               )}
 
-              {forumPosts.length === 0 ? (
+              {posts.length === 0 ? (
                 <div className="glass-card p-10 text-center">
                   <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
                   <p className="text-muted-foreground text-sm">Noch keine Beiträge.</p>
                 </div>
               ) : (
-                forumPosts.map((p) => (
+                posts.map((p) => (
                   <article
                     key={p.id}
                     onClick={() => navigate(`/forum/${forum.id}/post/${p.id}`)}
                     className="glass-card p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
                   >
                     <div className="flex items-center gap-2 mb-1.5 text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">{p.author}</span>
+                      <span className="font-semibold text-foreground">{p.authorName}</span>
                       <span>·</span>
-                      <span>{p.date}</span>
+                      <span>{formatDate(p._creationTime)}</span>
                       <Badge variant="outline" className={`${tagStyles[p.tag]} text-[10px] py-0 h-5 ml-auto`}>
                         {tagLabels[p.tag]}
                       </Badge>
@@ -375,7 +597,7 @@ const ForumDetailPage = () => {
                     {p.linkedScriptIds && p.linkedScriptIds.length > 0 && (
                       <div className="mt-3 pt-3 border-t flex flex-wrap gap-1.5">
                         {p.linkedScriptIds.map((id) => {
-                          const s = scripts.find((x) => x.id === id);
+                          const s = scripts.find((x) => x._id === id);
                           if (!s) return null;
                           return (
                             <Link
@@ -393,8 +615,16 @@ const ForumDetailPage = () => {
                       </div>
                     )}
                     <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {p.likes}</span>
-                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {p.comments?.length ?? 0}</span>
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleLike(p.id); }}
+                        className={`inline-flex items-center gap-1 transition-colors ${
+                          p.liked ? "text-primary" : "hover:text-foreground"
+                        }`}
+                      >
+                        <ThumbsUp className={`h-3.5 w-3.5 ${p.liked ? "fill-primary" : ""}`} />
+                        {p.likeCount}
+                      </button>
+                      <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {p.commentCount}</span>
                     </div>
                   </article>
                 ))
@@ -410,12 +640,12 @@ const ForumDetailPage = () => {
                     <p className="text-xs text-muted-foreground">Keine Mitglieder</p>
                   ) : (
                     forum.members.map((m) => (
-                      <div key={m} className="flex items-center gap-2 text-sm">
+                      <div key={m.userId} className="flex items-center gap-2 text-sm">
                         <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                          {m[0]?.toUpperCase()}
+                          {m.displayName[0]?.toUpperCase()}
                         </div>
-                        <span className="truncate">{m}</span>
-                        {m === forum.ownerName && (
+                        <span className="truncate">{m.displayName}</span>
+                        {m.userId === forum.ownerId && (
                           <span className="text-[9px] px-1.5 rounded bg-secondary text-muted-foreground ml-auto">Owner</span>
                         )}
                       </div>
@@ -430,15 +660,15 @@ const ForumDetailPage = () => {
                 </p>
                 {(() => {
                   const used = new Set<string>();
-                  forumPosts.forEach((p) => p.linkedScriptIds?.forEach((id) => used.add(id)));
-                  const linked = scripts.filter((s) => used.has(s.id));
+                  posts.forEach((p) => p.linkedScriptIds?.forEach((id) => used.add(id)));
+                  const linked = scripts.filter((s) => used.has(s._id));
                   if (linked.length === 0)
                     return <p className="text-xs text-muted-foreground">Noch keine Skripte verlinkt.</p>;
                   return (
                     <div className="space-y-1.5">
                       {linked.map((s) => (
                         <Link
-                          key={s.id}
+                          key={s._id}
                           to="/skripte"
                           className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/40 text-sm"
                         >
@@ -501,11 +731,11 @@ const ForumDetailPage = () => {
               </p>
             ) : (
               scripts.map((s) => {
-                const checked = linkedScriptIds.includes(s.id);
+                const checked = linkedScriptIds.includes(s._id);
                 return (
                   <button
-                    key={s.id}
-                    onClick={() => toggleLink(s.id)}
+                    key={s._id}
+                    onClick={() => toggleLink(s._id)}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                       checked
                         ? "bg-primary/5 border-primary/40"
@@ -516,7 +746,7 @@ const ForumDetailPage = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{s.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {s.subject} · {s.author}
+                        {s.subject}
                       </p>
                     </div>
                     {checked && <span className="text-xs text-primary font-medium">Verlinkt</span>}
@@ -532,6 +762,6 @@ const ForumDetailPage = () => {
       </Dialog>
     </div>
   );
-};
+}
 
 export default ForumDetailPage;
