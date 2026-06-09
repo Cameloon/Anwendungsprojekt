@@ -277,6 +277,9 @@ export const ensureAllgemeinForum = mutation({
       .first();
 
     if (existing) {
+      if (existing.ownerId) {
+        await ctx.db.patch(existing._id, { ownerId: undefined });
+      }
       const isMember = await ctx.db
         .query("forumMembers")
         .withIndex("by_forum_user", (q) =>

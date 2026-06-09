@@ -146,19 +146,12 @@ function ForumPage() {
   const ensureAllgemeinForumMutation = useMutation(api.forums.ensureAllgemeinForum);
   const deletePostMutation = useMutation(api.posts.deletePost);
 
-  const lastSynced = useRef("");
   const [adminViewJahrgang, setAdminViewJahrgang] = useState<string>("");
-  const mounted = useRef(false);
 
-  // Auto-create/join forums when jahrgang changes (not on initial mount)
+  // Auto-create/join forums on every mount (idempotent — cheap and semester-safe)
   useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
     const jg = isAdmin && adminViewJahrgang && adminViewJahrgang !== "ALL" ? adminViewJahrgang : myJahrgang;
-    if (jg && jg !== lastSynced.current) {
-      lastSynced.current = jg;
+    if (jg) {
       ensureLectureForumsMutation({ jahrgang: jg }).catch(() => {});
       ensureAllgemeinForumMutation({ jahrgang: jg }).catch(() => {});
     }
