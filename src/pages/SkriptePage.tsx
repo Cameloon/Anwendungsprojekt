@@ -167,9 +167,10 @@ const SkriptePage = () => {
     },
   ];
 
-  const titleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const subjectError = validateSubject(subject);
-  const descriptionError = validateScriptDescription(description);
+  // derived validation messages (live) so they update/clear automatically
+  const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+  const subjectError = subject.trim().length > 0 ? validateSubject(subject) : "";
+  const descriptionError = description.trim().length > 0 ? validateScriptDescription(description) : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,27 +234,38 @@ const SkriptePage = () => {
               >
                 <div className="glass-card p-5 space-y-4">
                   <div className="grid md:grid-cols-2 gap-3">
-                    <Input
-                      placeholder="Titel des Skripts"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
-                    <Input
-                      placeholder="Fach / Modul"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        placeholder="Titel des Skripts"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                      />
+                      {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        placeholder="Fach / Modul"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                      />
+                      {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
+                    </div>
                   </div>
-                  {titleError && <p className="text-xs text-destructive">{titleError}</p>}
-                  {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
-                  <Textarea
-                    placeholder="Kurze Beschreibung zum Inhalt"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                  />
-                  {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
+                  <div className="space-y-1">
+                    <Textarea
+                      placeholder="Kurze Beschreibung zum Inhalt"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                    />
+                    {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
+                  </div>
+                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
+                    <p className="font-medium text-foreground">Datei hierher ziehen</p>
+                    <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibility("public")}
