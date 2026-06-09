@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import EnsureProfile from "@/components/EnsureProfile";
@@ -31,6 +32,8 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
+
+
 const App = () => {
   const [booting, setBooting] = useState(true);
 
@@ -40,100 +43,105 @@ const App = () => {
   }, []);
 
   return (
+
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AnimatePresence>{booting && <SplashScreen />}</AnimatePresence>
-          <BrowserRouter>
-            <AuthProvider>
-              <EnsureProfile>
-              <div className="min-h-screen flex flex-col">
-                <div className="flex-1">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <ProtectedRoute>
-                          <DashboardPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin-dashboard"
-                      element={
-                        <AdminRoute><AdminDashboardPage /></AdminRoute>
-                      }
-                    />
-                    <Route
-                      path="/planner"
-                      element={
-                        <ProtectedRoute>
-                          <PlannerPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/forum"
-                      element={
-                        <ProtectedRoute>
-                          <ForumPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/forum/:forumId"
-                      element={
-                        <ProtectedRoute>
-                          <ForumDetailPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/forum/:forumId/post/:postId"
-                      element={
-                        <ProtectedRoute>
-                          <PostDetailPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/skripte"
-                      element={
-                        <ProtectedRoute>
-                          <SkriptePage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ProtectedRoute>
-                          <ProfilePage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/impressum" element={<ImpressumPage />} />
-                    <Route path="/datenschutz" element={<DatenschutzPage />} />
-                    <Route
-                      path="/nutzungsordnung"
-                      element={<NutzungsordnungPage />}
-                    />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-                <GlobalFooter />
-              </div>
-              <FeedbackButton />
-              </EnsureProfile>
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AnimatePresence>{booting && <SplashScreen />}</AnimatePresence>
+            <BrowserRouter>
+              <AuthProvider>
+                <EnsureProfile>
+                  <div className="min-h-screen flex flex-col">
+                    <div className="flex-1">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route
+                          path="/dashboard"
+                          element={
+                            <ProtectedRoute>
+                              <DashboardPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin-dashboard"
+                          element={
+                            <AdminRoute><AdminDashboardPage /></AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/planner"
+                          element={
+                            <ProtectedRoute>
+                              <PlannerPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum"
+                          element={
+                            <ProtectedRoute>
+                              <ForumPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum/:forumId"
+                          element={
+                            <ProtectedRoute>
+                              <ForumDetailPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/forum/:forumId/post/:postId"
+                          element={
+                            <ProtectedRoute>
+                              <PostDetailPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/skripte"
+                          element={
+                            <ProtectedRoute>
+                              <SkriptePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/profile"
+                          element={
+                            <ProtectedRoute>
+                              <ProfilePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/impressum" element={<ImpressumPage />} />
+                        <Route path="/datenschutz" element={<DatenschutzPage />} />
+                        <Route
+                          path="/nutzungsordnung"
+                          element={<NutzungsordnungPage />}
+                        />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </div>
+                    <GlobalFooter />
+                  </div>
+                  <FeedbackButton />
+                </EnsureProfile>
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
+
+  
 };
 
 export default App;

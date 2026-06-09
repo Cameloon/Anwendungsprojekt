@@ -30,12 +30,19 @@ import { useProfile } from "@/hooks/useProfile";
 import { toast } from "@/hooks/use-toast";
 import { IS_DEMO, demoStore } from "@/lib/demoMode";
 
+import Enum, { languageSetter } from "@/lib/Enum";
+import { useLanguage } from "@/hooks/useLanguage";
+import { languageSetting } from "@/lib/Enum";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+
 }
 
-const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
+const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
+
+  const { language, setLanguage } = useLanguage();
   const { user } = useAuth();
   const profile = useProfile();
   // These are safe to call only when providers are mounted (i.e., !IS_DEMO).
@@ -183,6 +190,29 @@ const AccountSettingsDialog = ({ open, onOpenChange }: Props) => {
               />
               {matrikelnummerError && <p className="text-xs text-destructive">{matrikelnummerError}</p>}
             </div>
+
+            <div className="space-y-2">
+              <Label>Sprache</Label>
+
+              <Select value={
+                language.match({
+                  english: () => {return "english"},
+                  german: () => {return "german"},
+                })
+              } onValueChange={(v) => {
+                console.log(v);
+                setLanguage(Enum.variant((v as any as "english" | "german" ), {}));
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Standort wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key={"Deutsch"} value={"german"} >Deutsch</SelectItem>
+                  <SelectItem key={"English (US)"} value={"english"} >English (US)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>DHBW-Standort *</Label>
               <Select value={hochschule} onValueChange={setHochschule}>

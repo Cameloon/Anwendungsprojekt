@@ -14,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const AccountMenu = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const profile = useProfile();
+  const { language, setLanguage } = useLanguage();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (!user) return null;
@@ -99,7 +101,7 @@ const AccountMenu = () => {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} language={language} setLanguage={setLanguage} />
     </>
   );
 };
