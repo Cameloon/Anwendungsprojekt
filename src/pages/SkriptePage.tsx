@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { loadScripts, saveScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
+import { validateSubject, validateScriptDescription } from "@/lib/validation";
 
 const subjectColors: Record<string, string> = {
   Mathematik: "bg-info/15 text-info border-info/20",
@@ -52,8 +53,8 @@ const SkriptePage = () => {
 
   const addScript = () => {
     const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-    const nextSubjectError = subject.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-    const nextDescriptionError = description.trim().length > 0 && description.trim().length < 10 ? "Mindestens 10 Zeichen oder leer lassen." : "";
+    const nextSubjectError = validateSubject(subject);
+    const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextSubjectError || nextDescriptionError) return;
     const next: Script = {
       id: Date.now().toString(),
@@ -115,8 +116,8 @@ const SkriptePage = () => {
 
   // derived validation messages (live) so they update/clear automatically
   const titleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const subjectError = subject.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-  const descriptionError = description.trim().length > 0 && description.trim().length < 10 ? "Mindestens 10 Zeichen oder leer lassen." : "";
+  const subjectError = validateSubject(subject);
+  const descriptionError = validateScriptDescription(description);
 
   return (
     <div className="min-h-screen bg-background">
