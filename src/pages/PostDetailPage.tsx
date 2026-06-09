@@ -66,10 +66,11 @@ const PostDetailPage = () => {
   useEffect(() => subscribeScripts(() => setScripts(publicScripts())), []);
 
   const post = useMemo(() => {
-    const storedPost = posts.find((p) => String(p.id) === postId);
+    if (!postId) return undefined;
+    const storedPost = posts.find((p) => p.id === postId);
     if (storedPost) return storedPost;
     if (forumId !== "public") return undefined;
-    return forumSeedPosts.find((p) => String(p.id) === postId);
+    return forumSeedPosts.find((p) => p.id === postId);
   }, [posts, postId, forumId]);
   const forum = useMemo(() => forums.find((f) => f.id === forumId), [forums, forumId]);
 
