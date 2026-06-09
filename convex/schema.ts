@@ -121,6 +121,8 @@ export default defineSchema({
     ),
     done: v.boolean(),
     note: v.optional(v.string()),
+    vorlesung: v.optional(v.string()),
+    declinedBy: v.optional(v.array(v.string())),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
@@ -146,6 +148,15 @@ export default defineSchema({
     text: v.string(),
     createdAt: v.number(),
   }).index("by_deadline", ["deadlineId"]),
+
+  deadlineSubscribers: defineTable({
+    deadlineId: v.id("deadlines"),
+    userId: v.string(),
+    done: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_deadline_user", ["deadlineId", "userId"])
+    .index("by_user", ["userId"]),
 
   scripts: defineTable({
     title: v.string(),
@@ -204,6 +215,13 @@ export default defineSchema({
     .index("by_group_user", ["groupId", "userId"])
     .index("by_group", ["groupId"])
     .index("by_user", ["userId"]),
+
+  semesterLectures: defineTable({
+    kurs: v.string(),
+    semesterNumber: v.number(),
+    lectureName: v.string(),
+    createdAt: v.number(),
+  }).index("by_kurs_semester", ["kurs", "semesterNumber"]),
 
   notifications: defineTable({
     type: v.union(

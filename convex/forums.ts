@@ -15,6 +15,7 @@ export const getAllAccessible = query({
       .unique();
 
     const userJahrgang = profile?.jahrgang || undefined;
+    const isAdmin = profile?.role === "admin";
 
     const allForums = await ctx.db.query("forums").collect();
     const myMemberships = await ctx.db
@@ -24,11 +25,20 @@ export const getAllAccessible = query({
     const memberForumIds = new Set(myMemberships.map((m) => m.forumId));
 
     const accessible = allForums.filter((f) => {
+      if (isAdmin) return true;
       if (memberForumIds.has(f._id)) return true;
       if (f.jahrgang && f.jahrgang !== userJahrgang) return false;
       if (f.visibility === "public") return true;
       return false;
     });
+
+    // Collect admin userIds to filter them out of member displays
+    const adminProfiles = await ctx.db
+      .query("profiles")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((q: any) => q.eq(q.field("role"), "admin"))
+      .collect();
+    const adminUserIds = new Set(adminProfiles.map((p: { userId: string }) => p.userId));
 
     return await Promise.all(
       accessible.map(async (f) => {
@@ -36,7 +46,8 @@ export const getAllAccessible = query({
           .query("forumMembers")
           .withIndex("by_forum", (q) => q.eq("forumId", f._id))
           .collect();
-        return { ...f, members };
+        const filtered = members.filter((m) => !adminUserIds.has(m.userId));
+        return { ...f, members: filtered };
       }),
     );
   },
@@ -87,10 +98,19 @@ export const getMembers = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    return await ctx.db
+    const members = await ctx.db
       .query("forumMembers")
       .withIndex("by_forum", (q) => q.eq("forumId", args.forumId))
       .collect();
+
+    const adminProfiles = await ctx.db
+      .query("profiles")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((q: any) => q.eq(q.field("role"), "admin"))
+      .collect();
+    const adminUserIds = new Set(adminProfiles.map((p: { userId: string }) => p.userId));
+
+    return members.filter((m) => !adminUserIds.has(m.userId));
   },
 });
 

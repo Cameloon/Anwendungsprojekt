@@ -20,12 +20,20 @@ import {
   Pencil,
   Globe,
   Lock,
+  GraduationCap,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -47,11 +55,6 @@ const categoryColors: Record<string, string> = {
   pruefung: "bg-destructive/15 text-destructive border-destructive/20",
   sonstiges: "bg-primary/15 text-primary border-primary/20",
 };
-const categoryDot: Record<string, string> = {
-  abgabe: "bg-info",
-  pruefung: "bg-destructive",
-  sonstiges: "bg-primary",
-};
 const categoryLabels: Record<string, string> = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
 
 interface Attachment {
@@ -69,6 +72,7 @@ interface DeadlineItem {
   category: "abgabe" | "pruefung" | "sonstiges";
   done: boolean;
   note?: string;
+  vorlesung?: string;
   attachments: Attachment[];
   messages: { id: string; author: string; text: string; createdAt: string }[];
   visibility: "public" | "private";
@@ -94,10 +98,14 @@ function PlannerPage() {
   const displayName = profile?.display_name || "Unbekannt";
 
   const deadlinesQuery = useQuery(api.deadlines.listForUser);
+  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang, {});
+  const jahrgangPeopleQuery = useQuery(api.profiles.listSameJahrgang, {});
 
   const createMutation = useMutation(api.deadlines.create);
   const updateMutation = useMutation(api.deadlines.update);
   const toggleDoneMutation = useMutation(api.deadlines.toggleDone);
+  const acceptDeadlineMutation = useMutation(api.deadlines.acceptDeadline);
+  const declineDeadlineMutation = useMutation(api.deadlines.declineDeadline);
   const deleteMutation = useMutation(api.deadlines.deleteDeadline);
   const addMessageMutation = useMutation(api.deadlines.addMessage);
   const inviteMutation = useMutation(api.notifications.inviteToDeadline);
@@ -121,8 +129,10 @@ function PlannerPage() {
   const [newMessage, setNewMessage] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [visibility, setVisibility] = useState<"public" | "private">("private");
-  const [inviteesInput, setInviteesInput] = useState("");
-  const [allowedKurseInput, setAllowedKurseInput] = useState("");
+  const [vorlesung, setVorlesung] = useState("");
+  const [inviteeSearch, setInviteeSearch] = useState("");
+  const [selectedInvitees, setSelectedInvitees] = useState<{ userId: string; displayName: string }[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(0);
 
   const deadlines: DeadlineItem[] = rawDeadlines.map((d: any) => ({
     id: d._id,
@@ -145,6 +155,7 @@ function PlannerPage() {
       createdAt: new Date(m._creationTime).toLocaleDateString("de-DE"),
     })),
     visibility: d.visibility,
+    vorlesung: d.vorlesung,
     invitees: d.invitees ?? [],
     allowedKurse: d.allowedKurse ?? [],
     ownerId: d.ownerId,
@@ -157,19 +168,63 @@ function PlannerPage() {
     setNote("");
     setPendingAttachments([]);
     setVisibility("private");
-    setInviteesInput("");
-    setAllowedKurseInput("");
+    setVorlesung("");
+    setInviteeSearch("");
+    setSelectedInvitees([]);
     setEditingId(null);
     setShowForm(false);
   };
 
-  const parseList = (s: string) =>
-    s.split(",").map((x) => x.trim()).filter(Boolean);
+  const selectInvitee = (p: { userId: string; displayName: string }) => {
+    setSelectedInvitees((prev) => [...prev, p]);
+    setInviteeSearch("");
+    setHighlightIndex(0);
+  };
+
+  const getFilteredInvitees = () =>
+    (jahrgangPeopleQuery ?? []).filter(
+      (p: { userId: string; displayName: string }) =>
+        p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
+        !selectedInvitees.some((s) => s.userId === p.userId),
+    );
+
+  const handleInviteeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const filtered = getFilteredInvitees().slice(0, 8);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filtered.length > 0) {
+        const idx = Math.min(highlightIndex, filtered.length - 1);
+        selectInvitee(filtered[idx]);
+      }
+    } else if (e.key === "Escape") {
+      setInviteeSearch("");
+      setHighlightIndex(0);
+    }
+  };
 
   const submitDeadline = async () => {
-    if (!title.trim() || !date) return;
-    const invitees = parseList(inviteesInput);
-    const allowedKurse = parseList(allowedKurseInput);
+    if (!title.trim() || !date || !vorlesung) {
+      if (!date) toast.error("Bitte ein Datum wählen");
+      else if (!vorlesung) toast.error("Bitte eine Vorlesung auswählen");
+      else toast.error("Bitte einen Titel eingeben");
+      return;
+    }
+    let inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
+    const inviteeNames = visibility === "private" ? selectedInvitees.map((s) => s.displayName) : [];
+
+    if (editingId) {
+      const existing = deadlines.find((d) => d.id === editingId);
+      if (existing) {
+        inviteeIds = [...new Set([...(existing.invitees ?? []), ...inviteeIds])];
+      }
+    }
+
     try {
       if (editingId) {
         await updateMutation({
@@ -178,10 +233,24 @@ function PlannerPage() {
           date,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
+          vorlesung: vorlesung || undefined,
           visibility,
-          invitees: invitees.length ? invitees : undefined,
-          allowedKurse: allowedKurse.length ? allowedKurse : undefined,
+          invitees: inviteeIds.length ? inviteeIds : undefined,
         });
+        if (inviteeIds.length) {
+          const existingInvitees = (deadlines.find((d) => d.id === editingId)?.invitees ?? []);
+          const newIds = inviteeIds.filter((id) => !existingInvitees.includes(id));
+          if (newIds.length) {
+            const newNames = newIds.map((id) => selectedInvitees.find((s) => s.userId === id)?.displayName ?? id);
+            await inviteMutation({
+              deadlineId: editingId as Id<"deadlines">,
+              deadlineTitle: title.trim(),
+              recipientIds: newIds,
+              recipientNames: newNames,
+              fromName: displayName,
+            });
+          }
+        }
         toast.success("Termin aktualisiert");
       } else {
         const result = await createMutation({
@@ -189,17 +258,17 @@ function PlannerPage() {
           date,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
+          vorlesung: vorlesung || undefined,
           visibility,
-          invitees: invitees.length ? invitees : undefined,
-          allowedKurse: allowedKurse.length ? allowedKurse : undefined,
+          invitees: inviteeIds.length ? inviteeIds : undefined,
         });
-        if (invitees.length) {
+        if (inviteeIds.length) {
           await inviteMutation({
             deadlineId: result as Id<"deadlines">,
             deadlineTitle: title.trim(),
-            recipientIds: invitees,
-            recipientNames: invitees,
-            fromName: me,
+            recipientIds: inviteeIds,
+            recipientNames: inviteeNames,
+            fromName: displayName,
           });
         }
         toast.success("Termin erstellt");
@@ -215,9 +284,15 @@ function PlannerPage() {
     setDate(d.date);
     setCategory(d.category);
     setNote(d.note ?? "");
+    setVorlesung(d.vorlesung ?? "");
     setVisibility(d.visibility);
-    setInviteesInput(d.invitees.join(", "));
-    setAllowedKurseInput(d.allowedKurse.join(", "));
+    const people = jahrgangPeopleQuery ?? [];
+    setSelectedInvitees(
+      (d.invitees ?? []).map((id: string) => ({
+        userId: id,
+        displayName: people.find((p: { userId: string; displayName: string }) => p.userId === id)?.displayName ?? id,
+      })),
+    );
     setEditingId(d.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -239,6 +314,24 @@ function PlannerPage() {
       toast.success("Termin gelöscht");
     } catch {
       toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const declineInvite = async (id: string) => {
+    try {
+      await declineDeadlineMutation({ deadlineId: id as Id<"deadlines"> });
+      toast.success("Abgelehnt");
+    } catch {
+      toast.error("Fehler");
+    }
+  };
+
+  const acceptInvite = async (id: string) => {
+    try {
+      await acceptDeadlineMutation({ deadlineId: id as Id<"deadlines"> });
+      toast.success("Termin angenommen — eigene Kopie erstellt");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Fehler beim Annehmen");
     }
   };
 
@@ -306,6 +399,8 @@ function PlannerPage() {
       startEdit={startEdit}
       toggleDone={toggleDone}
       removeDeadline={removeDeadline}
+      declineInvite={declineInvite}
+      acceptInvite={acceptInvite}
       search={search}
       setSearch={setSearch}
       filter={filter}
@@ -321,12 +416,21 @@ function PlannerPage() {
       setPendingAttachments={setPendingAttachments}
       visibility={visibility}
       setVisibility={setVisibility}
-      inviteesInput={inviteesInput}
-      setInviteesInput={setInviteesInput}
-      allowedKurseInput={allowedKurseInput}
-      setAllowedKurseInput={setAllowedKurseInput}
+      vorlesung={vorlesung}
+      setVorlesung={setVorlesung}
+      lectures={lecturesQuery ?? []}
+      inviteeSearch={inviteeSearch}
+      setInviteeSearch={setInviteeSearch}
+      selectedInvitees={selectedInvitees}
+      setSelectedInvitees={setSelectedInvitees}
+      jahrgangPeople={jahrgangPeopleQuery ?? []}
+      handleInviteeKeyDown={handleInviteeKeyDown}
+      selectInvitee={selectInvitee}
+      highlightIndex={highlightIndex}
+      setHighlightIndex={setHighlightIndex}
       openDeadline={openDeadline}
       displayName={displayName}
+      me={me}
     />
   );
 }
@@ -353,6 +457,8 @@ function PlannerLayout({
   startEdit,
   toggleDone,
   removeDeadline,
+  declineInvite,
+  acceptInvite,
   search,
   setSearch,
   filter,
@@ -368,12 +474,21 @@ function PlannerLayout({
   setPendingAttachments,
   visibility,
   setVisibility,
-  inviteesInput,
-  setInviteesInput,
-  allowedKurseInput,
-  setAllowedKurseInput,
+  vorlesung,
+  setVorlesung,
+  lectures,
+  inviteeSearch,
+  setInviteeSearch,
+  selectedInvitees,
+  setSelectedInvitees,
+  jahrgangPeople,
+  handleInviteeKeyDown,
+  selectInvitee,
+  highlightIndex,
+  setHighlightIndex,
   openDeadline,
   displayName,
+  me,
 }: {
   deadlines: DeadlineItem[];
   filtered: DeadlineItem[];
@@ -394,6 +509,8 @@ function PlannerLayout({
   startEdit: (d: DeadlineItem) => void;
   toggleDone: (id: string) => void;
   removeDeadline: (id: string) => void;
+  declineInvite: (id: string) => void;
+  acceptInvite: (id: string) => void;
   search: string;
   setSearch: (v: string) => void;
   filter: Filter;
@@ -409,12 +526,23 @@ function PlannerLayout({
   setPendingAttachments: (v: Attachment[]) => void;
   visibility: "public" | "private";
   setVisibility: (v: "public" | "private") => void;
-  inviteesInput: string;
-  setInviteesInput: (v: string) => void;
-  allowedKurseInput: string;
-  setAllowedKurseInput: (v: string) => void;
+  vorlesung: string;
+  setVorlesung: (v: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lectures: any[];
+  inviteeSearch: string;
+  setInviteeSearch: (v: string) => void;
+  selectedInvitees: { userId: string; displayName: string }[];
+  setSelectedInvitees: (v: { userId: string; displayName: string }[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  jahrgangPeople: any[];
+  handleInviteeKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  selectInvitee: (p: { userId: string; displayName: string }) => void;
+  highlightIndex: number;
+  setHighlightIndex: (v: number) => void;
   openDeadline: DeadlineItem | null;
   displayName: string;
+  me: string;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -494,6 +622,19 @@ function PlannerLayout({
                   </div>
                   <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
                   <div>
+                    <p className="text-xs text-muted-foreground mb-2">Vorlesung (optional)</p>
+                    <Select value={vorlesung} onValueChange={setVorlesung}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vorlesung wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lectures.map((l: any) => (
+                          <SelectItem key={l._id} value={l.lectureName}>{l.lectureName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <p className="text-xs text-muted-foreground mb-2">Sichtbarkeit</p>
                     <div className="flex gap-2">
                       <button
@@ -514,13 +655,71 @@ function PlannerLayout({
                       </button>
                     </div>
                   </div>
-                  {visibility === "private" && (
-                    <>
-                      <Input placeholder="Einzuladende Personen (komma-getrennt)" value={inviteesInput} onChange={(e) => setInviteesInput(e.target.value)} />
-                      <Input placeholder="Zugelassene Kurse (komma-getrennt, optional)" value={allowedKurseInput} onChange={(e) => setAllowedKurseInput(e.target.value)} />
-                    </>
-                  )}
-                  <div className="flex gap-2 justify-end pt-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Personen einladen</p>
+                    {visibility === "public" ? (
+                      <p className="text-xs text-muted-foreground italic">Alle Personen deines Jahrgangs werden automatisch eingeladen.</p>
+                    ) : (
+                      <div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {selectedInvitees.map((s) => (
+                          <Badge key={s.userId} variant="secondary" className="gap-1 pr-1">
+                            {s.displayName}
+                            <button
+                              onClick={() => setSelectedInvitees((prev) => prev.filter((x) => x.userId !== s.userId))}
+                              className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="relative">
+                        <Input
+                          placeholder="Namen suchen…"
+                          value={inviteeSearch}
+                          onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
+                          onFocus={() => setInviteeSearch((v) => v)}
+                          onBlur={() => setTimeout(() => setInviteeSearch(""), 200)}
+                          onKeyDown={handleInviteeKeyDown}
+                          autoComplete="off"
+                        />
+                        {inviteeSearch && (() => {
+                          const filtered = (jahrgangPeople).filter(
+                            (p: { userId: string; displayName: string }) =>
+                              p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
+                              !selectedInvitees.some((s) => s.userId === p.userId),
+                          );
+                          const shown = filtered.slice(0, 8);
+                          const safeIndex = Math.min(highlightIndex, shown.length - 1);
+                          return (
+                            <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-36 overflow-y-auto">
+                              {shown.length === 0 ? (
+                                <p className="px-3 py-2 text-xs text-muted-foreground">Keine Personen gefunden</p>
+                              ) : (
+                                shown.map((p, i) => (
+                                  <button
+                                    key={p.userId}
+                                    type="button"
+                                    className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${i === safeIndex ? "bg-accent" : "hover:bg-accent"}`}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      selectInvitee(p);
+                                    }}
+                                    ref={i === safeIndex ? (el) => { if (el) el.scrollIntoView({ block: "nearest" }); } : undefined}
+                                  >
+                                    {p.displayName}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          );
+                        })()}
+                    </div>
+                  </div>
+                )}
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={resetForm}>Abbrechen</Button>
                     <Button onClick={submitDeadline}>{editingId ? "Aktualisieren" : "Erstellen"}</Button>
                   </div>
@@ -564,6 +763,7 @@ function PlannerLayout({
               const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
               const messageCount = d.messages?.length ?? 0;
               const fileCount = d.attachments?.length ?? 0;
+              const isOwn = d.ownerId === me;
               return (
                 <motion.div
                   key={d.id}
@@ -572,18 +772,40 @@ function PlannerLayout({
                   animate={{ opacity: 1, x: 0 }}
                   className={`glass-card p-4 flex items-center gap-3 ${d.done ? "opacity-60" : ""}`}
                 >
-                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                    {d.done ? (
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                    )}
-                  </button>
+                  {isOwn ? (
+                    <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                      {d.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                      )}
+                    </button>
+                  ) : d.invitees?.includes(me) ? (
+                    <button
+                      onClick={() => acceptInvite(d.id)}
+                      className="shrink-0 px-2 py-1 text-[10px] font-medium rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      Annehmen
+                    </button>
+                  ) : (
+                    <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                      {d.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                      )}
+                    </button>
+                  )}
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className={`h-2 w-2 rounded-full ${categoryDot[d.category]}`} />
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
                       {categoryLabels[d.category]}
                     </span>
+                    {d.vorlesung && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                        <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                        {d.vorlesung}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -622,12 +844,25 @@ function PlannerLayout({
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
                       <MessageSquare className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {isOwn || d.visibility === "public" ? (
+                      <>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : d.invitees?.includes(me) ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 p-0 text-[10px] text-muted-foreground hover:text-destructive"
+                        onClick={() => declineInvite(d.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </motion.div>
               );
@@ -651,6 +886,11 @@ function PlannerLayout({
                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[openDeadline.category]}`}>
                     {categoryLabels[openDeadline.category]}
                   </span>
+                  {openDeadline.vorlesung && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                      <GraduationCap className="h-3 w-3" /> {openDeadline.vorlesung}
+                    </span>
+                  )}
                 </span>
               )}
             </DialogDescription>

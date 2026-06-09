@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare,
@@ -19,6 +19,8 @@ import {
   ExternalLink,
   FileText,
   Flag,
+  Trash2,
+  Shield,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Whiteboard from "@/components/Whiteboard";
@@ -43,7 +45,15 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Link, useNavigate } from "react-router-dom";
 
 import { DHBW_STANDORTE } from "@/lib/dhbw";
+import { JAHRGAENGE } from "@/lib/jahrgang";
 import { ReportDialog } from "@/components/ReportDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
@@ -96,7 +106,7 @@ interface FForumItem {
   visibility: "public" | "private";
   description: string;
   members: { userId: string; displayName: string }[];
-  ownerId: string;
+  ownerId?: string;
   inviteCode: string;
   kurs?: string;
   vorlesung?: string;
@@ -119,6 +129,7 @@ function ForumPage() {
   const me = user?.id || "";
   const displayName = profile?.display_name || "Unbekannt";
   const myJahrgang = profile?.jahrgang || undefined;
+  const isAdmin = profile?.role === "admin";
   const navigate = useNavigate();
 
   const forumsQuery = useQuery(api.forums.getAllAccessible);
@@ -131,8 +142,30 @@ function ForumPage() {
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
   const inviteMutation = useMutation(api.notifications.inviteToForum);
+  const ensureLectureForumsMutation = useMutation(api.semesterLectures.ensureLectureForums);
+  const ensureAllgemeinForumMutation = useMutation(api.forums.ensureAllgemeinForum);
+  const deletePostMutation = useMutation(api.posts.deletePost);
+
+  const lastSynced = useRef("");
+  const [adminViewJahrgang, setAdminViewJahrgang] = useState<string>("");
+  const mounted = useRef(false);
+
+  // Auto-create/join forums when jahrgang changes (not on initial mount)
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const jg = isAdmin && adminViewJahrgang && adminViewJahrgang !== "ALL" ? adminViewJahrgang : myJahrgang;
+    if (jg && jg !== lastSynced.current) {
+      lastSynced.current = jg;
+      ensureLectureForumsMutation({ jahrgang: jg }).catch(() => {});
+      ensureAllgemeinForumMutation({ jahrgang: jg }).catch(() => {});
+    }
+  }, [myJahrgang, adminViewJahrgang, isAdmin, ensureLectureForumsMutation, ensureAllgemeinForumMutation]);
 
   const [activeForumId, setActiveForumId] = useState<string>("");
+  const lastForumIdRef = useRef<string>("");
   const [showPostForm, setShowPostForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -161,78 +194,94 @@ function ForumPage() {
   const [joinCode, setJoinCode] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawForums: any[] = (forumsQuery ?? []) as any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pubScripts: FScriptItem[] = (allScriptsQuery ?? []).map((s: any) => ({
-    id: s._id,
-    title: s.title,
-    subject: s.subject,
-  }));
+  const rawForums: any[] = useMemo(() => {
+    let arr: any[] = (forumsQuery ?? []) as any[];
+    if (isAdmin && adminViewJahrgang && adminViewJahrgang !== "ALL") {
+      arr = arr.filter(
+        (f: any) => f.jahrgang && f.jahrgang === adminViewJahrgang.toUpperCase()
+      );
+    }
+    return arr;
+  }, [forumsQuery, isAdmin, adminViewJahrgang]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const forums: FForumItem[] = rawForums.map((f: any) => ({
-    id: f._id,
-    name: f.name,
-    visibility: f.visibility,
-    description: f.description ?? "",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    members: (f.members ?? []).map((m: any) => ({
-      userId: m.userId ?? m,
-      displayName: m.displayName ?? m,
-    })),
-    ownerId: f.ownerId,
-    inviteCode: f.inviteCode,
-    kurs: f.kurs,
-    vorlesung: f.vorlesung,
-    professor: f.professor,
-    standort: f.standort,
-  }));
+  const pubScripts: FScriptItem[] = useMemo(
+    () =>
+      (allScriptsQuery ?? []).map((s: any) => ({
+        id: s._id,
+        title: s.title,
+        subject: s.subject,
+      })),
+    [allScriptsQuery]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const forums: FForumItem[] = useMemo(
+    () =>
+      rawForums.map((f: any) => ({
+        id: f._id,
+        name: f.name,
+        visibility: f.visibility,
+        description: f.description ?? "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        members: (f.members ?? []).map((m: any) => ({
+          userId: m.userId ?? m,
+          displayName: m.displayName ?? m,
+        })),
+        ownerId: f.ownerId,
+        inviteCode: f.inviteCode,
+        kurs: f.kurs,
+        vorlesung: f.vorlesung,
+        professor: f.professor,
+        standort: f.standort,
+      })),
+    [rawForums]
+  );
+
+  const derivedForumId = activeForumId || (forums.length > 0 ? forums[0].id : "");
+  const effectiveForumId = derivedForumId || lastForumIdRef.current;
+  if (derivedForumId) lastForumIdRef.current = derivedForumId;
+
+  const activeForum = useMemo(
+    () => forums.find((f) => f.id === effectiveForumId),
+    [forums, effectiveForumId]
+  );
 
   // Posts for active forum
   const postsQuery = useQuery(
     api.posts.listByForum,
-    activeForumId ? { forumId: activeForumId as Id<"forums"> } : "skip"
+    effectiveForumId ? { forumId: effectiveForumId as Id<"forums"> } : "skip"
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawPosts: any[] = (postsQuery ?? []) as any[];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allPosts: FPostItem[] = rawPosts.map((p: any) => ({
-    id: p._id,
-    _creationTime: p._creationTime,
-    authorName: p.authorName,
-    authorId: p.authorId,
-    title: p.title,
-    content: p.content,
-    tag: p.tag,
-    liked: p.liked ?? false,
-    likeCount: p.likeCount ?? 0,
-    commentCount: (p.comments ?? []).length,
-    sketch: p.sketch,
-    linkedScriptIds: p.linkedScriptIds,
-    standort: p.standort,
-    studiengang: p.studiengang,
-    kurs: p.kurs,
-    vorlesung: p.vorlesung,
-    professor: p.professor,
-  }));
-
-  const publicForums = forums.filter((f) => f.visibility === "public");
-  const privateForums = forums.filter((f) => f.visibility === "private");
-
-  const activeForum = useMemo(
-    () => forums.find((f) => f.id === activeForumId) ?? forums[0],
-    [forums, activeForumId]
+  const allPosts: FPostItem[] = useMemo(
+    () =>
+      rawPosts.map((p: any) => ({
+        id: p._id,
+        _creationTime: p._creationTime,
+        authorName: p.authorName,
+        authorId: p.authorId,
+        title: p.title,
+        content: p.content,
+        tag: p.tag,
+        liked: p.liked ?? false,
+        likeCount: p.likeCount ?? 0,
+        commentCount: (p.comments ?? []).length,
+        sketch: p.sketch,
+        linkedScriptIds: p.linkedScriptIds,
+        standort: p.standort,
+        studiengang: p.studiengang,
+        kurs: p.kurs,
+        vorlesung: p.vorlesung,
+        professor: p.professor,
+      })),
+    [rawPosts]
   );
 
-  useEffect(() => {
-    if (activeForumId && !forums.some((f) => f.id === activeForumId)) {
-      setActiveForumId(forums[0]?.id || "");
-    }
-    if (!activeForumId && forums.length > 0) {
-      setActiveForumId(forums[0].id);
-    }
-  }, [forums, activeForumId]);
+  const publicForums = useMemo(() => forums.filter((f) => f.visibility === "public"), [forums]);
+  const privateForums = useMemo(() => forums.filter((f) => f.visibility === "private"), [forums]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -253,7 +302,7 @@ function ForumPage() {
   }, [allPosts, search, activeTag, sort, myJahrgang]);
 
   const isMember = activeForum?.members?.some((m) => m.userId === me) ?? false;
-  const isOwner = activeForum?.ownerId === me;
+  const isOwner = !!activeForum?.ownerId && activeForum.ownerId === me;
 
   const postTitleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
   const postContentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
@@ -353,6 +402,16 @@ function ForumPage() {
       toast.success("Beigetreten");
     } catch {
       toast.error("Fehler beim Beitreten");
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("Beitrag wirklich löschen?")) return;
+    try {
+      await deletePostMutation({ postId: postId as Id<"posts"> });
+      toast.success("Beitrag gelöscht");
+    } catch {
+      toast.error("Fehler beim Löschen");
     }
   };
 
@@ -463,6 +522,12 @@ function ForumPage() {
       myJahrgang={myJahrgang}
       reportTarget={reportTarget}
       setReportTarget={setReportTarget}
+      reportedBy={displayName}
+      isAdmin={isAdmin}
+      adminViewJahrgang={adminViewJahrgang}
+      setAdminViewJahrgang={setAdminViewJahrgang}
+      handleDeletePost={handleDeletePost}
+      postsQuery={postsQuery}
     />
   );
 }
@@ -545,6 +610,12 @@ function ForumPageLayout({
   myJahrgang,
   reportTarget,
   setReportTarget,
+  reportedBy,
+  isAdmin,
+  adminViewJahrgang,
+  setAdminViewJahrgang,
+  handleDeletePost,
+  postsQuery,
 }: {
   forums: FForumItem[];
   activeForum: FForumItem | undefined;
@@ -621,6 +692,12 @@ function ForumPageLayout({
   myJahrgang?: string;
   reportTarget: { postId: string; postTitle: string } | null;
   setReportTarget: (v: { postId: string; postTitle: string } | null) => void;
+  reportedBy: string;
+  isAdmin: boolean;
+  adminViewJahrgang: string;
+  setAdminViewJahrgang: (v: string) => void;
+  handleDeletePost: (postId: string) => void;
+  postsQuery: any;
 }) {
   const ForumItem = ({ f }: { f: FForumItem }) => {
     const Icon = f.visibility === "public" ? Hash : Lock;
@@ -687,6 +764,24 @@ function ForumPageLayout({
                     </Button>
                   </div>
                 </div>
+                {isAdmin && (
+                  <div className="mt-3 mb-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
+                      <Shield className="h-3 w-3" /> Admin: Jahrgang filtern
+                    </p>
+                    <Select value={adminViewJahrgang} onValueChange={setAdminViewJahrgang}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Alle Jahrgänge" />
+                      </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Alle Jahrgänge</SelectItem>
+                      {JAHRGAENGE.map((jg) => (
+                        <SelectItem key={jg} value={jg}>{jg}</SelectItem>
+                      ))}
+                    </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="mt-4">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Öffentlich</p>
                   {publicForums.length === 0 ? (
@@ -746,10 +841,10 @@ function ForumPageLayout({
                     </Button>
                   </Link>
                   <div className="flex gap-2">
-                    {activeForum.visibility === "public" && !isMember && (
+                    {!isAdmin && activeForum.visibility === "public" && !isMember && (
                       <Button size="sm" className="w-full" onClick={() => handleJoinPublic(activeForum.id)}>Beitreten</Button>
                     )}
-                    {!isOwner && isMember && (
+                    {!isAdmin && !isOwner && isMember && (
                       <Button size="sm" variant="outline" className="w-full" onClick={() => handleLeave(activeForum.id)}>Verlassen</Button>
                     )}
                   </div>
@@ -787,8 +882,8 @@ function ForumPageLayout({
                   <Button
                     onClick={() => setShowPostForm((v) => !v)}
                     className="gap-2"
-                    disabled={!isMember}
-                    title={isMember ? "" : "Tritt dem Forum bei, um zu posten"}
+                  disabled={!isAdmin && !isMember}
+                  title={isAdmin || isMember ? "" : "Tritt dem Forum bei, um zu posten"}
                   >
                     <Plus className="h-4 w-4" /> Neuer Beitrag
                   </Button>
@@ -797,7 +892,7 @@ function ForumPageLayout({
 
               {/* Post form */}
               <AnimatePresence>
-                {showPostForm && isMember && (
+                {showPostForm && (isAdmin || isMember) && (
                   <motion.div
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                     animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
@@ -923,20 +1018,23 @@ function ForumPageLayout({
 
               {/* Posts */}
               <div className="space-y-3">
-                {filtered.length === 0 && (
+                {postsQuery === undefined && (
+                  <div className="glass-card p-10 text-center">
+                    <div className="animate-pulse h-10 w-10 bg-muted-foreground/20 rounded-full mx-auto mb-3" />
+                    <p className="text-muted-foreground">Laden…</p>
+                  </div>
+                )}
+                {postsQuery !== undefined && filtered.length === 0 && (
                   <div className="glass-card p-10 text-center">
                     <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
                     <p className="text-muted-foreground">Keine Beiträge gefunden</p>
                   </div>
                 )}
-                {filtered.map((post, i) => {
+                {filtered.map((post) => {
                   const avatarColor = avatarColors[post.authorName.charCodeAt(0) % avatarColors.length];
                   return (
-                    <motion.article
+                    <article
                       key={post.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
                       onClick={() => navigate(`/forum/${activeForum?.id}/post/${post.id}`)}
                       className="glass-card p-5 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
                     >
@@ -995,6 +1093,18 @@ function ForumPageLayout({
                               <MessageCircle className="h-3.5 w-3.5" />
                               {post.commentCount}
                             </span>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePost(post.id);
+                                }}
+                                title="Beitrag löschen (Admin)"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1008,7 +1118,7 @@ function ForumPageLayout({
                           </div>
                         </div>
                       </div>
-                    </motion.article>
+                    </article>
                   );
                 })}
               </div>
@@ -1023,7 +1133,7 @@ function ForumPageLayout({
         postId={reportTarget?.postId ?? ""}
         postTitle={reportTarget?.postTitle ?? ""}
         forumName={activeForum?.name ?? "Forum"}
-        reportedBy={me}
+        reportedBy={reportedBy}
       />
 
       {/* Create-forum dialog */}

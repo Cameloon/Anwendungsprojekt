@@ -180,7 +180,10 @@ export const create = mutation({
           q.eq("forumId", args.forumId).eq("userId", identity.subject)
         )
         .unique();
-      if (!member) throw new Error("Not a member of this forum");
+      if (!member) {
+        const admin = await isAdmin(ctx, identity.subject);
+        if (!admin) throw new Error("Not a member of this forum");
+      }
     }
 
     const profile = await ctx.db
@@ -480,11 +483,16 @@ export const listRecent = query({
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .unique();
     const userJahrgang = profile?.jahrgang;
+    const isAdmin = profile?.role === "admin";
 
     const forums = await ctx.db.query("forums").collect();
     const accessibleIds: string[] = [];
 
     for (const forum of forums) {
+      if (isAdmin) {
+        accessibleIds.push(forum._id);
+        continue;
+      }
       if (forum.visibility === "public") {
         if (forum.jahrgang && forum.jahrgang !== userJahrgang) continue;
         accessibleIds.push(forum._id);

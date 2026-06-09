@@ -11,12 +11,23 @@ export interface AppProfile {
   jahrgang: string | null;
   avatar_url: string | null;
   created_at: string | null;
+  role: "admin" | "user" | null;
 }
 
 const useDemoProfile = (): AppProfile | null => {
   const [p, setP] = useState<DemoProfile | null>(() => demoStore.getProfile());
   useEffect(() => demoStore.subscribe(() => setP(demoStore.getProfile())), []);
-  return p;
+  if (!p) return null;
+  return {
+    display_name: p.displayName ?? null,
+    studienfach: p.studienfach ?? null,
+    matrikelnummer: p.matrikelnummer ?? null,
+    hochschule: p.hochschule ?? null,
+    jahrgang: p.jahrgang ?? null,
+    avatar_url: p.avatarUrl ?? null,
+    created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
+    role: p.role ?? null,
+  };
 };
 
 const useConvexProfile = (): AppProfile | null => {
@@ -30,6 +41,7 @@ const useConvexProfile = (): AppProfile | null => {
     jahrgang: data.jahrgang ?? null,
     avatar_url: data.avatarUrl ?? null,
     created_at: data.createdAt ? new Date(data.createdAt).toISOString() : null,
+    role: data.role ?? null,
   };
 };
 

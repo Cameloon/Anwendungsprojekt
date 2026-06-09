@@ -76,7 +76,7 @@ interface ForumDetailData {
   professor?: string;
   standort?: string;
   inviteCode: string;
-  ownerId: string;
+  ownerId?: string;
   members: MemberItem[];
 }
 
@@ -167,7 +167,7 @@ const ForumDetailPage = () => {
   }
 
   const isMember = !!isMemberQuery;
-  const isOwner = forumQuery.ownerId === me;
+  const isOwner = !!forumQuery?.ownerId && forumQuery.ownerId === me;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawForum: any = forumQuery;
@@ -645,7 +645,7 @@ function ForumDetailLayout({
                           {m.displayName[0]?.toUpperCase()}
                         </div>
                         <span className="truncate">{m.displayName}</span>
-                        {m.userId === forum.ownerId && (
+                        {forum.ownerId && m.userId === forum.ownerId && (
                           <span className="text-[9px] px-1.5 rounded bg-secondary text-muted-foreground ml-auto">Owner</span>
                         )}
                       </div>
