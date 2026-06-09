@@ -24,6 +24,7 @@ import {
   type ForumComment,
   type SharedPost,
 } from "@/lib/forumStore";
+import { forumSeedPosts } from "@/lib/forumSeedPosts";
 import { loadForums, subscribeForums, type Forum } from "@/lib/forumsStore";
 import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
 
@@ -64,7 +65,12 @@ const PostDetailPage = () => {
   useEffect(() => subscribeForums(() => setForums(loadForums())), []);
   useEffect(() => subscribeScripts(() => setScripts(publicScripts())), []);
 
-  const post = useMemo(() => posts.find((p) => p.id === postId), [posts, postId]);
+  const post = useMemo(() => {
+    const storedPost = posts.find((p) => String(p.id) === postId);
+    if (storedPost) return storedPost;
+    if (forumId !== "public") return undefined;
+    return forumSeedPosts.find((p) => String(p.id) === postId);
+  }, [posts, postId, forumId]);
   const forum = useMemo(() => forums.find((f) => f.id === forumId), [forums, forumId]);
 
   if (!post) {
