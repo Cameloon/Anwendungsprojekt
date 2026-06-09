@@ -8,6 +8,7 @@ import {
   Send,
   FileText,
   ExternalLink,
+  Flag,
   Reply,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
@@ -111,6 +113,7 @@ function PostDetailPage() {
 
   const [comment, setComment] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (post === undefined) {
     return (
@@ -200,6 +203,9 @@ function PostDetailPage() {
       replyTo={replyTo}
       startReply={startReply}
       cancelReply={cancelReply}
+      reportOpen={reportOpen}
+      setReportOpen={setReportOpen}
+      me={me}
       linkedScripts={linkedScripts}
     />
   );
@@ -221,6 +227,9 @@ function PostDetailLayout({
   replyTo,
   startReply,
   cancelReply,
+  reportOpen,
+  setReportOpen,
+  me,
   linkedScripts,
 }: {
   post: EnrichedPost;
@@ -236,6 +245,9 @@ function PostDetailLayout({
   replyTo: { id: string; name: string } | null;
   startReply: (c: PostComment) => void;
   cancelReply: () => void;
+  reportOpen: boolean;
+  setReportOpen: (open: boolean) => void;
+  me: string;
   linkedScripts: ScriptInfo[];
 }) {
   return (
@@ -452,9 +464,9 @@ function PostDetailLayout({
       <ReportDialog
         open={reportOpen}
         onOpenChange={setReportOpen}
-        postId={post.id}
+        postId={post._id}
         postTitle={post.title}
-        forumName={forum?.name ?? "Forum"}
+        forumName={forumName ?? "Forum"}
         reportedBy={me}
       />
     </div>

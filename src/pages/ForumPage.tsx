@@ -18,6 +18,7 @@ import {
   TrendingUp,
   ExternalLink,
   FileText,
+  Flag,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Whiteboard from "@/components/Whiteboard";
@@ -42,6 +43,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Link, useNavigate } from "react-router-dom";
 
 import { DHBW_STANDORTE } from "@/lib/dhbw";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
@@ -145,6 +147,7 @@ function ForumPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ postId: string; postTitle: string } | null>(null);
   const [fName, setFName] = useState("");
   const [fDesc, setFDesc] = useState("");
   const [fVisibility, setFVisibility] = useState<"public" | "private">("public");
@@ -458,6 +461,8 @@ function ForumPage() {
       tags={tags}
       toggleLike={toggleLike}
       myJahrgang={myJahrgang}
+      reportTarget={reportTarget}
+      setReportTarget={setReportTarget}
     />
   );
 }
@@ -538,6 +543,8 @@ function ForumPageLayout({
   tags,
   toggleLike,
   myJahrgang,
+  reportTarget,
+  setReportTarget,
 }: {
   forums: FForumItem[];
   activeForum: FForumItem | undefined;
@@ -612,6 +619,8 @@ function ForumPageLayout({
   tags: { id: string; label: string }[];
   toggleLike: (id: string) => void;
   myJahrgang?: string;
+  reportTarget: { postId: string; postTitle: string } | null;
+  setReportTarget: (v: { postId: string; postTitle: string } | null) => void;
 }) {
   const ForumItem = ({ f }: { f: FForumItem }) => {
     const Icon = f.visibility === "public" ? Hash : Lock;
@@ -1013,7 +1022,7 @@ function ForumPageLayout({
         onOpenChange={(open) => { if (!open) setReportTarget(null); }}
         postId={reportTarget?.postId ?? ""}
         postTitle={reportTarget?.postTitle ?? ""}
-        forumName={activeForum.name}
+        forumName={activeForum?.name ?? "Forum"}
         reportedBy={me}
       />
 
