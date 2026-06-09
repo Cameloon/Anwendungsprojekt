@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -34,25 +34,18 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { addPost as addForumPost } from "@/lib/forumStore";
+import { inviteToDeadline } from "@/lib/notificationsStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { validateTitle, validateDate, validateMessage } from "@/lib/validation";
 
-import { toast } from "sonner";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 
-const categoryColors: Record<string, string> = {
-  abgabe: "bg-info/15 text-info border-info/20",
-  pruefung: "bg-destructive/15 text-destructive border-destructive/20",
-  sonstiges: "bg-primary/15 text-primary border-primary/20",
-};
-const categoryDot: Record<string, string> = {
-  abgabe: "bg-info",
-  pruefung: "bg-destructive",
-  sonstiges: "bg-primary",
-};
-const categoryLabels: Record<string, string> = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
+
+
+import { useLanguage } from "@/hooks/useLanguage";
+
 
 interface Attachment {
   id: string;
@@ -62,7 +55,14 @@ interface Attachment {
   url: string;
 }
 
-interface DeadlineItem {
+interface ForumMessage {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+interface Deadline {
   id: string;
   title: string;
   date: string;
@@ -70,12 +70,32 @@ interface DeadlineItem {
   done: boolean;
   note?: string;
   attachments: Attachment[];
-  messages: { id: string; author: string; text: string; createdAt: string }[];
+  messages: ForumMessage[];
   visibility: "public" | "private";
-  invitees: string[];
-  allowedKurse: string[];
-  ownerId: string;
+  invitees: string[];        // display names
+  allowedKurse: string[];    // course codes (auto-invite course)
 }
+
+const categoryColors = {
+  abgabe: "bg-info/15 text-info border-info/20",
+  pruefung: "bg-destructive/15 text-destructive border-destructive/20",
+  sonstiges: "bg-primary/15 text-primary border-primary/20",
+};
+
+const categoryDot = {
+  abgabe: "bg-info",
+  pruefung: "bg-destructive",
+  sonstiges: "bg-primary",
+};
+
+const categoryLabels = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
+
+const initialDeadlines: Deadline[] = [
+  { id: "1", title: "Hausarbeit Mathematik", date: "2026-04-25", category: "abgabe", done: false, attachments: [], messages: [], visibility: "private", invitees: [], allowedKurse: [] },
+  { id: "2", title: "Klausur Informatik", date: "2026-05-10", category: "pruefung", done: false, attachments: [], messages: [], visibility: "public", invitees: [], allowedKurse: [] },
+  { id: "3", title: "Projektabgabe Software Engineering", date: "2026-04-30", category: "abgabe", done: false, attachments: [], messages: [], visibility: "private", invitees: [], allowedKurse: ["WWI23A"] },
+  { id: "4", title: "Übungsblatt Datenbanken", date: "2026-04-22", category: "abgabe", done: true, attachments: [], messages: [], visibility: "private", invitees: [], allowedKurse: [] },
+];
 
 type Filter = "alle" | "offen" | "erledigt" | "dringend";
 
@@ -85,32 +105,23 @@ const formatBytes = (b: number) => {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 };
 
-// ── Convex production path ──
 
-function PlannerPage() {
+
+
+
+
+
+
+
+const PlannerPage = () => {
   const { user } = useAuth();
   const profile = useProfile();
-  const me = user?.id || "";
-  const displayName = profile?.display_name || "Unbekannt";
-
-  const deadlinesQuery = useQuery(api.deadlines.listForUser);
-
-  const createMutation = useMutation(api.deadlines.create);
-  const updateMutation = useMutation(api.deadlines.update);
-  const toggleDoneMutation = useMutation(api.deadlines.toggleDone);
-  const deleteMutation = useMutation(api.deadlines.deleteDeadline);
-  const addMessageMutation = useMutation(api.deadlines.addMessage);
-  const inviteMutation = useMutation(api.notifications.inviteToDeadline);
-  const generateUploadUrlMutation = useMutation(api.deadlines.generateUploadUrl);
-  const attachFileMutation = useMutation(api.deadlines.attachFile);
-  const deleteAttachmentMutation = useMutation(api.deadlines.deleteAttachment);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawDeadlines: any[] = (deadlinesQuery ?? []) as any[];
-
+  const { language } = useLanguage();
+  const me = profile?.display_name || "Du";
+  const [deadlines, setDeadlines] = useState<Deadline[]>(initialDeadlines);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
-  const [category, setCategory] = useState<"abgabe" | "pruefung" | "sonstiges">("abgabe");
+  const [category, setCategory] = useState<Deadline["category"]>("abgabe");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -123,32 +134,7 @@ function PlannerPage() {
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [inviteesInput, setInviteesInput] = useState("");
   const [allowedKurseInput, setAllowedKurseInput] = useState("");
-
-  const deadlines: DeadlineItem[] = rawDeadlines.map((d: any) => ({
-    id: d._id,
-    title: d.title,
-    date: d.date,
-    category: d.category,
-    done: d.done,
-    note: d.note,
-    attachments: (d.attachments ?? []).map((a: any) => ({
-      id: a._id,
-      name: a.name,
-      size: a.size,
-      type: a.type,
-      url: a.url ?? "",
-    })),
-    messages: (d.messages ?? []).map((m: any) => ({
-      id: m._id,
-      author: m.authorName,
-      text: m.text,
-      createdAt: new Date(m._creationTime).toLocaleDateString("de-DE"),
-    })),
-    visibility: d.visibility,
-    invitees: d.invitees ?? [],
-    allowedKurse: d.allowedKurse ?? [],
-    ownerId: d.ownerId,
-  }));
+  const [submitted, setSubmitted] = useState(false);
 
   const resetForm = () => {
     setTitle("");
@@ -161,261 +147,211 @@ function PlannerPage() {
     setAllowedKurseInput("");
     setEditingId(null);
     setShowForm(false);
+    setSubmitted(false);
   };
 
   const parseList = (s: string) =>
     s.split(",").map((x) => x.trim()).filter(Boolean);
 
-  const submitDeadline = async () => {
-    if (!title.trim() || !date) return;
+  const submitDeadline = () => {
+    setSubmitted(true);
+    const nextTitleError = !title.trim() ? "Titel erforderlich." : validateTitle(title);
+    const nextDateError = validateDate(date);
+    if (nextTitleError || nextDateError) return;
     const invitees = parseList(inviteesInput);
     const allowedKurse = parseList(allowedKurseInput);
-    try {
-      if (editingId) {
-        await updateMutation({
-          deadlineId: editingId as Id<"deadlines">,
-          title: title.trim(),
+    let targetId = editingId;
+    let prevInvitees: string[] = [];
+    if (editingId) {
+      const existing = deadlines.find((d) => d.id === editingId);
+      prevInvitees = existing?.invitees ?? [];
+      setDeadlines((prev) =>
+        prev.map((d) =>
+          d.id === editingId
+            ? {
+                ...d,
+                title,
+                date,
+                category,
+                note: note.trim() || undefined,
+                attachments: pendingAttachments,
+                visibility,
+                invitees,
+                allowedKurse,
+              }
+            : d
+        )
+      );
+      toast({ title: "Termin aktualisiert" });
+    } else {
+      targetId = Date.now().toString();
+      setDeadlines((prev) => [
+        ...prev,
+        {
+          id: targetId!,
+          title,
           date,
-          category: category as "abgabe" | "pruefung" | "sonstiges",
+          category,
+          done: false,
           note: note.trim() || undefined,
+          attachments: pendingAttachments,
+          messages: [],
           visibility,
-          invitees: invitees.length ? invitees : undefined,
-          allowedKurse: allowedKurse.length ? allowedKurse : undefined,
-        });
-        toast.success("Termin aktualisiert");
-      } else {
-        const result = await createMutation({
-          title: title.trim(),
-          date,
-          category: category as "abgabe" | "pruefung" | "sonstiges",
-          note: note.trim() || undefined,
-          visibility,
-          invitees: invitees.length ? invitees : undefined,
-          allowedKurse: allowedKurse.length ? allowedKurse : undefined,
-        });
-        if (invitees.length) {
-          await inviteMutation({
-            deadlineId: result as Id<"deadlines">,
-            deadlineTitle: title.trim(),
-            recipientIds: invitees,
-            recipientNames: invitees,
-            fromName: me,
-          });
-        }
-        toast.success("Termin erstellt");
-      }
-      resetForm();
-    } catch {
-      toast.error("Fehler beim Speichern");
+          invitees,
+          allowedKurse,
+        },
+      ]);
     }
+    // Send invitations to NEW invitees only
+    const newInvitees = invitees.filter((x) => !prevInvitees.includes(x));
+    if (targetId && newInvitees.length) {
+      inviteToDeadline(targetId, title, newInvitees, me);
+      toast({
+        title: `${newInvitees.length} Einladung(en) gesendet`,
+        //description: "Eingeladene Personen werden benachrichtigt.",
+        description: language.match(
+          {
+            english: () => {return "Invited people will get notified"},
+            german: () => {return "Eingeladene Personen werden benachrichtigt"},
+          }
+        ),
+      });
+    }
+    resetForm();
   };
 
-  const startEdit = (d: DeadlineItem) => {
+  const startEdit = (d: Deadline) => {
+    setEditingId(d.id);
     setTitle(d.title);
     setDate(d.date);
     setCategory(d.category);
     setNote(d.note ?? "");
+    setPendingAttachments(d.attachments);
     setVisibility(d.visibility);
     setInviteesInput(d.invitees.join(", "));
     setAllowedKurseInput(d.allowedKurse.join(", "));
-    setEditingId(d.id);
+    setSubmitted(false);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const toggleDone = async (id: string) => {
-    try {
-      await toggleDoneMutation({ deadlineId: id as Id<"deadlines"> });
-    } catch {
-      toast.error("Fehler beim Aktualisieren");
-    }
+  const handlePendingUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newAttachments: Attachment[] = Array.from(files).map((f) => ({
+      id: `${Date.now()}-${f.name}`,
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      url: URL.createObjectURL(f),
+    }));
+    setPendingAttachments((prev) => [...prev, ...newAttachments]);
   };
 
-  const removeDeadline = async (id: string) => {
-    if (!window.confirm("Termin wirklich löschen?")) return;
-    try {
-      await deleteMutation({ deadlineId: id as Id<"deadlines"> });
-      if (openId === id) setOpenId(null);
-      toast.success("Termin gelöscht");
-    } catch {
-      toast.error("Fehler beim Löschen");
-    }
+  const removePendingAttachment = (attachId: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== attachId));
   };
 
-  const addMessage = async () => {
+  const toggleDone = (id: string) =>
+    setDeadlines((prev) => prev.map((d) => (d.id === id ? { ...d, done: !d.done } : d)));
+
+  const removeDeadline = (id: string) =>
+    setDeadlines((prev) => prev.filter((d) => d.id !== id));
+
+  const daysUntil = (date: string) =>
+    Math.ceil((new Date(date).getTime() - Date.now()) / 86400000);
+
+  const handleFileUpload = (id: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newAttachments: Attachment[] = Array.from(files).map((f) => ({
+      id: `${Date.now()}-${f.name}`,
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      url: URL.createObjectURL(f),
+    }));
+    setDeadlines((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, attachments: [...d.attachments, ...newAttachments] } : d))
+    );
+    toast({ title: "Datei(en) hochgeladen", description: `${files.length} Datei(en) hinzugefügt` });
+  };
+
+  const removeAttachment = (deadlineId: string, attachId: string) => {
+    setDeadlines((prev) =>
+      prev.map((d) =>
+        d.id === deadlineId ? { ...d, attachments: d.attachments.filter((a) => a.id !== attachId) } : d
+      )
+    );
+  };
+
+  const addMessage = (id: string) => {
+    if (newMessage.trim().length < 5) return;
     const text = newMessage.trim();
-    if (!text || !openId) return;
-    try {
-      await addMessageMutation({
-        deadlineId: openId as Id<"deadlines">,
-        text,
+    const msg: ForumMessage = {
+      id: Date.now().toString(),
+      author: "Du",
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    const target = deadlines.find((d) => d.id === id);
+    setDeadlines((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, messages: [...d.messages, msg] } : d))
+    );
+    // Mirror into the main Forum so all task-forum messages are stored & visible there
+    if (target) {
+      addForumPost({
+        id: `planner-${msg.id}`,
+        author: "Du",
+        title: `Aufgabe: ${target.title}`,
+        content: text,
+        date: "gerade eben",
+        likes: 0,
+        replies: 0,
+        tag: "diskussion",
+        vorlesung: target.title,
+        source: "planner",
+        taskId: target.id,
       });
-      setNewMessage("");
-    } catch {
-      toast.error("Fehler beim Senden");
+      toast({ title: "Im Forum gespeichert", description: "Beitrag ist nun auch im Forum sichtbar." });
     }
+    setNewMessage("");
   };
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return deadlines
-      .filter((d) => d.title.toLowerCase().includes(q))
+    return [...deadlines]
+      .filter((d) => d.title.toLowerCase().includes(search.toLowerCase()))
       .filter((d) => {
         if (filter === "offen") return !d.done;
         if (filter === "erledigt") return d.done;
-        if (filter === "dringend") {
-          const diff = new Date(d.date).getTime() - Date.now();
-          return !d.done && diff < 3 * 24 * 60 * 60 * 1000;
-        }
+        if (filter === "dringend") return !d.done && daysUntil(d.date) <= 3;
         return true;
-      });
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [deadlines, search, filter]);
 
-  const stats = useMemo(
-    () => ({
-      offen: deadlines.filter((d) => !d.done).length,
-      dringend: deadlines.filter((d) => {
-        const diff = new Date(d.date).getTime() - Date.now();
-        return !d.done && diff < 3 * 24 * 60 * 60 * 1000;
-      }).length,
-      erledigt: deadlines.filter((d) => d.done).length,
-    }),
-    [deadlines]
-  );
+  const open = deadlines.filter((d) => !d.done);
+  const urgent = open.filter((d) => daysUntil(d.date) <= 3 && daysUntil(d.date) >= 0);
+  const done = deadlines.filter((d) => d.done);
 
-  const openDeadline = openId ? deadlines.find((d) => d.id === openId) : null;
+  const stats = [
+    { label: "Offen", value: open.length, icon: ListTodo, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Dringend", value: urgent.length, icon: Flame, color: "text-destructive", bg: "bg-destructive/10" },
+    { label: "Erledigt", value: done.length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+  ];
 
-  return (
-    <PlannerLayout
-      deadlines={deadlines}
-      filtered={filtered}
-      stats={stats}
-      title={title}
-      setTitle={setTitle}
-      date={date}
-      setDate={setDate}
-      category={category}
-      setCategory={setCategory}
-      note={note}
-      setNote={setNote}
-      editingId={editingId}
-      showForm={showForm}
-      setShowForm={setShowForm}
-      resetForm={resetForm}
-      submitDeadline={submitDeadline}
-      startEdit={startEdit}
-      toggleDone={toggleDone}
-      removeDeadline={removeDeadline}
-      search={search}
-      setSearch={setSearch}
-      filter={filter}
-      setFilter={setFilter}
-      openId={openId}
-      setOpenId={setOpenId}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      newMessage={newMessage}
-      setNewMessage={setNewMessage}
-      addMessage={addMessage}
-      pendingAttachments={pendingAttachments}
-      setPendingAttachments={setPendingAttachments}
-      visibility={visibility}
-      setVisibility={setVisibility}
-      inviteesInput={inviteesInput}
-      setInviteesInput={setInviteesInput}
-      allowedKurseInput={allowedKurseInput}
-      setAllowedKurseInput={setAllowedKurseInput}
-      openDeadline={openDeadline}
-      displayName={displayName}
-    />
-  );
-}
+  const filters: { id: Filter; label: string }[] = [
+    { id: "alle", label: "Alle" },
+    { id: "offen", label: "Offen" },
+    { id: "dringend", label: "Dringend" },
+    { id: "erledigt", label: "Erledigt" },
+  ];
 
-// ── Shared layout ──
+  const activeDeadline = deadlines.find((d) => d.id === openId) || null;
 
-function PlannerLayout({
-  deadlines,
-  filtered,
-  stats,
-  title,
-  setTitle,
-  date,
-  setDate,
-  category,
-  setCategory,
-  note,
-  setNote,
-  editingId,
-  showForm,
-  setShowForm,
-  resetForm,
-  submitDeadline,
-  startEdit,
-  toggleDone,
-  removeDeadline,
-  search,
-  setSearch,
-  filter,
-  setFilter,
-  openId,
-  setOpenId,
-  activeTab,
-  setActiveTab,
-  newMessage,
-  setNewMessage,
-  addMessage,
-  pendingAttachments,
-  setPendingAttachments,
-  visibility,
-  setVisibility,
-  inviteesInput,
-  setInviteesInput,
-  allowedKurseInput,
-  setAllowedKurseInput,
-  openDeadline,
-  displayName,
-}: {
-  deadlines: DeadlineItem[];
-  filtered: DeadlineItem[];
-  stats: { offen: number; dringend: number; erledigt: number };
-  title: string;
-  setTitle: (v: string) => void;
-  date: string;
-  setDate: (v: string) => void;
-  category: string;
-  setCategory: (v: any) => void;
-  note: string;
-  setNote: (v: string) => void;
-  editingId: string | null;
-  showForm: boolean;
-  setShowForm: (v: boolean) => void;
-  resetForm: () => void;
-  submitDeadline: () => void;
-  startEdit: (d: DeadlineItem) => void;
-  toggleDone: (id: string) => void;
-  removeDeadline: (id: string) => void;
-  search: string;
-  setSearch: (v: string) => void;
-  filter: Filter;
-  setFilter: (v: Filter) => void;
-  openId: string | null;
-  setOpenId: (v: string | null) => void;
-  activeTab: "files" | "forum";
-  setActiveTab: (v: "files" | "forum") => void;
-  newMessage: string;
-  setNewMessage: (v: string) => void;
-  addMessage: () => void;
-  pendingAttachments: Attachment[];
-  setPendingAttachments: (v: Attachment[]) => void;
-  visibility: "public" | "private";
-  setVisibility: (v: "public" | "private") => void;
-  inviteesInput: string;
-  setInviteesInput: (v: string) => void;
-  allowedKurseInput: string;
-  setAllowedKurseInput: (v: string) => void;
-  openDeadline: DeadlineItem | null;
-  displayName: string;
-}) {
+  // derived validation messages — errors for required-but-empty fields only show after first submit attempt
+  const titleError = submitted && !title.trim() ? "Titel erforderlich." : validateTitle(title);
+  const dateError = submitted || date ? validateDate(date) : "";
+  const messageError = validateMessage(newMessage);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -432,40 +368,55 @@ function PlannerLayout({
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
                   <CalendarDays className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm text-muted-foreground">Planer</span>
+                <span className="text-sm text-muted-foreground">
+                  {language.match(
+                    {
+                      english: () => {return "Appointments & Deadlines"},
+                      german: () => {return "Termine & Deadlines"},
+                    }
+                  )}
+                </span>
               </div>
               <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
-                <span className="text-gradient">Termine</span> & Abgaben
+                Termin-<span className="text-gradient">Planner</span>
               </h1>
               <p className="text-muted-foreground mt-1">
-                Behalte Fristen, Prüfungen und Abgaben im Blick.
+                {language.match(
+                  {
+                    english: () => {return "Keep an eye on all of your Tests and Assignments"},
+                    german: () => {return "Behalte alle Abgaben und Prüfungen im Blick"},
+                  }
+                )}
+
               </p>
             </div>
-            <Button onClick={() => { resetForm(); setShowForm((v) => !v); }} className="gap-2 shrink-0">
+            <Button onClick={() => (showForm ? resetForm() : setShowForm(true))} className="gap-2">
               <Plus className="h-4 w-4" /> Neuer Termin
             </Button>
           </motion.div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mb-6">
-            {[
-              { label: "Offen", count: stats.offen, icon: ListTodo, color: "text-info" },
-              { label: "Dringend", count: stats.dringend, icon: Flame, color: "text-destructive" },
-              { label: "Erledigt", count: stats.erledigt, icon: CheckCircle2, color: "text-success" },
-            ].map((s) => (
-              <div key={s.label} className="glass-card p-4 flex items-center gap-3">
-                <div className={`h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
+            {stats.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 + i * 0.05 }}
+                className="glass-card p-4 flex items-center gap-3"
+              >
+                <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{s.count}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.label}</p>
+                  <p className="font-heading text-2xl font-bold leading-none">{s.value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Create/Edit form */}
+          {/* Form */}
           <AnimatePresence>
             {showForm && (
               <motion.div
@@ -475,160 +426,350 @@ function PlannerLayout({
                 className="overflow-hidden"
               >
                 <div className="glass-card p-5 space-y-4">
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <Input placeholder="Titel (z. B. Hausarbeit Mathe)" value={title} onChange={(e) => setTitle(e.target.value)} />
-                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Input
+                        placeholder="Titel des Termins *"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className={titleError ? "border-destructive" : ""}
+                      />
+                      {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className={dateError ? "border-destructive" : ""}
+                      />
+                      {dateError && <p className="text-xs text-destructive">{dateError}</p>}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
                       <button
                         key={c}
                         onClick={() => setCategory(c)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                          category === c ? categoryColors[c] : "text-muted-foreground bg-secondary border-transparent"
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                          category === c
+                            ? categoryColors[c]
+                            : "text-muted-foreground bg-secondary border-transparent"
                         }`}
                       >
+                        <span className={`h-2 w-2 rounded-full ${categoryDot[c]}`} />
                         {categoryLabels[c]}
                       </button>
                     ))}
                   </div>
-                  <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
+
+                  <Textarea
+                    placeholder="Notiz (optional) — z. B. Details, Themen, Räume…"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+
+                  {/* Visibility */}
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Sichtbarkeit</p>
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={() => setVisibility("public")}
-                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                          visibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          visibility === "public"
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "text-muted-foreground bg-secondary border-transparent"
                         }`}
                       >
                         <Globe className="h-4 w-4" /> Öffentlich
                       </button>
                       <button
+                        type="button"
                         onClick={() => setVisibility("private")}
-                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                          visibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          visibility === "private"
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "text-muted-foreground bg-secondary border-transparent"
                         }`}
                       >
                         <Lock className="h-4 w-4" /> Privat
                       </button>
                     </div>
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      {visibility === "public"
+                        ? "Für alle DHBW-Studierenden sichtbar."
+                        : "Nur für eingeladene Personen oder zugelassene Kurse sichtbar."}
+                    </p>
                   </div>
+
                   {visibility === "private" && (
-                    <>
-                      <Input placeholder="Einzuladende Personen (komma-getrennt)" value={inviteesInput} onChange={(e) => setInviteesInput(e.target.value)} />
-                      <Input placeholder="Zugelassene Kurse (komma-getrennt, optional)" value={allowedKurseInput} onChange={(e) => setAllowedKurseInput(e.target.value)} />
-                    </>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">Personen einladen</p>
+                        <Input
+                          placeholder="z. B. Anna M., Tim K."
+                          value={inviteesInput}
+                          onChange={(e) => setInviteesInput(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">Komma-getrennt</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">Kurse einladen</p>
+                        <Input
+                          placeholder="z. B. WWI23A, WWI23B"
+                          value={allowedKurseInput}
+                          onChange={(e) => setAllowedKurseInput(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">Komma-getrennt</p>
+                      </div>
+                    </div>
                   )}
-                  <div className="flex gap-2 justify-end pt-2">
-                    <Button variant="outline" onClick={resetForm}>Abbrechen</Button>
-                    <Button onClick={submitDeadline}>{editingId ? "Aktualisieren" : "Erstellen"}</Button>
+
+                  {/* Attachments while creating/editing */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="upload-new"
+                      className="border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary/50 hover:bg-secondary/30 transition-colors"
+                    >
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <p className="text-xs font-medium">Dateien hochladen</p>
+                      <p className="text-[11px] text-muted-foreground">Optional</p>
+                      <input
+                        id="upload-new"
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          handlePendingUpload(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {pendingAttachments.length > 0 && (
+                      <div className="space-y-1.5">
+                        {pendingAttachments.map((a) => (
+                          <div key={a.id} className="flex items-center gap-2 p-2 rounded-md bg-secondary/40">
+                            <FileText className="h-4 w-4 text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{a.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{formatBytes(a.size)}</p>
+                            </div>
+                            <button
+                              onClick={() => removePendingAttachment(a.id)}
+                              className="p-1 rounded hover:bg-background text-muted-foreground hover:text-destructive"
+                              aria-label="Entfernen"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={resetForm}>
+                      Abbrechen
+                    </Button>
+                    <Button onClick={submitDeadline}>
+                      {editingId ? "Speichern" : "Hinzufügen"}
+                    </Button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Search + Filter */}
-          <div className="flex flex-col md:flex-row gap-3 mb-4">
+          {/* Filters + Search */}
+          <div className="flex flex-col md:flex-row gap-3 mb-5">
             <div className="relative flex-1">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Termine durchsuchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input
+                placeholder="Termine durchsuchen…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
             <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 w-fit">
-              {(["alle", "offen", "dringend", "erledigt"] as Filter[]).map((f) => (
+              {filters.map((f) => (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${
-                    filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    filter === f.id
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {f === "dringend" ? "Dringend" : f === "offen" ? "Offen" : f === "erledigt" ? "Erledigt" : "Alle"}
+                  {f.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Deadline list */}
-          <div className="space-y-2">
+          {/* List */}
+          <div className="space-y-2.5">
             {filtered.length === 0 && (
               <div className="glass-card p-10 text-center">
                 <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">Keine Termine gefunden.</p>
+                <p className="text-muted-foreground">Keine Termine gefunden</p>
               </div>
             )}
-            {filtered.map((d) => {
-              const diff = new Date(d.date).getTime() - Date.now();
-              const overdue = diff < 0 && !d.done;
-              const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
-              const messageCount = d.messages?.length ?? 0;
-              const fileCount = d.attachments?.length ?? 0;
+            {filtered.map((d, i) => {
+              const days = daysUntil(d.date);
+              const isUrgent = days <= 3 && days >= 0 && !d.done;
+              const isOverdue = days < 0 && !d.done;
+              const due = new Date(d.date);
               return (
                 <motion.div
                   key={d.id}
-                  layout
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className={`glass-card p-4 flex items-center gap-3 ${d.done ? "opacity-60" : ""}`}
+                  transition={{ delay: i * 0.04 }}
+                  className={`glass-card p-4 flex items-center gap-4 group hover:shadow-md transition-all ${
+                    d.done ? "opacity-60" : ""
+                  } ${isUrgent ? "border-destructive/40" : ""} ${
+                    isOverdue ? "border-destructive/60 bg-destructive/5" : ""
+                  }`}
                 >
-                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                    {d.done ? (
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                    )}
-                  </button>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className={`h-2 w-2 rounded-full ${categoryDot[d.category]}`} />
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                      {categoryLabels[d.category]}
+                  {/* Date chip */}
+                  <div
+                    className={`flex flex-col items-center justify-center h-14 w-14 rounded-xl shrink-0 ${
+                      d.done
+                        ? "bg-secondary text-muted-foreground"
+                        : isUrgent || isOverdue
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    <span className="text-[10px] uppercase font-semibold leading-none">
+                      {due.toLocaleDateString("de-DE", { month: "short" })}
+                    </span>
+                    <span className="font-heading text-xl font-bold leading-none mt-1">
+                      {due.getDate()}
                     </span>
                   </div>
+
+                  {/* Check */}
+                  <button
+                    onClick={() => toggleDone(d.id)}
+                    className="shrink-0"
+                    aria-label="Als erledigt markieren"
+                  >
+                    <CheckCircle2
+                      className={`h-6 w-6 transition-colors ${
+                        d.done
+                          ? "text-success"
+                          : "text-muted-foreground hover:text-primary"
+                      }`}
+                    />
+                  </button>
+
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
-                        {d.title}
-                      </p>
-                      {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
-                      {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                    <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
+                      {d.title}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <Badge
+                        variant="outline"
+                        className={`${categoryColors[d.category]} text-[10px] py-0 h-5`}
+                      >
+                        {categoryLabels[d.category]}
+                      </Badge>
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
+                          d.visibility === "public"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-secondary text-muted-foreground"
+                        }`}
+                        title={
+                          d.visibility === "public"
+                            ? "Öffentlich"
+                            : `Privat${
+                                d.invitees.length || d.allowedKurse.length
+                                  ? ` • ${[...d.invitees, ...d.allowedKurse].join(", ")}`
+                                  : ""
+                              }`
+                        }
+                      >
+                        {d.visibility === "public" ? (
+                          <Globe className="h-3 w-3" />
+                        ) : (
+                          <Lock className="h-3 w-3" />
+                        )}
+                        {d.visibility === "public" ? "Öffentlich" : "Privat"}
                       </span>
-                      {d.visibility === "private" && (
-                        <span className="inline-flex items-center gap-1">
-                          <Lock className="h-3 w-3" /> Privat
+                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {due.toLocaleDateString("de-DE")}
+                      </span>
+                      {!d.done && (
+                        <span
+                          className={`text-xs font-medium ${
+                            isOverdue
+                              ? "text-destructive"
+                              : isUrgent
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                          }`}
+                        >
+                          {isOverdue
+                            ? `${Math.abs(days)} Tage überfällig`
+                            : days === 0
+                              ? "Heute"
+                              : `in ${days} ${days === 1 ? "Tag" : "Tagen"}`}
                         </span>
                       )}
-                      {d.invitees.length > 0 && (
-                        <span>{d.invitees.length} Eingeladene</span>
-                      )}
                     </div>
                   </div>
+
+                  {/* Quick actions: files + forum */}
                   <div className="flex items-center gap-1 shrink-0">
-                    {fileCount > 0 && (
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                        <Paperclip className="h-3 w-3" /> {fileCount}
-                      </span>
-                    )}
-                    {messageCount > 0 && (
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                        <MessageSquare className="h-3 w-3" /> {messageCount}
-                      </span>
-                    )}
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <button
+                      onClick={() => {
+                        setOpenId(d.id);
+                        setActiveTab("files");
+                      }}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Dateien"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {d.attachments.length > 0 && <span>{d.attachments.length}</span>}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOpenId(d.id);
+                        setActiveTab("forum");
+                      }}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Forum"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      {d.messages.length > 0 && <span>{d.messages.length}</span>}
+                    </button>
                   </div>
+
+                  {(isUrgent || isOverdue) && (
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                  )}
+                  <button
+                    onClick={() => startEdit(d)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                    aria-label="Bearbeiten"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => removeDeadline(d.id)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    aria-label="Löschen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </motion.div>
               );
             })}
@@ -636,88 +777,163 @@ function PlannerLayout({
         </div>
       </div>
 
-      {/* Detail dialog */}
-      <Dialog open={!!openId} onOpenChange={(o) => { if (!o) setOpenId(null); }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" />
-              {openDeadline?.title || "Termin"}
-            </DialogTitle>
-            <DialogDescription>
-              {openDeadline && (
-                <span className="inline-flex items-center gap-2">
-                  <span>{new Date(openDeadline.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}</span>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[openDeadline.category]}`}>
-                    {categoryLabels[openDeadline.category]}
-                  </span>
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum")} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mb-3">
-              <TabsTrigger value="files" className="gap-1.5">
-                <Paperclip className="h-4 w-4" /> Dateien
-              </TabsTrigger>
-              <TabsTrigger value="forum" className="gap-1.5">
-                <MessageSquare className="h-4 w-4" /> Forum ({openDeadline?.messages?.length ?? 0})
-              </TabsTrigger>
-            </TabsList>
+      {/* Detail dialog: files + forum */}
+      <Dialog open={!!openId} onOpenChange={(v) => !v && setOpenId(null)}>
+        <DialogContent className="max-w-2xl">
+          {activeDeadline && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${categoryDot[activeDeadline.category]}`} />
+                  {activeDeadline.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {new Date(activeDeadline.date).toLocaleDateString("de-DE", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </DialogDescription>
+              </DialogHeader>
 
-            <TabsContent value="files" className="flex-1 overflow-y-auto space-y-3">
-              {(!openDeadline || openDeadline.attachments.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-8">Keine Dateien angehängt.</p>
-              )}
-              {openDeadline?.attachments.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                  <FileText className="h-5 w-5 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatBytes(a.size)}</p>
-                  </div>
-                  <a href={a.url} download className="text-primary hover:underline text-xs inline-flex items-center gap-1">
-                    <Download className="h-3.5 w-3.5" />
-                  </a>
+              {activeDeadline.note && (
+                <div className="rounded-lg bg-secondary/40 p-3 text-sm whitespace-pre-wrap">
+                  {activeDeadline.note}
                 </div>
-              ))}
-              <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-2">Datei anhängen</p>
-                <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-dashed cursor-pointer hover:bg-secondary/40 transition-colors">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Klicken zum Hochladen</span>
-                  <input type="file" className="hidden" multiple onChange={() => {}} />
-                </label>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="forum" className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto space-y-2 mb-3">
-                {(!openDeadline || openDeadline.messages.length === 0) && (
-                  <p className="text-sm text-muted-foreground text-center py-8">Keine Nachrichten.</p>
-                )}
-                {openDeadline?.messages.map((m) => (
-                  <div key={m.id} className="p-3 rounded-lg bg-secondary/40">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold">{m.author}</span>
-                      <span className="text-[10px] text-muted-foreground">{m.createdAt}</span>
-                    </div>
-                    <p className="text-sm">{m.text}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2 pt-2 border-t">
-                <Input placeholder="Nachricht schreiben…" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") addMessage(); }} />
-                <Button size="icon" onClick={addMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4" />
+              )}
+              <div className="flex justify-end -mt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => {
+                    setOpenId(null);
+                    startEdit(activeDeadline);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Termin bearbeiten
                 </Button>
               </div>
-            </TabsContent>
-          </Tabs>
+
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum")}>
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="files" className="gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Dateien ({activeDeadline.attachments.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="forum" className="gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Forum ({activeDeadline.messages.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Files tab */}
+                <TabsContent value="files" className="space-y-3 mt-4">
+                  <label
+                    htmlFor={`upload-${activeDeadline.id}`}
+                    className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-secondary/30 transition-colors"
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <p className="text-sm font-medium">Dateien hochladen</p>
+                    <p className="text-xs text-muted-foreground">Klicken oder Dateien hierher ziehen</p>
+                    <input
+                      id={`upload-${activeDeadline.id}`}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(activeDeadline.id, e.target.files)}
+                    />
+                  </label>
+
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {activeDeadline.attachments.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Noch keine Dateien hochgeladen
+                      </p>
+                    )}
+                    {activeDeadline.attachments.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-secondary/40 group"
+                      >
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{a.name}</p>
+                          <p className="text-xs text-muted-foreground">{formatBytes(a.size)}</p>
+                        </div>
+                        <a
+                          href={a.url}
+                          download={a.name}
+                          className="p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-foreground"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                        <button
+                          onClick={() => removeAttachment(activeDeadline.id, a.id)}
+                          className="p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* Forum tab */}
+                <TabsContent value="forum" className="space-y-3 mt-4">
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {activeDeadline.messages.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Noch keine Beiträge — starte die Diskussion!
+                      </p>
+                    )}
+                    {activeDeadline.messages.map((m) => (
+                      <div key={m.id} className="p-3 rounded-lg bg-secondary/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-semibold">{m.author}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(m.createdAt).toLocaleString("de-DE", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              day: "2-digit",
+                              month: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{m.text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 items-end pt-2 border-t">
+                    <Textarea
+                      placeholder="Schreibe einen Beitrag…"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      rows={2}
+                      className="resize-none"
+                    />
+                    {messageError && <p className="text-xs text-destructive">{messageError}</p>}
+                    <Button
+                      onClick={() => addMessage(activeDeadline.id)}
+                      disabled={!newMessage.trim()}
+                      size="icon"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
   );
-}
+};
 
 export default PlannerPage;
