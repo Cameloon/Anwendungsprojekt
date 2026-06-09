@@ -32,6 +32,7 @@ import {
   Trash2,
   TrendingUp,
   ExternalLink,
+  Flag,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Whiteboard from "@/components/Whiteboard";
@@ -48,6 +49,7 @@ import { forumSeedPosts } from "@/lib/forumSeedPosts";
 import { Link, useNavigate } from "react-router-dom";
 import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
 import { FileText } from "lucide-react";
+import { ReportDialog } from "@/components/ReportDialog";
 import { toast } from "sonner";
 
 type Post = SharedPost;
@@ -118,6 +120,7 @@ const ForumPage = () => {
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<Post["tag"] | "alle">("alle");
   const [sort, setSort] = useState<Sort>("neu");
+  const [reportTarget, setReportTarget] = useState<{ postId: string; postTitle: string } | null>(null);
 
   useEffect(() => subscribe(() => setStored(loadPosts())), []);
   useEffect(() => subscribeForums(() => setForums(loadForums())), []);
@@ -828,6 +831,16 @@ const ForumPage = () => {
                               <MessageCircle className="h-3.5 w-3.5" />
                               {post.comments?.length ?? post.replies}
                             </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReportTarget({ postId: post.id, postTitle: post.title });
+                              }}
+                              title="Beitrag melden"
+                              className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            >
+                              <Flag className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -839,6 +852,15 @@ const ForumPage = () => {
           </div>
         </div>
       </div>
+
+      <ReportDialog
+        open={reportTarget !== null}
+        onOpenChange={(open) => { if (!open) setReportTarget(null); }}
+        postId={reportTarget?.postId ?? ""}
+        postTitle={reportTarget?.postTitle ?? ""}
+        forumName={activeForum.name}
+        reportedBy={me}
+      />
 
       {/* Create-forum dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

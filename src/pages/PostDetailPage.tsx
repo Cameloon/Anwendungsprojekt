@@ -8,6 +8,7 @@ import {
   Send,
   FileText,
   ExternalLink,
+  Flag,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
 import { forumSeedPosts } from "@/lib/forumSeedPosts";
 import { loadForums, subscribeForums, type Forum } from "@/lib/forumsStore";
 import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const tagStyles = {
   frage: "bg-info/15 text-info border-info/20",
@@ -60,6 +62,7 @@ const PostDetailPage = () => {
   const [forums, setForums] = useState<Forum[]>(() => loadForums());
   const [scripts, setScripts] = useState<Script[]>(() => publicScripts());
   const [comment, setComment] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => subscribe(() => setPosts(loadPosts())), []);
   useEffect(() => subscribeForums(() => setForums(loadForums())), []);
@@ -203,6 +206,14 @@ const PostDetailPage = () => {
                 <MessageSquare className="h-3.5 w-3.5" />
                 {comments.length} {comments.length === 1 ? "Kommentar" : "Kommentare"}
               </span>
+              <button
+                onClick={() => setReportOpen(true)}
+                title="Beitrag melden"
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Melden
+              </button>
             </div>
           </motion.article>
 
@@ -266,6 +277,15 @@ const PostDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        postId={post.id}
+        postTitle={post.title}
+        forumName={forum?.name ?? "Forum"}
+        reportedBy={me}
+      />
     </div>
   );
 };
