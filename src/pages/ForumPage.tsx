@@ -44,6 +44,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { DHBW_STANDORTE } from "@/lib/dhbw";
 import { inviteToForum } from "@/lib/notificationsStore";
+import { forumSeedPosts } from "@/lib/forumSeedPosts";
 import { Link, useNavigate } from "react-router-dom";
 import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
 import { FileText } from "lucide-react";
@@ -64,48 +65,6 @@ const tagLabels = {
   material: "Material",
   diskussion: "Diskussion",
 };
-
-const initialPosts: Post[] = [
-  {
-    id: "1",
-    author: "Anna M.",
-    title: "Frage zur linearen Algebra Aufgabe 3",
-    content: "Kann mir jemand bei der Eigenwertberechnung helfen? Ich komme bei der 3x3 Matrix nicht weiter.",
-    date: "vor 2 Stunden",
-    likes: 5,
-    replies: 3,
-    tag: "frage",
-    standort: "DHBW Stuttgart",
-    studiengang: "Wirtschaftsinformatik",
-    kurs: "WWI23A",
-  },
-  {
-    id: "2",
-    author: "Tim K.",
-    title: "Lerngruppe für Statistik Klausur",
-    content: "Wer hat Lust auf eine kursübergreifende Lerngruppe für die Statistik-Klausur? Online via Discord.",
-    date: "vor 5 Stunden",
-    likes: 12,
-    replies: 8,
-    tag: "lerngruppe",
-    standort: "DHBW Mannheim",
-    studiengang: "BWL-Industrie",
-    kurs: "WIN22",
-  },
-  {
-    id: "3",
-    author: "Lena S.",
-    title: "Zusammenfassung Vorlesung 7 - Algorithmen",
-    content: "Habe meine Zusammenfassung zur Sortieralgorithmen-Vorlesung hochgeladen. Schaut gerne rein!",
-    date: "gestern",
-    likes: 20,
-    replies: 4,
-    tag: "material",
-    standort: "DHBW Karlsruhe",
-    studiengang: "Informatik",
-    kurs: "TINF22",
-  },
-];
 
 const avatarColors = [
   "bg-primary/15 text-primary",
@@ -183,7 +142,7 @@ const ForumPage = () => {
   }, [accessible, activeForumId]);
 
   const allPosts = useMemo(
-    () => (activeForum.isDefault ? [...stored, ...initialPosts] : [...stored]),
+    () => (activeForum.isDefault ? [...stored, ...forumSeedPosts] : [...stored]),
     [stored, activeForum.isDefault]
   );
 
