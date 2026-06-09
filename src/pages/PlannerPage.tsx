@@ -39,6 +39,7 @@ import { addPost as addForumPost } from "@/lib/forumStore";
 import { inviteToDeadline } from "@/lib/notificationsStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { validateTitle, validateDate, validateMessage } from "@/lib/validation";
 
 interface Attachment {
   id: string;
@@ -138,8 +139,8 @@ const PlannerPage = () => {
     s.split(",").map((x) => x.trim()).filter(Boolean);
 
   const submitDeadline = () => {
-    const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-    const nextDateError = date ? "" : "Bitte ein Datum wählen.";
+    const nextTitleError = validateTitle(title);
+    const nextDateError = validateDate(date);
     if (nextTitleError || nextDateError) return;
     const invitees = parseList(inviteesInput);
     const allowedKurse = parseList(allowedKurseInput);
@@ -324,9 +325,9 @@ const PlannerPage = () => {
   const activeDeadline = deadlines.find((d) => d.id === openId) || null;
 
   // derived validation messages
-  const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const dateError = !date ? "Bitte ein Datum wählen." : "";
-  const messageError = newMessage.trim().length > 0 && newMessage.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
+  const titleError = validateTitle(title);
+  const dateError = date ? validateDate(date) : "";
+  const messageError = validateMessage(newMessage);
 
   return (
     <div className="min-h-screen bg-background">
