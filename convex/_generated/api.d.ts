@@ -9,7 +9,13 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as deadlines from "../deadlines.js";
+import type * as forums from "../forums.js";
+import type * as groups from "../groups.js";
+import type * as notifications from "../notifications.js";
+import type * as posts from "../posts.js";
 import type * as profiles from "../profiles.js";
+import type * as scripts from "../scripts.js";
 
 import type {
   ApiFromModules,
@@ -19,7 +25,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  deadlines: typeof deadlines;
+  forums: typeof forums;
+  groups: typeof groups;
+  notifications: typeof notifications;
+  posts: typeof posts;
   profiles: typeof profiles;
+  scripts: typeof scripts;
 }>;
 
 /**

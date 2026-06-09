@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Globe, Hash, MessageSquare, ThumbsUp, MessageCircle, ArrowRight } from "lucide-react";
-import { loadPosts, subscribe, type SharedPost } from "@/lib/forumStore";
-import { accessibleForums, subscribeForums, type Forum } from "@/lib/forumsStore";
+import { Eye, EyeOff, Hash, MessageSquare, ThumbsUp, MessageCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 const HIDDEN_KEY = "dashboard_hidden_forums_v1";
 const POSTS_PER_FORUM = 5;
-const CURRENT_USER = "Du";
 
 const loadHidden = (): string[] => {
   try {
@@ -20,24 +19,29 @@ const loadHidden = (): string[] => {
 const saveHidden = (h: string[]) => localStorage.setItem(HIDDEN_KEY, JSON.stringify(h));
 
 const ForumFeed = () => {
-  const [posts, setPosts] = useState<SharedPost[]>(() => loadPosts());
-  const [accessible, setAccessible] = useState<Forum[]>(() => accessibleForums(CURRENT_USER));
+  const forumsQuery = useQuery(api.forums.getAllAccessible);
+  const recentPostsQuery = useQuery(api.posts.listRecent);
+
   const [hidden, setHidden] = useState<string[]>(() => loadHidden());
 
-  useEffect(() => subscribe(() => setPosts(loadPosts())), []);
-  useEffect(() => subscribeForums(() => setAccessible(accessibleForums(CURRENT_USER))), []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawForums: any[] = (forumsQuery ?? []) as any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawPosts: any[] = (recentPostsQuery ?? []) as any[];
 
-  const forums = useMemo(() => {
-    return accessible.map((f) => ({
-      id: f.id,
-      name: f.name,
-      icon: f.isDefault ? Globe : Hash,
-      posts: (f.isDefault
-        ? posts.filter((p) => !p.groupId && p.visibility !== "private")
-        : posts.filter((p) => p.groupId === f.id)
-      ).slice(0, POSTS_PER_FORUM),
-    }));
-  }, [posts, accessible]);
+  const forums = rawForums.map((f: any) => ({
+    id: f._id,
+    name: f.name,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    posts: rawPosts.filter((p: any) => p.forumId === f._id).slice(0, POSTS_PER_FORUM).map((p: any) => ({
+      id: p._id,
+      title: p.title,
+      authorName: p.authorName,
+      date: p._creationTime,
+      likeCount: p.likeCount ?? 0,
+      commentCount: (p.comments ?? []).length,
+    })),
+  }));
 
   const toggleHidden = (id: string) => {
     const next = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id];
@@ -47,6 +51,16 @@ const ForumFeed = () => {
 
   const visible = forums.filter((f) => !hidden.includes(f.id));
   const hiddenForums = forums.filter((f) => hidden.includes(f.id));
+
+  const formatDate = (ts: number) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "gerade eben";
+    if (m < 60) return `vor ${m} Min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `vor ${h} Std`;
+    return new Date(ts).toLocaleDateString("de-DE");
+  };
 
   return (
     <section className="glass-card rounded-2xl p-6">
@@ -60,58 +74,55 @@ const ForumFeed = () => {
         </Link>
       </div>
 
-      {visible.length === 0 ? (
+      {forums.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6 text-center">
           Alle Foren sind ausgeblendet. Aktiviere unten ein Forum, um Beiträge zu sehen.
         </p>
       ) : (
         <div className="space-y-6">
-          {visible.map((forum) => {
-            const Icon = forum.icon;
-            return (
-              <div key={forum.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    {forum.name}
-                  </div>
-                  <button
-                    onClick={() => toggleHidden(forum.id)}
-                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                    title="Forum im Dashboard ausblenden"
-                  >
-                    <EyeOff className="h-3.5 w-3.5" /> Ausblenden
-                  </button>
+          {forums.map((forum) => (
+            <div key={forum.id}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  {forum.name}
                 </div>
-                {forum.posts.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-2">Noch keine Beiträge.</p>
-                ) : (
-                  <ul className="divide-y divide-border/60">
-                    {forum.posts.map((p) => (
-                      <li key={p.id} className="py-2.5">
-                        <Link to="/forum" className="block group">
-                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                            {p.title}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                            <span>{p.author}</span>
-                            <span>•</span>
-                            <span>{p.date}</span>
-                            <span className="inline-flex items-center gap-1">
-                              <ThumbsUp className="h-3 w-3" /> {p.likes}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <MessageCircle className="h-3 w-3" /> {p.replies}
-                            </span>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <button
+                  onClick={() => toggleHidden(forum.id)}
+                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                  title="Forum im Dashboard ausblenden"
+                >
+                  <EyeOff className="h-3.5 w-3.5" /> Ausblenden
+                </button>
               </div>
-            );
-          })}
+              {forum.posts.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">Noch keine Beiträge.</p>
+              ) : (
+                <ul className="divide-y divide-border/60">
+                  {forum.posts.map((p) => (
+                    <li key={p.id} className="py-2.5">
+                      <Link to="/forum" className="block group">
+                        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                          {p.title}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <span>{p.authorName}</span>
+                          <span>•</span>
+                          <span>{typeof p.date === 'number' ? formatDate(p.date) : p.date}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <ThumbsUp className="h-3 w-3" /> {p.likeCount}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" /> {p.commentCount}
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

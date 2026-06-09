@@ -1,6 +1,55 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, displayName: string) {
+  const jg = jahrgang.toUpperCase();
+
+  const existing = await ctx.db
+    .query("forums")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("name"), "Allgemein"))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+    .first();
+
+  if (existing) {
+    const isMember = await ctx.db
+      .query("forumMembers")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex("by_forum_user", (q: any) =>
+        q.eq("forumId", existing._id).eq("userId", userId),
+      )
+      .unique();
+    if (!isMember) {
+      await ctx.db.insert("forumMembers", {
+        forumId: existing._id,
+        userId,
+        displayName,
+        joinedAt: Date.now(),
+      });
+    }
+    return;
+  }
+
+  const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const forumId = await ctx.db.insert("forums", {
+    name: "Allgemein",
+    description: `Allgemeiner Austausch für Jahrgang ${jg}`,
+    visibility: "public",
+    inviteCode: code,
+    jahrgang: jg,
+    createdAt: Date.now(),
+  });
+
+  await ctx.db.insert("forumMembers", {
+    forumId,
+    userId,
+    displayName,
+    joinedAt: Date.now(),
+  });
+}
+
 export const getMine = query({
   args: {},
   handler: async (ctx) => {
@@ -89,9 +138,19 @@ export const upsertMine = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, patch);
+      if (args.jahrgang) {
+        const displayName =
+          args.displayName ||
+          existing.displayName ||
+          identity.name ||
+          identity.email ||
+          "Unbekannt";
+        await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+      }
       return existing._id;
     }
-    return await ctx.db.insert("profiles", {
+
+    const newId = await ctx.db.insert("profiles", {
       userId: identity.subject,
       email: args.email ?? identity.email ?? undefined,
       displayName: args.displayName,
@@ -103,6 +162,17 @@ export const upsertMine = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    if (args.jahrgang) {
+      const displayName =
+        args.displayName ||
+        identity.name ||
+        identity.email ||
+        "Unbekannt";
+      await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+    }
+
+    return newId;
   },
 });
 
@@ -135,15 +205,20 @@ export const complete = mutation({
       updatedAt: now,
     };
 
+    const displayName = args.displayName.trim();
+
     if (existing) {
       await ctx.db.patch(existing._id, patch);
+      await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
       return existing._id;
     }
-    return await ctx.db.insert("profiles", {
+    const newId = await ctx.db.insert("profiles", {
       userId: identity.subject,
       email: identity.email ?? undefined,
       ...patch,
       createdAt: now,
     });
+    await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+    return newId;
   },
 });

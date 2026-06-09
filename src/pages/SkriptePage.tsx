@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Upload,
-  Eye,
   Download,
   Search,
   BookOpen,
@@ -11,14 +10,20 @@ import {
   Filter,
   Globe,
   Lock,
+  Trash2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { loadScripts, saveScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
 import { validateSubject, validateScriptDescription } from "@/lib/validation";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { toast } from "sonner";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const subjectColors: Record<string, string> = {
   Mathematik: "bg-info/15 text-info border-info/20",
@@ -27,14 +32,38 @@ const subjectColors: Record<string, string> = {
   Physik: "bg-accent/15 text-accent border-accent/20",
 };
 
-const typeColors: Record<Script["type"], string> = {
+const typeColors: Record<string, string> = {
   PDF: "bg-destructive/10 text-destructive",
   DOCX: "bg-info/10 text-info",
   Notiz: "bg-success/10 text-success",
 };
 
+interface ScriptItem {
+  id: string;
+  title: string;
+  subject: string;
+  description: string;
+  authorName: string;
+  authorId: string;
+  date: string;
+  pages: number;
+  type: "PDF" | "DOCX" | "Notiz";
+  visibility: "public" | "private";
+  url?: string;
+  fileName?: string;
+}
+
 const SkriptePage = () => {
-  const [scripts, setScripts] = useState<Script[]>(() => loadScripts());
+  const { user } = useAuth();
+  const profile = useProfile();
+  const me = user?.id || "";
+  const displayName = profile?.display_name || "Unbekannt";
+
+  const scriptsQuery = useQuery(api.scripts.listVisible);
+
+  const createMutation = useMutation(api.scripts.create);
+  const deleteMutation = useMutation(api.scripts.deleteScript);
+
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -42,51 +71,75 @@ const SkriptePage = () => {
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
-  // derive validation messages from current input so they disappear when corrected
 
-  useEffect(() => subscribeScripts(() => setScripts(loadScripts())), []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawScripts: any[] = (scriptsQuery ?? []) as any[];
+
+  const scripts: ScriptItem[] = rawScripts.map((s: any) => ({
+    id: s._id,
+    title: s.title,
+    subject: s.subject,
+    description: s.description,
+    authorName: s.authorName,
+    authorId: s.authorId,
+    date: new Date(s._creationTime).toLocaleDateString("de-DE"),
+    pages: s.pages,
+    type: s.type,
+    visibility: s.visibility,
+    url: s.url,
+    fileName: s.fileName,
+  }));
 
   const subjects = useMemo(() => {
     const set = new Set(scripts.map((s) => s.subject));
     return ["alle", ...Array.from(set)];
   }, [scripts]);
 
-  const addScript = () => {
+  const addScript = async () => {
     const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
     const nextSubjectError = validateSubject(subject);
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextSubjectError || nextDescriptionError) return;
-    const next: Script = {
-      id: Date.now().toString(),
-      title,
-      subject,
-      description,
-      author: "Du",
-      date: new Date().toLocaleDateString("de-DE"),
-      pages: 0,
-      type: "Notiz",
-      visibility,
-    };
-    const updated = [next, ...scripts];
-    setScripts(updated);
-    saveScripts(updated);
-    setTitle("");
-    setSubject("");
-    setDescription("");
-    setVisibility("public");
-    setShowUpload(false);
+    try {
+      await createMutation({
+        title: title.trim(),
+        subject: subject.trim(),
+        description: description.trim(),
+        pages: 0,
+        type: "Notiz",
+        visibility,
+      });
+      toast.success("Skript erstellt");
+      setTitle("");
+      setSubject("");
+      setDescription("");
+      setVisibility("public");
+      setShowUpload(false);
+    } catch {
+      toast.error("Fehler beim Erstellen");
+    }
+  };
+
+  const removeScript = async (id: string) => {
+    if (!window.confirm("Skript wirklich löschen?")) return;
+    try {
+      await deleteMutation({ scriptId: id as Id<"scripts"> });
+      toast.success("Skript gelöscht");
+    } catch {
+      toast.error("Fehler beim Löschen");
+    }
   };
 
   const filtered = useMemo(() => {
     return scripts
-      .filter((s) => s.visibility !== "private" || s.author === "Du")
+      .filter((s) => s.visibility !== "private" || s.authorId === me)
       .filter(
         (s) =>
           s.title.toLowerCase().includes(search.toLowerCase()) ||
           s.description.toLowerCase().includes(search.toLowerCase())
       )
       .filter((s) => activeSubject === "alle" || s.subject === activeSubject);
-  }, [scripts, search, activeSubject]);
+  }, [scripts, search, activeSubject, me]);
 
   const totalPages = scripts.reduce((sum, s) => sum + s.pages, 0);
 
@@ -114,7 +167,6 @@ const SkriptePage = () => {
     },
   ];
 
-  // derived validation messages (live) so they update/clear automatically
   const titleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
   const subjectError = validateSubject(subject);
   const descriptionError = validateScriptDescription(description);
@@ -202,11 +254,6 @@ const SkriptePage = () => {
                     className="resize-none"
                   />
                   {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
-                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
-                    <p className="font-medium text-foreground">Datei hierher ziehen</p>
-                    <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
-                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibility("public")}
@@ -327,27 +374,34 @@ const SkriptePage = () => {
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
                   <div className="min-w-0">
-                    <p className="truncate">{script.author}</p>
+                    <p className="truncate">{script.authorName}</p>
                     <p className="text-[10px] mt-0.5">
                       {script.date}
                       {script.pages > 0 && ` · ${script.pages} S.`}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    {script.url && (
+                      <a href={script.url} download className="inline-flex">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    {script.authorId === me && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeScript(script.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </motion.div>

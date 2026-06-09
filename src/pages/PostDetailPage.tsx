@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -8,33 +8,27 @@ import {
   Send,
   FileText,
   ExternalLink,
+  Reply,
+  X,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
-import { toast } from "sonner";
-import {
-  addComment,
-  loadPosts,
-  subscribe,
-  updatePost,
-  type ForumComment,
-  type SharedPost,
-} from "@/lib/forumStore";
-import { forumSeedPosts } from "@/lib/forumSeedPosts";
-import { loadForums, subscribeForums, type Forum } from "@/lib/forumsStore";
-import { publicScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
 
-const tagStyles = {
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { toast } from "sonner";
+
+const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
   lerngruppe: "bg-primary/15 text-primary border-primary/20",
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
-const tagLabels = {
+const tagLabels: Record<string, string> = {
   frage: "Frage",
   lerngruppe: "Lerngruppe",
   material: "Material",
@@ -49,30 +43,85 @@ const avatarColors = [
   "bg-destructive/15 text-destructive",
 ];
 
-const PostDetailPage = () => {
+function formatDate(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "gerade eben";
+  if (m < 60) return `vor ${m} Min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `vor ${h} Std`;
+  return new Date(ts).toLocaleDateString("de-DE");
+}
+
+interface PostComment {
+  _id: string;
+  _creationTime: number;
+  authorId: string;
+  authorName: string;
+  content: string;
+  parentId?: string;
+  liked: boolean;
+  likeCount: number;
+}
+
+interface EnrichedPost {
+  _id: string;
+  _creationTime: number;
+  forumId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  tag: string;
+  liked: boolean;
+  likeCount: number;
+  comments: PostComment[];
+  sketch?: string;
+  linkedScriptIds?: string[];
+}
+
+interface ForumInfo {
+  _id: string;
+  name: string;
+}
+
+interface ScriptInfo {
+  _id: string;
+  title: string;
+}
+
+function PostDetailPage() {
   const { forumId, postId } = useParams<{ forumId: string; postId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const profile = useProfile();
-  const me = profile?.display_name || "Du";
+  const me = user?.id || "";
 
-  const [posts, setPosts] = useState<SharedPost[]>(() => loadPosts());
-  const [forums, setForums] = useState<Forum[]>(() => loadForums());
-  const [scripts, setScripts] = useState<Script[]>(() => publicScripts());
+  const post = useQuery(
+    api.posts.getById,
+    postId ? { postId: postId as Id<"posts"> } : "skip"
+  ) as EnrichedPost | null | undefined;
+  const forum = useQuery(
+    api.forums.getById,
+    forumId ? { forumId: forumId as Id<"forums"> } : "skip"
+  ) as ForumInfo | null | undefined;
+  const allScripts = useQuery(api.scripts.listPublic) as ScriptInfo[] | undefined;
+
+  const toggleLikeMutation = useMutation(api.posts.toggleLike);
+  const toggleCommentLikeMutation = useMutation(api.posts.toggleCommentLike);
+  const addCommentMutation = useMutation(api.posts.addComment);
+
   const [comment, setComment] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => subscribe(() => setPosts(loadPosts())), []);
-  useEffect(() => subscribeForums(() => setForums(loadForums())), []);
-  useEffect(() => subscribeScripts(() => setScripts(publicScripts())), []);
-
-  const post = useMemo(() => {
-    if (!postId) return undefined;
-    const storedPost = posts.find((p) => p.id === postId);
-    if (storedPost) return storedPost;
-    if (forumId !== "public") return undefined;
-    return forumSeedPosts.find((p) => p.id === postId);
-  }, [posts, postId, forumId]);
-  const forum = useMemo(() => forums.find((f) => f.id === forumId), [forums, forumId]);
+  if (post === undefined) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-32 md:pt-24 pb-16 px-6 container mx-auto max-w-3xl text-center">
+          <div className="h-6 w-6 animate-spin mx-auto text-muted-foreground border-2 border-current border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
+  }
 
   if (!post) {
     return (
@@ -89,34 +138,106 @@ const PostDetailPage = () => {
   }
 
   const comments = post.comments ?? [];
-  const linkedScripts = (post.linkedScriptIds ?? [])
-    .map((id) => scripts.find((s) => s.id === id))
-    .filter(Boolean) as Script[];
+  const linkedScripts = (allScripts ?? []).filter((s) =>
+    (post.linkedScriptIds ?? []).some((id) => id === s._id)
+  );
 
-  const toggleLike = () => {
-    updatePost(post.id, {
-      liked: !post.liked,
-      likes: post.liked ? Math.max(0, post.likes - 1) : post.likes + 1,
-    });
+  const handleToggleLike = () => {
+    if (!me) return;
+    toggleLikeMutation({ postId: post._id });
   };
 
-  const submitComment = () => {
+  const handleToggleCommentLike = async (commentId: string) => {
+    if (!me) return;
+    try {
+      await toggleCommentLikeMutation({ commentId: commentId as Id<"postComments"> });
+    } catch (e) {
+      toast.error("Fehler beim Liken des Kommentars");
+    }
+  };
+
+  const submitComment = async () => {
     const text = comment.trim();
     if (!text) return;
-    const c: ForumComment = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      author: me,
-      content: text,
-      date: "gerade eben",
-      createdAt: Date.now(),
-    };
-    addComment(post.id, c);
-    setComment("");
-    toast.success("Kommentar gepostet");
+    try {
+      await addCommentMutation({
+        postId: post._id,
+        content: text,
+        parentId: replyTo ? (replyTo.id as Id<"postComments">) : undefined,
+      });
+      setComment("");
+      setReplyTo(null);
+      toast.success("Kommentar gepostet");
+    } catch {
+      toast.error("Fehler beim Posten");
+    }
   };
 
-  const backTo = forum ? `/forum/${forum.id}` : "/forum";
+  const startReply = (c: PostComment) => {
+    setReplyTo({ id: c._id, name: c.authorName });
+    setComment(`@${c.authorName} `);
+  };
 
+  const cancelReply = () => {
+    setReplyTo(null);
+    setComment("");
+  };
+
+  const backTo = forum ? `/forum/${forum._id}` : "/forum";
+
+  return (
+    <PostDetailLayout
+      post={post}
+      forumName={forum?.name ?? null}
+      backTo={backTo}
+      navigate={navigate}
+      comments={comments}
+      comment={comment}
+      setComment={setComment}
+      submitComment={submitComment}
+      handleToggleLike={handleToggleLike}
+      handleToggleCommentLike={handleToggleCommentLike}
+      replyTo={replyTo}
+      startReply={startReply}
+      cancelReply={cancelReply}
+      linkedScripts={linkedScripts}
+    />
+  );
+}
+
+// ── Shared layout ──
+
+function PostDetailLayout({
+  post,
+  forumName,
+  backTo,
+  navigate,
+  comments,
+  comment,
+  setComment,
+  submitComment,
+  handleToggleLike,
+  handleToggleCommentLike,
+  replyTo,
+  startReply,
+  cancelReply,
+  linkedScripts,
+}: {
+  post: EnrichedPost;
+  forumName: string | null;
+  backTo: string;
+  navigate: ReturnType<typeof useNavigate>;
+  comments: PostComment[];
+  comment: string;
+  setComment: (v: string) => void;
+  submitComment: () => void;
+  handleToggleLike: () => void;
+  handleToggleCommentLike: (commentId: string) => void;
+  replyTo: { id: string; name: string } | null;
+  startReply: (c: PostComment) => void;
+  cancelReply: () => void;
+  linkedScripts: ScriptInfo[];
+}) {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -128,8 +249,8 @@ const PostDetailPage = () => {
             onClick={() => navigate(backTo)}
             className="gap-1.5 mb-4 -ml-2"
           >
-            <ArrowLeft className="h-4 w-4" />{" "}
-            {forum ? `Zurück zu ${forum.name}` : "Zurück"}
+            <ArrowLeft className="h-4 w-4" />
+            {forumName ? `Zurück zu ${forumName}` : "Zurück"}
           </Button>
 
           <motion.article
@@ -140,17 +261,17 @@ const PostDetailPage = () => {
             <div className="flex items-center gap-3 mb-3">
               <div
                 className={`h-10 w-10 rounded-full ${
-                  avatarColors[post.author.charCodeAt(0) % avatarColors.length]
+                  avatarColors[post.authorName.charCodeAt(0) % avatarColors.length]
                 } flex items-center justify-center font-bold`}
               >
-                {post.author[0]?.toUpperCase()}
+                {post.authorName[0]?.toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{post.author}</p>
-                <p className="text-xs text-muted-foreground">{post.date}</p>
+                <p className="text-sm font-semibold">{post.authorName}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(post._creationTime)}</p>
               </div>
-              <Badge variant="outline" className={`${tagStyles[post.tag]} text-[10px] py-0 h-5`}>
-                {tagLabels[post.tag]}
+              <Badge variant="outline" className={`${tagStyles[post.tag] || ""} text-[10px] py-0 h-5`}>
+                {tagLabels[post.tag as keyof typeof tagLabels] || post.tag}
               </Badge>
             </div>
             <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight mb-2">
@@ -174,7 +295,7 @@ const PostDetailPage = () => {
                 <div className="flex flex-wrap gap-1.5">
                   {linkedScripts.map((s) => (
                     <Link
-                      key={s.id}
+                      key={s._id}
                       to="/skripte"
                       className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-success/10 text-success hover:bg-success/20"
                     >
@@ -189,7 +310,7 @@ const PostDetailPage = () => {
 
             <div className="flex items-center gap-2 mt-5 pt-4 border-t">
               <button
-                onClick={toggleLike}
+                onClick={handleToggleLike}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   post.liked
                     ? "bg-primary/10 text-primary"
@@ -197,7 +318,7 @@ const PostDetailPage = () => {
                 }`}
               >
                 <ThumbsUp className={`h-3.5 w-3.5 ${post.liked ? "fill-primary" : ""}`} />
-                {post.likes}
+                {post.likeCount}
               </button>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -206,9 +327,17 @@ const PostDetailPage = () => {
             </div>
           </motion.article>
 
-          {/* Composer */}
           <div className="glass-card p-4 mb-6">
-            <p className="text-xs text-muted-foreground mb-2 font-medium">Antwort schreiben</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground font-medium">
+                {replyTo ? `Antwort an @${replyTo.name}` : "Kommentar schreiben"}
+              </p>
+              {replyTo && (
+                <button onClick={cancelReply} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             <Textarea
               placeholder="Schreibe einen Kommentar…"
               value={comment}
@@ -227,7 +356,6 @@ const PostDetailPage = () => {
             </div>
           </div>
 
-          {/* Comments list */}
           <div className="space-y-3">
             {comments.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -235,39 +363,85 @@ const PostDetailPage = () => {
                 <p className="text-sm">Noch keine Kommentare. Sei der/die Erste!</p>
               </div>
             ) : (
-              comments
-                .slice()
-                .sort((a, b) => a.createdAt - b.createdAt)
-                .map((c, i) => (
-                  <motion.div
-                    key={c.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="glass-card p-4 flex gap-3"
-                  >
-                    <div
-                      className={`h-8 w-8 rounded-full ${
-                        avatarColors[c.author.charCodeAt(0) % avatarColors.length]
-                      } flex items-center justify-center text-xs font-bold shrink-0`}
+              (() => {
+                const sorted = [...comments].sort((a, b) => a._creationTime - b._creationTime);
+                const childrenOf = new Map<string, PostComment[]>();
+                const roots: PostComment[] = [];
+                for (const c of sorted) {
+                  if (!c.parentId) { roots.push(c); continue; }
+                  const arr = childrenOf.get(c.parentId) ?? [];
+                  arr.push(c);
+                  childrenOf.set(c.parentId, arr);
+                }
+                const renderComment = (comment: PostComment, depth: number, idxs: number[]) => {
+                  const isRoot = depth === 0;
+                  const avatarSize = isRoot ? "h-8 w-8" : "h-7 w-7";
+                  const avatarFont = isRoot ? "text-xs" : "text-[10px]";
+                  const inner = (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idxs.reduce((a, b) => a + b, 0) * 0.02 }}
+                      className={`flex gap-3 ${isRoot ? "glass-card p-4" : "py-3"}`}
                     >
-                      {c.author[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm font-semibold">{c.author}</span>
-                        <span className="text-[10px] text-muted-foreground">{c.date}</span>
+                      <div
+                        className={`${avatarSize} rounded-full shrink-0 ${
+                          avatarColors[comment.authorName.charCodeAt(0) % avatarColors.length]
+                        } flex items-center justify-center ${avatarFont} font-bold`}
+                      >
+                        {comment.authorName[0]?.toUpperCase()}
                       </div>
-                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{c.content}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-sm font-semibold">{comment.authorName}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(comment._creationTime)}</span>
+                        </div>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{comment.content}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <button
+                            onClick={() => handleToggleCommentLike(comment._id)}
+                            className={`inline-flex items-center gap-1 rounded-md text-[10px] font-medium transition-colors ${
+                              comment.liked
+                                ? "text-primary"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <ThumbsUp className={`h-3 w-3 ${comment.liked ? "fill-primary" : ""}`} />
+                            {comment.likeCount}
+                          </button>
+                          <button
+                            onClick={() => startReply(comment)}
+                            className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Reply className="h-3 w-3" /> Antworten
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                  const children = childrenOf.get(comment._id) ?? [];
+                  return (
+                    <div
+                      key={comment._id}
+                      style={
+                        isRoot
+                          ? undefined
+                          : { marginLeft: Math.min(depth * 20, 60), paddingLeft: Math.min(depth * 8 + 8, 24), borderLeft: "2px solid hsl(var(--border))" }
+                      }
+                    >
+                      {inner}
+                      {children.map((child, ci) => renderComment(child, depth + 1, [...idxs, ci]))}
                     </div>
-                  </motion.div>
-                ))
+                  );
+                };
+                return roots.map((root, i) => renderComment(root, 0, [i]));
+              })()
             )}
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
 export default PostDetailPage;

@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ConvexProvider } from "convex/react";
 import App from "./App.tsx";
 import { convex } from "./lib/convex";
 import { IS_DEMO } from "./lib/demoMode";
@@ -15,7 +16,11 @@ if (IS_DEMO) {
   console.warn(
     "[setup] Running in DEMO mode (Clerk/Convex env vars missing). Using local dummy auth + profile."
   );
-  root.render(<App />);
+  root.render(
+    <ConvexProvider client={convex}>
+      <App />
+    </ConvexProvider>
+  );
 } else {
   root.render(
     <ClerkProvider publishableKey={clerkPubKey!}>

@@ -9,22 +9,16 @@ import {
   Flame,
   MessageSquare,
   Plus,
-  Presentation,
   Users,
   Zap,
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import PageSkeleton from "@/components/PageSkeleton";
 import GroupsPanel from "@/components/GroupsPanel";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-import { loadGroups } from "@/lib/groupStore";
-import { loadPosts, subscribe, type SharedPost } from "@/lib/forumStore";
-import {
-  publicScripts,
-  subscribeScripts,
-  type Script,
-} from "@/lib/scriptsStore";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Task {
@@ -108,23 +102,23 @@ const DashboardPage = () => {
   const profile = useProfile();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [posts, setPosts] = useState<SharedPost[]>(() => loadPosts());
-  const [scripts, setScripts] = useState<Script[]>(() => publicScripts());
+  const postsData = useQuery(api.posts.listRecent);
+  const scriptsData = useQuery(api.scripts.listPublic);
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [overviewMode, setOverviewMode] = useState<"overview" | "latest">(
     "overview",
   );
   const name = profile?.display_name ?? "";
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 250);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => subscribe(() => setPosts(loadPosts())), []);
-  useEffect(() => subscribeScripts(() => setScripts(publicScripts())), []);
+  const posts = useMemo(() => postsData ?? [], [postsData]);
+  const scripts = useMemo(() => scriptsData ?? [], [scriptsData]);
 
   const toggleTask = (id: string) =>
     setTasks((prev) =>
@@ -166,7 +160,7 @@ const DashboardPage = () => {
     const values = new Set<string>();
     filteredTasks.forEach((task) => values.add(task.fach));
     filteredPosts.forEach((post) => {
-      const key = post.fach || post.vorlesung || post.kurs;
+      const key = post.tag;
       if (key) values.add(key);
     });
     filteredScripts.forEach((script) => values.add(script.subject));
@@ -181,7 +175,7 @@ const DashboardPage = () => {
   const selectedPosts = useMemo(() => {
     if (!selectedSubject) return [];
     return filteredPosts.filter(
-      (post) => (post.fach || post.vorlesung || post.kurs) === selectedSubject,
+      (post) => post.tag === selectedSubject,
     );
   }, [filteredPosts, selectedSubject]);
 
@@ -223,8 +217,7 @@ const DashboardPage = () => {
             linkLabel: "Forum",
             items: latestPosts.map((post) => ({
               title: post.title,
-              meta:
-                post.fach || post.vorlesung || post.kurs || post.tag || "Forum",
+              meta: post.tag || "Forum",
               extra: post.content,
             })),
             emptyText: "Keine Beiträge.",
@@ -236,7 +229,7 @@ const DashboardPage = () => {
             linkLabel: "Bibliothek",
             items: latestScripts.map((script) => ({
               title: script.title,
-              meta: `${script.subject} · ${script.author}`,
+              meta: `${script.subject} · ${script.authorName}`,
               extra: script.description || "",
             })),
             emptyText: "Keine Skripte.",
@@ -269,12 +262,7 @@ const DashboardPage = () => {
               linkLabel: "Forum",
               items: selectedPosts.map((post) => ({
                 title: post.title,
-                meta:
-                  post.fach ||
-                  post.vorlesung ||
-                  post.kurs ||
-                  post.tag ||
-                  "Forum",
+                meta: post.tag || "Forum",
                 extra: post.content,
               })),
               emptyText: "Keine Beiträge.",
@@ -286,7 +274,7 @@ const DashboardPage = () => {
               linkLabel: "Bibliothek",
               items: selectedScripts.map((script) => ({
                 title: script.title,
-                meta: `${script.subject} · ${script.author}`,
+                meta: `${script.subject} · ${script.authorName}`,
                 extra: script.description || "",
               })),
               emptyText: "Keine Skripte.",
@@ -315,12 +303,7 @@ const DashboardPage = () => {
               linkLabel: "Forum",
               items: latestPosts.map((post) => ({
                 title: post.title,
-                meta:
-                  post.fach ||
-                  post.vorlesung ||
-                  post.kurs ||
-                  post.tag ||
-                  "Forum",
+                meta: post.tag || "Forum",
                 extra: post.content,
               })),
               emptyText: "Keine Beiträge.",
@@ -332,7 +315,7 @@ const DashboardPage = () => {
               linkLabel: "Bibliothek",
               items: latestScripts.map((script) => ({
                 title: script.title,
-                meta: `${script.subject} · ${script.author}`,
+                meta: `${script.subject} · ${script.authorName}`,
                 extra: script.description || "",
               })),
               emptyText: "Keine Skripte.",
@@ -434,8 +417,7 @@ const DashboardPage = () => {
                     (task) => task.fach === subject,
                   );
                   const subjectPosts = filteredPosts.filter(
-                    (post) =>
-                      (post.fach || post.vorlesung || post.kurs) === subject,
+                    (post) => post.tag === subject,
                   );
                   const subjectScripts = filteredScripts.filter(
                     (script) => script.subject === subject,
