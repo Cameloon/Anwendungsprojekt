@@ -134,7 +134,7 @@ const PlannerPage = () => {
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [inviteesInput, setInviteesInput] = useState("");
   const [allowedKurseInput, setAllowedKurseInput] = useState("");
-  // derived validation so errors update/clear automatically
+  const [submitted, setSubmitted] = useState(false);
 
   const resetForm = () => {
     setTitle("");
@@ -147,14 +147,15 @@ const PlannerPage = () => {
     setAllowedKurseInput("");
     setEditingId(null);
     setShowForm(false);
-    // derived errors will clear when inputs are reset
+    setSubmitted(false);
   };
 
   const parseList = (s: string) =>
     s.split(",").map((x) => x.trim()).filter(Boolean);
 
   const submitDeadline = () => {
-    const nextTitleError = validateTitle(title);
+    setSubmitted(true);
+    const nextTitleError = !title.trim() ? "Titel erforderlich." : validateTitle(title);
     const nextDateError = validateDate(date);
     if (nextTitleError || nextDateError) return;
     const invitees = parseList(inviteesInput);
@@ -229,6 +230,7 @@ const PlannerPage = () => {
     setVisibility(d.visibility);
     setInviteesInput(d.invitees.join(", "));
     setAllowedKurseInput(d.allowedKurse.join(", "));
+    setSubmitted(false);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -345,9 +347,9 @@ const PlannerPage = () => {
 
   const activeDeadline = deadlines.find((d) => d.id === openId) || null;
 
-  // derived validation messages
-  const titleError = validateTitle(title);
-  const dateError = date ? validateDate(date) : "";
+  // derived validation messages — errors for required-but-empty fields only show after first submit attempt
+  const titleError = submitted && !title.trim() ? "Titel erforderlich." : validateTitle(title);
+  const dateError = submitted || date ? validateDate(date) : "";
   const messageError = validateMessage(newMessage);
 
   return (
@@ -425,19 +427,25 @@ const PlannerPage = () => {
               >
                 <div className="glass-card p-5 space-y-4">
                   <div className="grid md:grid-cols-2 gap-3">
-                    <Input
-                      placeholder="Titel des Termins"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
-                    <Input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        placeholder="Titel des Termins *"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className={titleError ? "border-destructive" : ""}
+                      />
+                      {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className={dateError ? "border-destructive" : ""}
+                      />
+                      {dateError && <p className="text-xs text-destructive">{dateError}</p>}
+                    </div>
                   </div>
-                  {titleError && <p className="text-xs text-destructive">{titleError}</p>}
-                  {dateError && <p className="text-xs text-destructive">{dateError}</p>}
                   <div className="flex flex-wrap gap-2">
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
                       <button
