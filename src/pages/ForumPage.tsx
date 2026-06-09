@@ -986,6 +986,16 @@ function ForumPageLayout({
                               <MessageCircle className="h-3.5 w-3.5" />
                               {post.commentCount}
                             </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReportTarget({ postId: post.id, postTitle: post.title });
+                              }}
+                              title="Beitrag melden"
+                              className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            >
+                              <Flag className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -997,6 +1007,15 @@ function ForumPageLayout({
           </div>
         </div>
       </div>
+
+      <ReportDialog
+        open={reportTarget !== null}
+        onOpenChange={(open) => { if (!open) setReportTarget(null); }}
+        postId={reportTarget?.postId ?? ""}
+        postTitle={reportTarget?.postTitle ?? ""}
+        forumName={activeForum.name}
+        reportedBy={me}
+      />
 
       {/* Create-forum dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

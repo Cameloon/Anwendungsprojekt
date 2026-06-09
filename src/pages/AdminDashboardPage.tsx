@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { loadReports, dismissReport, subscribeReports, type PostReport } from "@/lib/reportsStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -23,14 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
-interface ReportItem {
-  title: string;
-  forum: string;
-  reason: string;
-  author: string;
-  urgency: "hoch" | "mittel" | "niedrig";
-}
-
 interface LectureItem {
   title: string;
   semester: string;
@@ -39,29 +32,6 @@ interface LectureItem {
   status: "aktiv" | "importiert" | "archiviert";
 }
 
-const reportedPosts: ReportItem[] = [
-  {
-    title: "Unklare Klausurfrage",
-    forum: "Mathematik II",
-    reason: "Möglicher Spam / Tonfall",
-    author: "@leon",
-    urgency: "hoch",
-  },
-  {
-    title: "Material-Upload doppelt",
-    forum: "SE Projekt",
-    reason: "Doppelter Inhalt gemeldet",
-    author: "@julia",
-    urgency: "mittel",
-  },
-  {
-    title: "Abwertender Kommentar",
-    forum: "BWL-Forum",
-    reason: "Verstoß gegen Netiquette",
-    author: "@noah",
-    urgency: "hoch",
-  },
-];
 
 const lectures: LectureItem[] = [
   {
@@ -123,6 +93,9 @@ const AdminDashboardPage = () => {
   const approveUser = useMutation(api.admin.approveUser);
   const rejectUser = useMutation(api.admin.rejectUser);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [reports, setReports] = useState<PostReport[]>(() => loadReports());
+
+  useEffect(() => subscribeReports(() => setReports(loadReports())), []);
 
   const handleApprove = async (userId: string) => {
     setUpdating(userId);
@@ -200,7 +173,7 @@ const AdminDashboardPage = () => {
                   value={String(pendingProfiles.length)}
                   hint="Nutzer warten"
                 />
-                <MetricCard label="Meldungen" value="3" hint="Forum-Queue" />
+                <MetricCard label="Meldungen" value={String(reports.filter((r) => r.status === "offen").length)} hint="Forum-Queue" />
                 <MetricCard
                   label="Vorlesungen"
                   value="18"
@@ -318,32 +291,44 @@ const AdminDashboardPage = () => {
               description="Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden."
             >
               <div className="space-y-3">
-                {reportedPosts.map((report) => (
+                {reports.length === 0 && (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Keine offenen Meldungen.
+                  </p>
+                )}
+                {reports.map((report) => (
                   <div
-                    key={report.title}
+                    key={report.id}
                     className="rounded-2xl border border-border/60 bg-background/80 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{report.title}</p>
+                          <p className="font-medium">{report.postTitle}</p>
                           <Badge
                             variant="secondary"
-                            className={statusTone(report.urgency)}
+                            className={statusTone(report.status)}
                           >
-                            {report.urgency}
+                            {report.status}
                           </Badge>
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          {report.forum} · gemeldet von {report.author}
+                          {report.forumName} · gemeldet von {report.reportedBy}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {report.reason}
                         </p>
                       </div>
-                      <Button size="sm" variant="outline" className="shrink-0">
-                        Moderieren
-                      </Button>
+                      {report.status === "offen" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => dismissReport(report.id)}
+                        >
+                          Erledigt
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

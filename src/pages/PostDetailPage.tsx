@@ -324,6 +324,14 @@ function PostDetailLayout({
                 <MessageSquare className="h-3.5 w-3.5" />
                 {comments.length} {comments.length === 1 ? "Kommentar" : "Kommentare"}
               </span>
+              <button
+                onClick={() => setReportOpen(true)}
+                title="Beitrag melden"
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Melden
+              </button>
             </div>
           </motion.article>
 
@@ -440,6 +448,15 @@ function PostDetailLayout({
           </div>
         </div>
       </div>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        postId={post.id}
+        postTitle={post.title}
+        forumName={forum?.name ?? "Forum"}
+        reportedBy={me}
+      />
     </div>
   );
 }
