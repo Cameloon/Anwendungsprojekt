@@ -55,6 +55,9 @@ export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, 
       .first();
 
     if (existing) {
+      if (existing.ownerId) {
+        await ctx.db.patch(existing._id, { ownerId: undefined });
+      }
       const isMember = await ctx.db
         .query("forumMembers")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
