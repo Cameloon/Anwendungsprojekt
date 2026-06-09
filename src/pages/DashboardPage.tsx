@@ -1,64 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
   BookOpen,
-  CalendarDays,
   CheckCircle2,
   Circle,
-  Flame,
   MessageSquare,
   Plus,
   Users,
-  Zap,
+  Flame,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
-import PageSkeleton from "@/components/PageSkeleton";
 import GroupsPanel from "@/components/GroupsPanel";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
-
-interface Task {
-  id: string;
-  title: string;
-  due: string;
-  fach: string;
-  done: boolean;
-}
-
-const initialTasks: Task[] = [
-  {
-    id: "1",
-    title: "Hausarbeit Mathematik",
-    due: "2026-04-28",
-    fach: "Mathematik",
-    done: false,
-  },
-  {
-    id: "2",
-    title: "Projektabgabe Software Engineering",
-    due: "2026-04-30",
-    fach: "SE",
-    done: false,
-  },
-  {
-    id: "3",
-    title: "Kapitel 4 lesen",
-    due: "2026-04-29",
-    fach: "Statistik",
-    done: true,
-  },
-  {
-    id: "4",
-    title: "Klausur Informatik vorbereiten",
-    due: "2026-05-10",
-    fach: "Informatik",
-    done: false,
-  },
-];
 
 const QUOTES = [
   "Der Weg ist das Ziel.",
@@ -74,36 +32,12 @@ const greeting = () => {
   return "Guten Abend";
 };
 
-const daysUntil = (iso: string) =>
-  Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
-
-const formatRelative = (iso: string) => {
-  const d = daysUntil(iso);
-  if (d < 0) return `${Math.abs(d)}d überfällig`;
-  if (d === 0) return "Heute";
-  if (d === 1) return "Morgen";
-  if (d <= 7) return `In ${d} Tagen`;
-  return new Date(iso).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "short",
-  });
-};
-
-const dueBadgeClass = (iso: string) => {
-  const d = daysUntil(iso);
-  if (d < 0) return "bg-destructive/10 text-destructive";
-  if (d <= 2) return "bg-destructive/10 text-destructive";
-  if (d <= 7) return "bg-accent/10 text-accent";
-  return "bg-secondary text-muted-foreground";
-};
-
 const DashboardPage = () => {
   const { user } = useAuth();
   const profile = useProfile();
-  const [loading, setLoading] = useState(true);
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const postsData = useQuery(api.posts.listRecent);
   const scriptsData = useQuery(api.scripts.listPublic);
+  const lecturesData = useQuery(api.semesterLectures.getLecturesForMyJahrgang, {});
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [overviewMode, setOverviewMode] = useState<"overview" | "latest">(
@@ -112,81 +46,22 @@ const DashboardPage = () => {
   const name = profile?.display_name ?? "";
   const now = useMemo(() => new Date(), []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 250);
-    return () => clearTimeout(timer);
-  }, []);
-
   const posts = useMemo(() => postsData ?? [], [postsData]);
   const scripts = useMemo(() => scriptsData ?? [], [scriptsData]);
+  const lectures = useMemo(() => lecturesData ?? [], [lecturesData]);
 
-  const toggleTask = (id: string) =>
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, done: !task.done } : task,
-      ),
-    );
-
-  const { open, doneCount, urgent, sortedOpen } = useMemo(() => {
-    const openTasks = tasks.filter((task) => !task.done);
-    const done = tasks.filter((task) => task.done).length;
-    const urgentCount = openTasks.filter(
-      (task) => daysUntil(task.due) <= 2,
-    ).length;
-    const sorted = [...openTasks].sort(
-      (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime(),
-    );
-    return {
-      open: openTasks,
-      doneCount: done,
-      urgent: urgentCount,
-      sortedOpen: sorted,
-    };
-  }, [tasks]);
-
-  const filteredTasks = useMemo(() => {
-    return sortedOpen;
-  }, [sortedOpen]);
-
-  const filteredPosts = useMemo(() => {
-    return posts;
-  }, [posts]);
-
-  const filteredScripts = useMemo(() => {
-    return scripts;
-  }, [scripts]);
-
-  const subjectsList = useMemo(() => {
-    const values = new Set<string>();
-    filteredTasks.forEach((task) => values.add(task.fach));
-    filteredPosts.forEach((post) => {
-      const key = post.tag;
-      if (key) values.add(key);
-    });
-    filteredScripts.forEach((script) => values.add(script.subject));
-    return Array.from(values).sort();
-  }, [filteredTasks, filteredPosts, filteredScripts]);
-
-  const selectedTasks = useMemo(() => {
-    if (!selectedSubject) return [];
-    return filteredTasks.filter((task) => task.fach === selectedSubject);
-  }, [filteredTasks, selectedSubject]);
+  const subjectsList = useMemo(() => lectures.map((l) => l.lectureName).sort(), [lectures]);
 
   const selectedPosts = useMemo(() => {
     if (!selectedSubject) return [];
-    return filteredPosts.filter(
-      (post) => post.tag === selectedSubject,
-    );
-  }, [filteredPosts, selectedSubject]);
+    return posts.filter((post) => post.tag === selectedSubject);
+  }, [posts, selectedSubject]);
 
   const selectedScripts = useMemo(() => {
     if (!selectedSubject) return [];
-    return filteredScripts.filter(
-      (script) => script.subject === selectedSubject,
-    );
-  }, [filteredScripts, selectedSubject]);
+    return scripts.filter((script) => script.subject === selectedSubject);
+  }, [scripts, selectedSubject]);
 
-  const latestTasks = useMemo(() => sortedOpen.slice(0, 5), [sortedOpen]);
   const latestPosts = useMemo(() => posts.slice(0, 5), [posts]);
   const latestScripts = useMemo(() => scripts.slice(0, 5), [scripts]);
 
@@ -195,21 +70,6 @@ const DashboardPage = () => {
   const overviewBlocks =
     overviewMode === "latest"
       ? [
-          {
-            title: "Aktuelle Abgaben",
-            icon: <CalendarDays className="h-4 w-4" />,
-            linkTo: "/planner",
-            linkLabel: "Planner",
-            items: latestTasks.map((task) => ({
-              title: task.title,
-              meta: task.fach,
-              extra: formatRelative(task.due),
-              badgeClass: dueBadgeClass(task.due),
-              done: task.done,
-              onToggle: () => toggleTask(task.id),
-            })),
-            emptyText: "Keine offenen Aufgaben.",
-          },
           {
             title: "Aktuelle Forenbeiträge",
             icon: <MessageSquare className="h-4 w-4" />,
@@ -238,24 +98,6 @@ const DashboardPage = () => {
       : selectedSubject
         ? [
             {
-              title: "Abgaben",
-              icon: <CalendarDays className="h-4 w-4" />,
-              linkTo: "/planner",
-              linkLabel: "Planner",
-              items: selectedTasks.map((task) => ({
-                title: task.title,
-                meta: task.fach,
-                extra: task.done
-                  ? `Erledigt · ${formatRelative(task.due)}`
-                  : `Offen · ${formatRelative(task.due)}`,
-                badgeClass: dueBadgeClass(task.due),
-                badgeText: formatRelative(task.due),
-                done: task.done,
-                onToggle: () => toggleTask(task.id),
-              })),
-              emptyText: "Keine Abgaben.",
-            },
-            {
               title: "Forenbeiträge",
               icon: <MessageSquare className="h-4 w-4" />,
               linkTo: "/forum",
@@ -282,21 +124,6 @@ const DashboardPage = () => {
           ]
         : [
             {
-              title: "Aktuelle Abgaben",
-              icon: <CalendarDays className="h-4 w-4" />,
-              linkTo: "/planner",
-              linkLabel: "Planner",
-              items: latestTasks.map((task) => ({
-                title: task.title,
-                meta: task.fach,
-                extra: formatRelative(task.due),
-                badgeClass: dueBadgeClass(task.due),
-                done: task.done,
-                onToggle: () => toggleTask(task.id),
-              })),
-              emptyText: "Keine offenen Aufgaben.",
-            },
-            {
               title: "Aktuelle Forenbeiträge",
               icon: <MessageSquare className="h-4 w-4" />,
               linkTo: "/forum",
@@ -322,12 +149,13 @@ const DashboardPage = () => {
             },
           ];
 
-  if (loading) return <PageSkeleton />;
-
-  const activeSubject = selectedSubject ?? "Alle Module";
+  const activeSubject = selectedSubject ?? "Alle Vorlesungen";
   const activeSubjectDescription = selectedSubject
     ? `Inhalte für ${selectedSubject}`
-    : "Gesamtansicht aller verfügbaren Module";
+    : "Gesamtansicht aller Vorlesungen";
+
+  const totalPosts = posts.length;
+  const totalScripts = scripts.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -376,30 +204,28 @@ const DashboardPage = () => {
 
             <div className="grid grid-cols-2 gap-3 lg:col-span-2">
               <HeroStat
-                label="Offen"
-                value={open.length}
+                label="Vorlesungen"
+                value={lectures.length}
+                icon={<BookOpen className="h-5 w-5" />}
+                hint="dieses Semester"
+              />
+              <HeroStat
+                label="Forum"
+                value={totalPosts}
+                icon={<MessageSquare className="h-5 w-5" />}
+                hint="Beiträge"
+              />
+              <HeroStat
+                label="Skripte"
+                value={totalScripts}
                 icon={<Circle className="h-5 w-5" />}
-                hint="Aufgaben"
-              />
-              <HeroStat
-                label="Dringend"
-                value={urgent}
-                icon={<Zap className="h-5 w-5" />}
-                hint="<= 2 Tage"
-                tone="warn"
-              />
-              <HeroStat
-                label="Erledigt"
-                value={doneCount}
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                hint="Gesamt"
-                tone="ok"
+                hint="verfügbar"
               />
               <HeroStat
                 label="Woche"
-                value={Math.max(1, doneCount)}
+                value={now.getDay() || 7}
                 icon={<Flame className="h-5 w-5" />}
-                hint="Streak"
+                hint="Tag"
                 tone="hot"
               />
             </div>
@@ -413,19 +239,13 @@ const DashboardPage = () => {
                 </div>
               ) : (
                 subjectsList.map((subject) => {
-                  const subjectTasks = filteredTasks.filter(
-                    (task) => task.fach === subject,
-                  );
-                  const subjectPosts = filteredPosts.filter(
+                  const subjectPosts = posts.filter(
                     (post) => post.tag === subject,
                   );
-                  const subjectScripts = filteredScripts.filter(
+                  const subjectScripts = scripts.filter(
                     (script) => script.subject === subject,
                   );
-                  const total =
-                    subjectTasks.length +
-                    subjectPosts.length +
-                    subjectScripts.length;
+                  const total = subjectPosts.length + subjectScripts.length;
 
                   const active = selectedSubject === subject;
 
@@ -449,13 +269,7 @@ const DashboardPage = () => {
                       <h3 className="text-center font-heading text-xl font-medium leading-tight text-muted-foreground">
                         {subject}
                       </h3>
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
-                        <div className="rounded-2xl bg-background/80 py-2">
-                          <p className="font-semibold text-foreground">
-                            {subjectTasks.length}
-                          </p>
-                          <p>Abgaben</p>
-                        </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-center text-[11px] text-muted-foreground">
                         <div className="rounded-2xl bg-background/80 py-2">
                           <p className="font-semibold text-foreground">
                             {subjectPosts.length}
@@ -509,7 +323,7 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
               {overviewBlocks.map((block) => (
                 <OverviewBlock
                   key={block.title}

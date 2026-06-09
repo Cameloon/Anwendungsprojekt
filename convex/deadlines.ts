@@ -1,6 +1,24 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// ─── Helpers ───
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getJahrgangUserIds(ctx: any, userId: string): Promise<string[]> {
+  const profile = await ctx.db
+    .query("profiles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+  if (!profile?.jahrgang) return [];
+  const all = await ctx.db.query("profiles").collect();
+  return all
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((p: any) => p.jahrgang === profile.jahrgang && p.userId !== userId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((p: any) => p.userId);
+}
+
 // ─── Queries ───
 
 export const listForUser = query({
@@ -8,19 +26,24 @@ export const listForUser = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .unique();
-    const userKurs = profile?.hochschule || undefined;
 
     const all = await ctx.db.query("deadlines").collect();
 
+    // For public deadlines: hide originals the user already accepted (owns a copy)
+    const myOwn = all.filter((d) => d.ownerId === identity.subject);
+    const acceptedSignatures = new Set(
+      myOwn.map((d) => `${d.title}|${d.date}|${d.category}`),
+    );
+
     return all.filter((d) => {
       if (d.ownerId === identity.subject) return true;
-      if (d.visibility === "public") return true;
+      if (d.visibility === "public") {
+        if (d.declinedBy?.includes(identity.subject)) return false;
+        const sig = `${d.title}|${d.date}|${d.category}`;
+        if (acceptedSignatures.has(sig)) return false;
+        return true;
+      }
       if (d.invitees?.includes(identity.subject)) return true;
-      if (userKurs && d.allowedKurse?.includes(userKurs)) return true;
       return false;
     });
   },
@@ -31,7 +54,6 @@ export const getById = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
     return await ctx.db.get(args.deadlineId);
   },
 });
@@ -41,12 +63,10 @@ export const getAttachments = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
     const files = await ctx.db
       .query("deadlineAttachments")
       .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
       .collect();
-
     return await Promise.all(
       files.map(async (f) => ({
         ...f,
@@ -61,7 +81,6 @@ export const getMessages = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
     return await ctx.db
       .query("deadlineMessages")
       .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
@@ -82,6 +101,7 @@ export const create = mutation({
       v.literal("sonstiges")
     ),
     note: v.optional(v.string()),
+    vorlesung: v.optional(v.string()),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
@@ -90,22 +110,48 @@ export const create = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const now = Date.now();
+    const invitees = args.visibility === "public"
+      ? await getJahrgangUserIds(ctx, identity.subject)
+      : args.invitees?.filter(Boolean);
 
-    const deadlineId = await ctx.db.insert("deadlines", {
+    return await ctx.db.insert("deadlines", {
       title: args.title.trim(),
       date: args.date,
       category: args.category,
       done: false,
       note: args.note?.trim(),
+      vorlesung: args.vorlesung?.trim(),
       visibility: args.visibility,
-      invitees: args.invitees?.filter(Boolean),
+      invitees,
       allowedKurse: args.allowedKurse?.filter(Boolean),
       ownerId: identity.subject,
       createdAt: now,
       updatedAt: now,
+    }).then(async (deadlineId) => {
+      if (args.visibility === "public" && invitees && invitees.length > 0) {
+        const profile = await ctx.db
+          .query("profiles")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+          .unique();
+        const fromName = profile?.displayName || identity.name || "Unbekannt";
+        for (const recipientId of invitees) {
+          await ctx.db.insert("notifications", {
+            type: "deadline_invite",
+            recipientId,
+            recipientName: recipientId,
+            fromId: identity.subject,
+            fromName,
+            title: args.title.trim(),
+            message: `${fromName} hat dich zum Termin „${args.title.trim()}“ eingeladen (öffentlich).`,
+            deadlineId,
+            status: "pending",
+            createdAt: now,
+          });
+        }
+      }
+      return deadlineId;
     });
-
-    return deadlineId;
   },
 });
 
@@ -118,6 +164,7 @@ export const update = mutation({
       v.union(v.literal("abgabe"), v.literal("pruefung"), v.literal("sonstiges"))
     ),
     note: v.optional(v.string()),
+    vorlesung: v.optional(v.string()),
     visibility: v.optional(
       v.union(v.literal("public"), v.literal("private"))
     ),
@@ -130,17 +177,26 @@ export const update = mutation({
     if (!identity) throw new Error("Not authenticated");
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-    if (deadline.ownerId !== identity.subject) throw new Error("Not authorized");
+
+    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject) {
+      const isInvited = deadline.invitees?.includes(identity.subject);
+      if (!isInvited)
+        throw new Error("Not authorized — nur der Besitzer oder Eingeladene dürfen bearbeiten");
+    }
 
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.title !== undefined) patch.title = args.title.trim();
     if (args.date !== undefined) patch.date = args.date;
     if (args.category !== undefined) patch.category = args.category;
     if (args.note !== undefined) patch.note = args.note?.trim();
+    if (args.vorlesung !== undefined) patch.vorlesung = args.vorlesung?.trim();
     if (args.visibility !== undefined) patch.visibility = args.visibility;
     if (args.invitees !== undefined) patch.invitees = args.invitees?.filter(Boolean);
     if (args.allowedKurse !== undefined) patch.allowedKurse = args.allowedKurse?.filter(Boolean);
     if (args.done !== undefined) patch.done = args.done;
+    if (args.visibility === "public" && !args.invitees) {
+      patch.invitees = await getJahrgangUserIds(ctx, identity.subject);
+    }
 
     await ctx.db.patch(args.deadlineId, patch);
   },
@@ -153,12 +209,123 @@ export const toggleDone = mutation({
     if (!identity) throw new Error("Not authenticated");
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-    if (deadline.ownerId !== identity.subject) throw new Error("Not authorized");
 
-    await ctx.db.patch(args.deadlineId, {
-      done: !deadline.done,
-      updatedAt: Date.now(),
+    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject)
+      throw new Error("Not your copy");
+
+    const newDone = !deadline.done;
+
+    if (deadline.visibility === "public") {
+      // Shared done state — update all copies with same title+date+category
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const all = await ctx.db
+        .query("deadlines")
+        .filter((q: any) => q.eq(q.field("title"), deadline.title))
+        .filter((q: any) => q.eq(q.field("date"), deadline.date))
+        .filter((q: any) => q.eq(q.field("category"), deadline.category))
+        .filter((q: any) => q.eq(q.field("visibility"), "public"))
+        .collect();
+      for (const d of all) {
+        await ctx.db.patch(d._id, { done: newDone, updatedAt: Date.now() });
+      }
+    } else {
+      await ctx.db.patch(args.deadlineId, {
+        done: newDone,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const acceptDeadline = mutation({
+  args: { deadlineId: v.id("deadlines") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Deadline not found");
+    if (!deadline.invitees?.includes(identity.subject))
+      throw new Error("Nicht eingeladen");
+
+    // Check if already accepted — has own copy
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const existing = await ctx.db
+      .query("deadlines")
+      .filter((q: any) => q.eq(q.field("ownerId"), identity.subject))
+      .filter((q: any) => q.eq(q.field("title"), deadline.title))
+      .filter((q: any) => q.eq(q.field("date"), deadline.date))
+      .first();
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    if (existing) return existing._id;
+
+    // Remove user from original invitees
+    const updatedInvitees = (deadline.invitees ?? []).filter(
+      (id) => id !== identity.subject,
+    );
+    const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
+
+    // For public: also add to declinedBy so the original stays hidden after accepting
+    if (deadline.visibility === "public") {
+      const declined = [...(deadline.declinedBy ?? []), identity.subject];
+      (patchFields as Record<string, unknown>).declinedBy = declined;
+    }
+
+    await ctx.db.patch(args.deadlineId, patchFields);
+
+    // Mark pending invitation notification as accepted
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pendingNotif = await ctx.db
+      .query("notifications")
+      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
+      .filter((q: any) => q.eq(q.field("recipientId"), identity.subject))
+      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
+      .filter((q: any) => q.eq(q.field("status"), "pending"))
+      .first();
+    if (pendingNotif) {
+      await ctx.db.patch(pendingNotif._id, { status: "accepted" });
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("deadlines", {
+      title: deadline.title,
+      date: deadline.date,
+      category: deadline.category,
+      done: false,
+      note: deadline.note,
+      vorlesung: deadline.vorlesung,
+      visibility: deadline.visibility,
+      ownerId: identity.subject,
+      createdAt: now,
+      updatedAt: now,
     });
+  },
+});
+
+export const declineDeadline = mutation({
+  args: { deadlineId: v.id("deadlines") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Deadline not found");
+    if (!deadline.invitees?.includes(identity.subject))
+      throw new Error("Nicht eingeladen");
+
+    const updated = deadline.invitees.filter((id) => id !== identity.subject);
+    await ctx.db.patch(args.deadlineId, { invitees: updated });
+
+    // Mark pending invitation notification as declined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pendingNotif = await ctx.db
+      .query("notifications")
+      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
+      .filter((q: any) => q.eq(q.field("recipientId"), identity.subject))
+      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
+      .filter((q: any) => q.eq(q.field("status"), "pending"))
+      .first();
+    if (pendingNotif) {
+      await ctx.db.patch(pendingNotif._id, { status: "declined" });
+    }
   },
 });
 
@@ -169,7 +336,27 @@ export const deleteDeadline = mutation({
     if (!identity) throw new Error("Not authenticated");
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-    if (deadline.ownerId !== identity.subject) throw new Error("Not authorized");
+
+    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject)
+      throw new Error("Not authorized — nur der Besitzer darf löschen");
+
+    // For public copies: add user to declinedBy on the ORIGINAL only, not other copies
+    if (deadline.visibility === "public" && deadline.ownerId === identity.subject) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const original = await ctx.db
+        .query("deadlines")
+        .filter((q: any) => q.eq(q.field("title"), deadline.title))
+        .filter((q: any) => q.eq(q.field("date"), deadline.date))
+        .filter((q: any) => q.eq(q.field("category"), deadline.category))
+        .filter((q: any) => q.eq(q.field("visibility"), "public"))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((q: any) => q.neq(q.field("ownerId"), identity.subject))
+        .first();
+      if (original) {
+        const declined = [...(original.declinedBy ?? []), identity.subject];
+        await ctx.db.patch(original._id, { declinedBy: declined });
+      }
+    }
 
     const attachments = await ctx.db
       .query("deadlineAttachments")
@@ -196,7 +383,6 @@ export const generateUploadUrl = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -232,7 +418,6 @@ export const deleteAttachment = mutation({
     const attachment = await ctx.db.get(args.attachmentId);
     if (!attachment) throw new Error("Attachment not found");
     if (attachment.uploadedBy !== identity.subject) throw new Error("Not authorized");
-
     await ctx.storage.delete(attachment.storageId);
     await ctx.db.delete(args.attachmentId);
   },
@@ -253,10 +438,8 @@ export const addMessage = mutation({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
-
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-
     await ctx.db.insert("deadlineMessages", {
       deadlineId: args.deadlineId,
       authorId: identity.subject,

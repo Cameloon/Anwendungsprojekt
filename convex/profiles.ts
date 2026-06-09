@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { ensureLectureForumsForProfile } from "./semesterLectures";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, displayName: string) {
@@ -109,6 +110,34 @@ export const getAccessStatus = query({
   },
 });
 
+export const listSameJahrgang = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const myProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+
+    if (!myProfile?.jahrgang) return [];
+
+    const all = await ctx.db.query("profiles").collect();
+    return all
+      .filter(
+        (p) =>
+          p.jahrgang === myProfile.jahrgang &&
+          p.userId !== identity.subject &&
+          p.displayName,
+      )
+      .map((p) => ({
+        userId: p.userId,
+        displayName: p.displayName as string,
+      }));
+  },
+});
+
 export const upsertMine = mutation({
   args: {
     displayName: v.optional(v.string()),
@@ -146,6 +175,7 @@ export const upsertMine = mutation({
           identity.email ||
           "Unbekannt";
         await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+        await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
       }
       return existing._id;
     }
@@ -170,6 +200,7 @@ export const upsertMine = mutation({
         identity.email ||
         "Unbekannt";
       await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+      await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
     }
 
     return newId;
@@ -210,6 +241,7 @@ export const complete = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, patch);
       await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+      await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
       return existing._id;
     }
     const newId = await ctx.db.insert("profiles", {
@@ -219,6 +251,7 @@ export const complete = mutation({
       createdAt: now,
     });
     await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
+    await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
     return newId;
   },
 });

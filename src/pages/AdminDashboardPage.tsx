@@ -12,8 +12,10 @@ import {
   GraduationCap,
   LayoutGrid,
   Loader2,
+  Plus,
   Shield,
   ShieldCheck,
+  Trash2,
   Users,
   FileWarning,
   Settings2,
@@ -22,40 +24,17 @@ import {
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
-interface LectureItem {
-  title: string;
-  semester: string;
-  course: string;
-  campus: string;
-  status: "aktiv" | "importiert" | "archiviert";
-}
-
-
-const lectures: LectureItem[] = [
-  {
-    title: "Software Engineering",
-    semester: "WiSe 2025/26",
-    course: "TIF25B",
-    campus: "DHBW Lörrach",
-    status: "aktiv",
-  },
-  {
-    title: "Mathematik für Informatiker",
-    semester: "WiSe 2025/26",
-    course: "TIF25B",
-    campus: "DHBW Lörrach",
-    status: "importiert",
-  },
-  {
-    title: "Betriebswirtschaftslehre",
-    semester: "SoSe 2026",
-    course: "BWL24C",
-    campus: "DHBW Stuttgart",
-    status: "archiviert",
-  },
-];
+const SEMESTER_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 
 const ruleCards = [
   {
@@ -92,10 +71,24 @@ const AdminDashboardPage = () => {
   const profiles = useQuery(api.admin.getAll, {});
   const approveUser = useMutation(api.admin.approveUser);
   const rejectUser = useMutation(api.admin.rejectUser);
+  const lectures = useQuery(api.semesterLectures.list, {});
+  const saveLecture = useMutation(api.semesterLectures.manage);
+  const deleteLecture = useMutation(api.semesterLectures.deleteLecture);
+  const seedLectures = useMutation(api.semesterLectures.seedIfEmpty);
   const [updating, setUpdating] = useState<string | null>(null);
   const [reports, setReports] = useState<PostReport[]>(() => loadReports());
+  const [newKurs, setNewKurs] = useState("");
+  const [newSemester, setNewSemester] = useState("1");
+  const [newLectureName, setNewLectureName] = useState("");
 
   useEffect(() => subscribeReports(() => setReports(loadReports())), []);
+
+  // Auto-seed base lecture data once on admin page load
+  useEffect(() => {
+    seedLectures({}).catch(() => {
+      // ignore — only works for admins and only seeds if empty
+    });
+  }, [seedLectures]);
 
   const handleApprove = async (userId: string) => {
     setUpdating(userId);
@@ -176,8 +169,8 @@ const AdminDashboardPage = () => {
                 <MetricCard label="Meldungen" value={String(reports.filter((r) => r.status === "offen").length)} hint="Forum-Queue" />
                 <MetricCard
                   label="Vorlesungen"
-                  value="18"
-                  hint="aktive Einträge"
+                  value={String(lectures?.length ?? "—")}
+                  hint="hinterlegte Einträge"
                 />
                 <MetricCard
                   label="Upload-Regeln"
@@ -340,41 +333,102 @@ const AdminDashboardPage = () => {
             <Panel
               title="Vorlesungsverwaltung"
               icon={<GraduationCap className="h-4 w-4" />}
-              description="Vorlesungen werden als kurs- und standortbezogene Auswahl für Formulare bereitgestellt."
+              description="Lege Vorlesungen pro Kurs und Semester an. Nutzer werden beim Onboarding automatisch in die passenden Vorlesungs-Foren eingeschrieben."
             >
-              <div className="space-y-3">
-                {lectures.map((lecture) => (
-                  <div
-                    key={`${lecture.title}-${lecture.course}`}
-                    className="rounded-2xl border border-border/60 bg-background/80 p-4"
-                  >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-4 grid gap-3 sm:grid-cols-4">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Kurs</label>
+                  <Select value={newKurs} onValueChange={setNewKurs}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kurs wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["INF", "TIF", "WIF", "BWL", "MAB", "ETE", "MEC", "DSA", "AI", "SEC", "WI"].map((k) => (
+                        <SelectItem key={k} value={k}>{k}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Semester</label>
+                  <Select value={newSemester} onValueChange={setNewSemester}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEMESTER_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{s}.</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Vorlesungsname</label>
+                  <Input
+                    value={newLectureName}
+                    onChange={(e) => setNewLectureName(e.target.value)}
+                    placeholder="z.B. Mathematik 1"
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="mb-4 gap-1"
+                disabled={!newKurs || !newLectureName.trim()}
+                onClick={async () => {
+                  try {
+                    await saveLecture({
+                      kurs: newKurs,
+                      semesterNumber: parseInt(newSemester, 10),
+                      lectureName: newLectureName.trim(),
+                    });
+                    setNewLectureName("");
+                    toast({ title: "Gespeichert", description: "Vorlesung wurde angelegt." });
+                  } catch (err) {
+                    toast({ title: "Fehler", description: err instanceof Error ? err.message : "Speichern fehlgeschlagen", variant: "destructive" });
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4" /> Hinzufügen
+              </Button>
+
+              <div className="space-y-2">
+                {lectures === undefined ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : lectures.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Noch keine Vorlesungen hinterlegt.</p>
+                ) : (
+                  lectures.map((lecture) => (
+                    <div
+                      key={lecture._id}
+                      className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
+                    >
                       <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{lecture.title}</p>
-                          <Badge
-                            variant="secondary"
-                            className={statusTone(lecture.status)}
-                          >
-                            {lecture.status}
-                          </Badge>
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {lecture.semester} · {lecture.course} ·{" "}
-                          {lecture.campus}
+                        <p className="font-medium">{lecture.lectureName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {lecture.kurs} · {lecture.semesterNumber}. Semester
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
-                          Import
-                        </Button>
-                        <Button size="sm" variant="ghost">
-                          Bearbeiten
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={async () => {
+                          try {
+                            await deleteLecture({ id: lecture._id });
+                            toast({ title: "Gelöscht", description: `${lecture.lectureName} wurde entfernt.` });
+                          } catch (err) {
+                            toast({ title: "Fehler", description: err instanceof Error ? err.message : "Löschen fehlgeschlagen", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Panel>
 
