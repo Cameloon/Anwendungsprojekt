@@ -28,3 +28,26 @@ export function validateMessage(message: string): string {
 export function isDeadlineFormValid(title: string, date: string, today?: Date): boolean {
   return validateTitle(title) === "" && validateDate(date, today) === "" && title.trim().length >= TITLE_MIN;
 }
+
+// ---------------------------------------------------------------------------
+// Skripte-Upload
+// ---------------------------------------------------------------------------
+
+/** Shows error even for empty string — used in forms that validate on open. */
+export function validateSubject(subject: string): string {
+  if (subject.trim().length < 2) return "Mindestens 2 Zeichen.";
+  return "";
+}
+
+export function validateScriptDescription(description: string): string {
+  const trimmed = description.trim();
+  if (trimmed.length > 0 && trimmed.length < 10) return "Mindestens 10 Zeichen oder leer lassen.";
+  return "";
+}
+
+export const FILE_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+
+export function validateFileSize(bytes: number): string {
+  if (bytes > FILE_MAX_BYTES) return "Datei darf maximal 25 MB groß sein.";
+  return "";
+}
