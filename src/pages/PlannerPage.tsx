@@ -6,6 +6,7 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
+  Check,
   Search,
   ListTodo,
   Flame,
@@ -781,12 +782,14 @@ function PlannerLayout({
                       )}
                     </button>
                   ) : d.invitees?.includes(me) ? (
-                    <button
-                      onClick={() => acceptInvite(d.id)}
-                      className="shrink-0 px-2 py-1 text-[10px] font-medium rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      Annehmen
-                    </button>
+                    <div className="flex gap-1 shrink-0">
+                      <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
+                        <Check className="h-3 w-3" /> Annehmen
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
+                        <X className="h-3 w-3" /> Ablehnen
+                      </Button>
+                    </div>
                   ) : (
                     <button onClick={() => toggleDone(d.id)} className="shrink-0">
                       {d.done ? (
@@ -853,15 +856,6 @@ function PlannerLayout({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </>
-                    ) : d.invitees?.includes(me) ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 p-0 text-[10px] text-muted-foreground hover:text-destructive"
-                        onClick={() => declineInvite(d.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     ) : null}
                   </div>
                 </motion.div>

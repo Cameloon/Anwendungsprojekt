@@ -136,10 +136,16 @@ export const create = mutation({
           .unique();
         const fromName = profile?.displayName || identity.name || "Unbekannt";
         for (const recipientId of invitees) {
+          const recipientProfile = await ctx.db
+            .query("profiles")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .withIndex("by_user", (q: any) => q.eq("userId", recipientId))
+            .unique();
+          const recipientName = recipientProfile?.displayName || recipientId;
           await ctx.db.insert("notifications", {
             type: "deadline_invite",
             recipientId,
-            recipientName: recipientId,
+            recipientName,
             fromId: identity.subject,
             fromName,
             title: args.title.trim(),

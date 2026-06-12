@@ -193,9 +193,14 @@ export const accept = mutation({
           const updatedInvitees = (deadline.invitees ?? []).filter(
             (id) => id !== identity.subject,
           );
-          await ctx.db.patch(notification.deadlineId, {
-            invitees: updatedInvitees,
-          });
+          const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
+
+          if (deadline.visibility === "public") {
+            const declined = [...(deadline.declinedBy ?? []), identity.subject];
+            patchFields.declinedBy = declined;
+          }
+
+          await ctx.db.patch(notification.deadlineId, patchFields);
 
           await ctx.db.insert("deadlines", {
             title: deadline.title,
@@ -225,6 +230,21 @@ export const decline = mutation({
     const notification = await ctx.db.get(args.notificationId);
     if (!notification) throw new Error("Notification not found");
     if (notification.recipientId !== identity.subject) throw new Error("Not authorized");
+
+    if (notification.type === "deadline_invite" && notification.deadlineId) {
+      const deadline = await ctx.db.get(notification.deadlineId);
+      if (deadline) {
+        const updatedInvitees = (deadline.invitees ?? []).filter(
+          (id) => id !== identity.subject,
+        );
+        const patch: Record<string, unknown> = { invitees: updatedInvitees };
+        if (deadline.visibility === "public") {
+          const declinedBy = [...(deadline.declinedBy ?? []), identity.subject];
+          patch.declinedBy = declinedBy;
+        }
+        await ctx.db.patch(notification.deadlineId, patch);
+      }
+    }
 
     await ctx.db.patch(args.notificationId, { status: "declined" });
   },
