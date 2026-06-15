@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Upload,
+  Eye,
   Download,
   Search,
   BookOpen,
@@ -10,20 +11,19 @@ import {
   Filter,
   Globe,
   Lock,
-  Trash2,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { validateSubject, validateScriptDescription } from "@/lib/validation";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
-import { toast } from "sonner";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import { loadScripts, saveScripts, subscribeScripts, type Script } from "@/lib/scriptsStore";
+
+const MAX_SCRIPT_FILE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_SCRIPT_EXTENSIONS = ["pdf", "docx", "pptx", "png", "jpg", "jpeg"];
+const SCRIPT_FILE_ACCEPT = ".pdf,.docx,.pptx,.png,.jpg,.jpeg";
 
 const subjectColors: Record<string, string> = {
   Mathematik: "bg-info/15 text-info border-info/20",
@@ -32,114 +32,138 @@ const subjectColors: Record<string, string> = {
   Physik: "bg-accent/15 text-accent border-accent/20",
 };
 
-const typeColors: Record<string, string> = {
+const typeColors: Record<Script["type"], string> = {
   PDF: "bg-destructive/10 text-destructive",
   DOCX: "bg-info/10 text-info",
+  PPTX: "bg-accent/10 text-accent",
+  PNG: "bg-success/10 text-success",
+  JPG: "bg-success/10 text-success",
   Notiz: "bg-success/10 text-success",
 };
 
-interface ScriptItem {
-  id: string;
-  title: string;
-  subject: string;
-  description: string;
-  authorName: string;
-  authorId: string;
-  date: string;
-  pages: number;
-  type: "PDF" | "DOCX" | "Notiz";
-  visibility: "public" | "private";
-  url?: string;
-  fileName?: string;
-}
+const formatBytes = (value: number) => {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getScriptFileType = (file: File): Script["type"] | null => {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!ext || !ALLOWED_SCRIPT_EXTENSIONS.includes(ext)) return null;
+  if (ext === "pdf") return "PDF";
+  if (ext === "docx") return "DOCX";
+  if (ext === "pptx") return "PPTX";
+  if (ext === "jpg" || ext === "jpeg") return "JPG";
+  return "PNG";
+};
 
 const SkriptePage = () => {
-  const { user } = useAuth();
-  const profile = useProfile();
-  const me = user?.id || "";
-  const displayName = profile?.display_name || "Unbekannt";
-
-  const scriptsQuery = useQuery(api.scripts.listVisible);
-
-  const createMutation = useMutation(api.scripts.create);
-  const deleteMutation = useMutation(api.scripts.deleteScript);
-
+  const [scripts, setScripts] = useState<Script[]>(() => loadScripts());
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadState, setUploadState] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawScripts: any[] = (scriptsQuery ?? []) as any[];
-
-  const scripts: ScriptItem[] = rawScripts.map((s: any) => ({
-    id: s._id,
-    title: s.title,
-    subject: s.subject,
-    description: s.description,
-    authorName: s.authorName,
-    authorId: s.authorId,
-    date: new Date(s._creationTime).toLocaleDateString("de-DE"),
-    pages: s.pages,
-    type: s.type,
-    visibility: s.visibility,
-    url: s.url,
-    fileName: s.fileName,
-  }));
+  useEffect(() => subscribeScripts(() => setScripts(loadScripts())), []);
 
   const subjects = useMemo(() => {
     const set = new Set(scripts.map((s) => s.subject));
     return ["alle", ...Array.from(set)];
   }, [scripts]);
 
-  const addScript = async () => {
-    const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-    const nextSubjectError = validateSubject(subject);
-    const nextDescriptionError = validateScriptDescription(description);
-    if (nextTitleError || nextSubjectError || nextDescriptionError) return;
-    try {
-      await createMutation({
-        title: title.trim(),
-        subject: subject.trim(),
-        description: description.trim(),
-        pages: 0,
-        type: "Notiz",
-        visibility,
-      });
-      toast.success("Skript erstellt");
-      setTitle("");
-      setSubject("");
-      setDescription("");
-      setVisibility("public");
-      setShowUpload(false);
-    } catch {
-      toast.error("Fehler beim Erstellen");
-    }
+  const resetUploadForm = () => {
+    setTitle("");
+    setSubject("");
+    setDescription("");
+    setSelectedFile(null);
+    setVisibility("public");
   };
 
-  const removeScript = async (id: string) => {
-    if (!window.confirm("Skript wirklich löschen?")) return;
-    try {
-      await deleteMutation({ scriptId: id as Id<"scripts"> });
-      toast.success("Skript gelöscht");
-    } catch {
-      toast.error("Fehler beim Löschen");
+  const validateSelectedFile = (file: File) => {
+    const type = getScriptFileType(file);
+    if (!type) {
+      const message = "Ungültiger Dateityp. Erlaubt sind PDF, DOCX, PPTX, PNG und JPG.";
+      setUploadState({ kind: "error", message });
+      return { ok: false as const, message };
     }
+    if (file.size > MAX_SCRIPT_FILE_SIZE) {
+      const message = `Datei zu groß. Maximal erlaubt sind ${formatBytes(MAX_SCRIPT_FILE_SIZE)}.`;
+      setUploadState({ kind: "error", message });
+      return { ok: false as const, message };
+    }
+    return { ok: true as const, type };
+  };
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    const result = validateSelectedFile(file);
+    if (!result.ok) {
+      setSelectedFile(null);
+      return;
+    }
+    setSelectedFile(file);
+    setUploadState({
+      kind: "success",
+      message: `Datei ausgewählt: ${file.name} (${formatBytes(file.size)})`,
+    });
+  };
+
+  const addScript = () => {
+    if (!title.trim() || !subject.trim() || !selectedFile) {
+      setUploadState({
+        kind: "error",
+        message: "Bitte Titel, Fach und eine gültige Datei angeben.",
+      });
+      return;
+    }
+
+    const validated = validateSelectedFile(selectedFile);
+    if (!validated.ok) {
+      setSelectedFile(null);
+      return;
+    }
+
+    const next: Script = {
+      id: Date.now().toString(),
+      title: title.trim(),
+      subject: subject.trim(),
+      description: description.trim(),
+      author: "Du",
+      date: new Date().toLocaleDateString("de-DE"),
+      pages: 0,
+      type: validated.type,
+      visibility,
+      fileName: selectedFile.name,
+    };
+    const updated = [next, ...scripts];
+    setScripts(updated);
+    saveScripts(updated);
+    setUploadState({
+      kind: "success",
+      message: `"${selectedFile.name}" wurde erfolgreich hochgeladen.`,
+    });
+    resetUploadForm();
+    setShowUpload(false);
   };
 
   const filtered = useMemo(() => {
     return scripts
-      .filter((s) => s.visibility !== "private" || s.authorId === me)
+      .filter((s) => s.visibility !== "private" || s.author === "Du")
       .filter(
         (s) =>
           s.title.toLowerCase().includes(search.toLowerCase()) ||
           s.description.toLowerCase().includes(search.toLowerCase())
       )
       .filter((s) => activeSubject === "alle" || s.subject === activeSubject);
-  }, [scripts, search, activeSubject, me]);
+  }, [scripts, search, activeSubject]);
 
   const totalPages = scripts.reduce((sum, s) => sum + s.pages, 0);
 
@@ -167,15 +191,10 @@ const SkriptePage = () => {
     },
   ];
 
-  // derived validation messages (live) so they update/clear automatically
-  const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const subjectError = subject.trim().length > 0 ? validateSubject(subject) : "";
-  const descriptionError = description.trim().length > 0 ? validateScriptDescription(description) : "";
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-32 md:pt-24 pb-16 px-6">
+      <div className="pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-6xl">
           {/* Header */}
           <motion.div
@@ -201,6 +220,33 @@ const SkriptePage = () => {
               <Upload className="h-4 w-4" /> Hochladen
             </Button>
           </motion.div>
+
+          <AnimatePresence>
+            {uploadState && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className={`mb-6 rounded-xl border p-4 flex items-start gap-3 ${
+                  uploadState.kind === "success"
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-destructive/30 bg-destructive/10 text-destructive"
+                }`}
+              >
+                {uploadState.kind === "success" ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    {uploadState.kind === "success" ? "Upload erfolgreich" : "Upload abgewiesen"}
+                  </p>
+                  <p className="text-xs opacity-90 mt-0.5">{uploadState.message}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mb-6">
@@ -234,38 +280,61 @@ const SkriptePage = () => {
               >
                 <div className="glass-card p-5 space-y-4">
                   <div className="grid md:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Input
-                        placeholder="Titel des Skripts"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                      />
-                      {titleError && <p className="text-xs text-destructive">{titleError}</p>}
-                    </div>
-                    <div className="space-y-1">
-                      <Input
-                        placeholder="Fach / Modul"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                      />
-                      {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Textarea
-                      placeholder="Kurze Beschreibung zum Inhalt"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="resize-none"
+                    <Input
+                      placeholder="Titel des Skripts"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                     />
-                    {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
+                    <Input
+                      placeholder="Fach / Modul"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                    />
                   </div>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                  <Textarea
+                    placeholder="Kurze Beschreibung zum Inhalt"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <label className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors block">
                     <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
-                    <p className="font-medium text-foreground">Datei hierher ziehen</p>
-                    <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
-                  </div>
+                    <p className="font-medium text-foreground">Datei auswählen</p>
+                    <p className="text-xs mt-1">
+                      Erlaubt: PDF, DOCX, PPTX, PNG, JPG · max. {formatBytes(MAX_SCRIPT_FILE_SIZE)}
+                    </p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {ALLOWED_SCRIPT_EXTENSIONS.map((ext) => (
+                        <span
+                          key={ext}
+                          className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-foreground/80"
+                        >
+                          .{ext}
+                        </span>
+                      ))}
+                    </div>
+                    <input
+                      type="file"
+                      accept={SCRIPT_FILE_ACCEPT}
+                      className="hidden"
+                      onChange={(e) => {
+                        handleFileChange(e.target.files?.[0] ?? null);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {selectedFile && (
+                    <div className="rounded-lg border bg-success/10 border-success/20 p-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-success truncate">{selectedFile.name}</p>
+                        <p className="text-xs text-success/80">{formatBytes(selectedFile.size)}</p>
+                      </div>
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">
+                        Bereit
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibility("public")}
@@ -292,7 +361,9 @@ const SkriptePage = () => {
                     <Button variant="outline" onClick={() => setShowUpload(false)}>
                       Abbrechen
                     </Button>
-                    <Button onClick={addScript}>Skript hochladen</Button>
+                    <Button onClick={addScript} disabled={!title.trim() || !subject.trim() || !selectedFile}>
+                      Skript hochladen
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -383,37 +454,36 @@ const SkriptePage = () => {
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-4 flex-1">
                   {script.description}
                 </p>
+                {script.fileName && (
+                  <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-medium text-muted-foreground w-fit">
+                    <FileText className="h-3 w-3" />
+                    {script.fileName}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
                   <div className="min-w-0">
-                    <p className="truncate">{script.authorName}</p>
+                    <p className="truncate">{script.author}</p>
                     <p className="text-[10px] mt-0.5">
                       {script.date}
                       {script.pages > 0 && ` · ${script.pages} S.`}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    {script.url && (
-                      <a href={script.url} download className="inline-flex">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    )}
-                    {script.authorId === me && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeScript(script.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </motion.div>
