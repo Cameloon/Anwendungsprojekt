@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { MessageCircleHeart, Send, Loader2, CheckCircle2, X, Bug, Lightbulb, Heart, MessageSquare } from "lucide-react";
+import {
+  MessageCircleHeart,
+  Send,
+  Loader2,
+  CheckCircle2,
+  X,
+  Bug,
+  Lightbulb,
+  Palette,
+  Zap,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Category = "bug" | "idee" | "lob" | "sonstiges";
@@ -18,11 +25,36 @@ const ratings = [
   { emoji: "😍", label: "Super", value: 4 },
 ];
 
-const categories: { id: Category; label: string; icon: typeof Bug; color: string }[] = [
-  { id: "bug", label: "Fehler", icon: Bug, color: "text-destructive bg-destructive/10 border-destructive/20" },
-  { id: "idee", label: "Idee", icon: Lightbulb, color: "text-info bg-info/10 border-info/20" },
-  { id: "lob", label: "Lob", icon: Heart, color: "text-success bg-success/10 border-success/20" },
-  { id: "sonstiges", label: "Sonstiges", icon: MessageSquare, color: "text-primary bg-primary/10 border-primary/20" },
+const categories: {
+  id: Category;
+  label: string;
+  icon: typeof Bug;
+  color: string;
+}[] = [
+  {
+    id: "bug",
+    label: "Fehler",
+    icon: Bug,
+    color: "text-destructive bg-destructive/10 border-destructive/20",
+  },
+  {
+    id: "idee",
+    label: "Funktion",
+    icon: Lightbulb,
+    color: "text-info bg-info/10 border-info/20",
+  },
+  {
+    id: "lob",
+    label: "Design",
+    icon: Palette,
+    color: "text-success bg-success/10 border-success/20",
+  },
+  {
+    id: "sonstiges",
+    label: "Performance",
+    icon: Zap,
+    color: "text-primary bg-primary/10 border-primary/20",
+  },
 ];
 
 const FeedbackButton = () => {
@@ -32,7 +64,6 @@ const FeedbackButton = () => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
-  // live validation: derive message error so it disappears when corrected
 
   const reset = () => {
     setRating(null);
@@ -42,9 +73,9 @@ const FeedbackButton = () => {
     setSending(false);
   };
 
-  const handleClose = (val: boolean) => {
-    setOpen(val);
-    if (!val) setTimeout(reset, 300);
+  const handleClose = (value: boolean) => {
+    setOpen(value);
+    if (!value) setTimeout(reset, 300);
   };
 
   const submit = async () => {
@@ -52,53 +83,62 @@ const FeedbackButton = () => {
       toast.error("Bitte schreibe mindestens 5 Zeichen.");
       return;
     }
+
     setSending(true);
-    await new Promise((r) => setTimeout(r, 700));
+    await new Promise((resolve) => setTimeout(resolve, 700));
     setSending(false);
     setDone(true);
-    toast.success("Danke für dein Feedback! 💜");
+    toast.success("Danke! Deine Rückmeldung wurde gespeichert.");
     setTimeout(() => handleClose(false), 1800);
   };
 
-  const selectedRating = ratings.find((r) => r.value === rating);
+  const selectedRating = ratings.find((item) => item.value === rating);
 
   return (
     <>
       <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1.8, type: "spring" }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.8, duration: 0.35 }}
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow"
+        className={`fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-card/95 text-sm font-medium text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 hover:shadow-xl sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3 ${open ? "pointer-events-none opacity-0" : ""}`}
         aria-label="Feedback geben"
       >
-        <MessageCircleHeart className="h-6 w-6" />
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <MessageCircleHeart className="h-5 w-5" />
+        </span>
+        <span className="hidden sm:block text-left">
+          <span className="block leading-tight">Feedback</span>
+          <span className="block text-xs font-normal text-muted-foreground">
+            Idee, Fehler oder Lob
+          </span>
+        </span>
       </motion.button>
 
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+        <DialogContent
+          hideCloseButton
+          className="overflow-hidden gap-0 p-0 sm:max-w-lg"
+        >
           <AnimatePresence mode="wait">
             {done ? (
               <motion.div
                 key="done"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 className="p-10 text-center"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", delay: 0.1 }}
-                  className="h-16 w-16 rounded-full bg-success/15 flex items-center justify-center mx-auto mb-4"
-                >
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
                   <CheckCircle2 className="h-8 w-8 text-success" />
-                </motion.div>
-                <h3 className="font-heading text-xl font-bold mb-1">Vielen Dank! 💜</h3>
+                </div>
+                <h3 className="mb-1 font-heading text-xl font-bold">
+                  Vielen Dank!
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Dein Feedback macht StudentPlanner besser.
+                  Danke! Deine Rückmeldung wurde gespeichert.
                 </p>
               </motion.div>
             ) : (
@@ -108,54 +148,56 @@ const FeedbackButton = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <div className="relative bg-gradient-to-br from-primary/10 via-accent/5 to-transparent px-6 pt-6 pb-5 border-b border-border">
+                <div className="relative border-b border-border bg-gradient-to-br from-primary/10 via-accent/5 to-transparent px-6 pb-5 pt-6">
                   <button
                     onClick={() => handleClose(false)}
-                    className="absolute top-4 right-4 h-7 w-7 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                    className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary"
                     aria-label="Schließen"
                   >
                     <X className="h-4 w-4" />
                   </button>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
                       <MessageCircleHeart className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="text-xs text-muted-foreground font-medium">
+                    <span className="text-xs font-medium text-muted-foreground">
                       Feedback
                     </span>
                   </div>
                   <h3 className="font-heading text-xl font-bold">
-                    Wie zufrieden bist du?
+                    Was möchtest du uns sagen?
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Dein Feedback hilft uns wirklich weiter.
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Teile kurz deine Idee, einen Fehler oder allgemeines Feedback.
                   </p>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="space-y-5 p-6">
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       1. Bewertung
                     </p>
                     <div className="grid grid-cols-4 gap-2">
-                      {ratings.map((r) => (
+                      {ratings.map((item) => (
                         <motion.button
-                          key={r.value}
-                          whileTap={{ scale: 0.92 }}
-                          onClick={() => setRating(r.value)}
-                          className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all ${
-                            rating === r.value
-                              ? "border-primary bg-primary/5 scale-105"
-                              : "border-transparent bg-secondary/60 opacity-70 hover:opacity-100"
+                          key={item.value}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => setRating(item.value)}
+                          className={`rounded-xl border-2 py-3 transition-all ${
+                            rating === item.value
+                              ? "scale-[1.03] border-primary bg-primary/5"
+                              : "border-transparent bg-secondary/60 opacity-75 hover:opacity-100"
                           }`}
                         >
-                          <span className="text-2xl">{r.emoji}</span>
+                          <span className="block text-2xl">{item.emoji}</span>
                           <span
-                            className={`text-[10px] font-medium ${
-                              rating === r.value ? "text-primary" : "text-muted-foreground"
+                            className={`mt-1 block text-[10px] font-medium ${
+                              rating === item.value
+                                ? "text-primary"
+                                : "text-muted-foreground"
                             }`}
                           >
-                            {r.label}
+                            {item.label}
                           </span>
                         </motion.button>
                       ))}
@@ -170,22 +212,24 @@ const FeedbackButton = () => {
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden"
                       >
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                          2. Worum geht es?
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          2. Thema
                         </p>
                         <div className="grid grid-cols-4 gap-2">
-                          {categories.map((c) => (
+                          {categories.map((item) => (
                             <button
-                              key={c.id}
-                              onClick={() => setCategory(c.id)}
-                              className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg border transition-all ${
-                                category === c.id
-                                  ? c.color
+                              key={item.id}
+                              onClick={() => setCategory(item.id)}
+                              className={`flex flex-col items-center gap-1.5 rounded-lg border py-2.5 transition-all ${
+                                category === item.id
+                                  ? item.color
                                   : "border-transparent bg-secondary/60 text-muted-foreground hover:text-foreground"
                               }`}
                             >
-                              <c.icon className="h-4 w-4" />
-                              <span className="text-[11px] font-medium">{c.label}</span>
+                              <item.icon className="h-4 w-4" />
+                              <span className="text-[11px] font-medium">
+                                {item.label}
+                              </span>
                             </button>
                           ))}
                         </div>
@@ -199,32 +243,36 @@ const FeedbackButton = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden space-y-3"
+                        className="space-y-3 overflow-hidden"
                       >
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                            3. Erzähl uns mehr
+                          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            3. Nachricht
                           </p>
                           <Textarea
                             placeholder={
                               selectedRating && selectedRating.value <= 2
-                                ? "Was läuft schief? Wie können wir das beheben?"
-                                : "Was gefällt dir? Was würdest du dir wünschen?"
+                                ? "Was läuft schief? Wie können wir das verbessern?"
+                                : "Was gefällt dir oder was wünschst du dir?"
                             }
                             value={message}
-                            onChange={(e) => setMessage(e.target.value)}
+                            onChange={(event) => setMessage(event.target.value)}
                             rows={4}
                             disabled={sending}
                             className="resize-none"
                             maxLength={500}
                           />
-                          {message.trim().length > 0 && message.trim().length < 5 && (
-                            <p className="mt-1 text-xs font-medium text-destructive">Bitte schreibe mindestens 5 Zeichen.</p>
-                          )}
-                          <p className="text-[10px] text-muted-foreground text-right mt-1">
+                          {message.trim().length > 0 &&
+                            message.trim().length < 5 && (
+                              <p className="mt-1 text-xs font-medium text-destructive">
+                                Bitte schreibe mindestens 5 Zeichen.
+                              </p>
+                            )}
+                          <p className="mt-1 text-right text-[10px] text-muted-foreground">
                             {message.length}/500
                           </p>
                         </div>
+
                         <Button
                           onClick={submit}
                           disabled={sending}
@@ -233,11 +281,13 @@ const FeedbackButton = () => {
                         >
                           {sending ? (
                             <>
-                              <Loader2 className="h-4 w-4 animate-spin" /> Wird gesendet…
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Wird gesendet…
                             </>
                           ) : (
                             <>
-                              <Send className="h-4 w-4" /> Feedback senden
+                              <Send className="h-4 w-4" />
+                              Feedback senden
                             </>
                           )}
                         </Button>

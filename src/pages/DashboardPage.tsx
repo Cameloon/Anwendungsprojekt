@@ -6,6 +6,8 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
+  Clock3,
+  Files,
   MessageSquare,
   Plus,
   Users,
@@ -19,7 +21,7 @@ import { useProfile } from "@/hooks/useProfile";
 
 const QUOTES = [
   "Der Weg ist das Ziel.",
-  "Kleine Schritte, groesse Wirkung.",
+  "Kleine Schritte, große Wirkung.",
   "Beginne - der Rest folgt.",
   "Heute ist ein guter Tag zum Lernen.",
 ];
@@ -84,13 +86,36 @@ const DashboardPage = () => {
         .slice(0, 5),
     [deadlines],
   );
+  const upcomingDeadlines = useMemo(
+    () =>
+      deadlines
+        .filter((deadline) => !deadline.done)
+        .filter((deadline) => new Date(deadline.date).getTime() >= now.getTime())
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [deadlines, now],
+  );
+  const nextDeadline = upcomingDeadlines[0] ?? null;
+  const openDeadlines = useMemo(
+    () => deadlines.filter((deadline) => !deadline.done),
+    [deadlines],
+  );
+  const urgentDeadlinesCount = useMemo(
+    () =>
+      openDeadlines.filter((deadline) => {
+        const time = new Date(deadline.date).getTime();
+        return time >= now.getTime() && time - now.getTime() <= 3 * 24 * 60 * 60 * 1000;
+      }).length,
+    [now, openDeadlines],
+  );
+  const newPostsCount = latestPosts.length;
+  const newScriptsCount = latestScripts.length;
 
   const quote = useMemo(() => QUOTES[now.getDate() % QUOTES.length], [now]);
 
   const overviewBlocks = selectedSubject
     ? [
         {
-          title: "Forenbeitraege",
+          title: "Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
           linkLabel: "Forum",
@@ -99,7 +124,7 @@ const DashboardPage = () => {
             meta: post.tag || "Forum",
             extra: post.content,
           })),
-          emptyText: "Keine Beitraege.",
+          emptyText: "Keine Beiträge.",
         },
         {
           title: "Skripte",
@@ -136,7 +161,7 @@ const DashboardPage = () => {
       ]
     : [
         {
-          title: "Alle Forenbeitraege",
+          title: "Alle Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
           linkLabel: "Forum",
@@ -145,7 +170,7 @@ const DashboardPage = () => {
             meta: post.tag || "Forum",
             extra: post.content,
           })),
-          emptyText: "Keine Beitraege.",
+          emptyText: "Keine Beiträge.",
         },
         {
           title: "Alle Skripte",
@@ -183,12 +208,27 @@ const DashboardPage = () => {
 
   const activeSubject = selectedSubject ?? "Alle Vorlesungen";
   const activeSubjectDescription = selectedSubject
-    ? `Inhalte fuer ${selectedSubject}`
+    ? `Inhalte für ${selectedSubject}`
     : "Gesamtansicht aller Vorlesungen";
 
-  const totalPosts = posts.length;
-  const totalScripts = scripts.length;
-  const totalDeadlines = deadlines.length;
+  const nextDeadlineValue = nextDeadline
+    ? new Date(nextDeadline.date).toLocaleDateString("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+      })
+    : "Kein Termin";
+  const nextDeadlineHint = nextDeadline ? nextDeadline.title : "Nichts geplant";
+  const openDeadlinesValue = openDeadlines.length;
+  const openDeadlinesHint =
+    openDeadlines.length === 0
+      ? "Alles erledigt"
+      : urgentDeadlinesCount > 0
+        ? `${urgentDeadlinesCount} dringend`
+        : "Gut im Plan";
+  const newPostsHint =
+    newPostsCount > 0 ? "Im Forum ansehen" : "Keine neuen Beiträge";
+  const newScriptsHint =
+    newScriptsCount > 0 ? "In der Bibliothek" : "Keine neuen Skripte";
 
   return (
     <div className="min-h-screen bg-background">
@@ -237,29 +277,38 @@ const DashboardPage = () => {
 
             <div className="grid grid-cols-2 gap-3 lg:col-span-2">
               <HeroStat
-                label="Vorlesungen"
-                value={lectures.length}
-                icon={<BookOpen className="h-5 w-5" />}
-                hint="dieses Semester"
-              />
-              <HeroStat
-                label="Forum"
-                value={totalPosts}
-                icon={<MessageSquare className="h-5 w-5" />}
-                hint="Beitraege"
-              />
-              <HeroStat
-                label="Skripte"
-                value={totalScripts}
-                icon={<Circle className="h-5 w-5" />}
-                hint="verfuegbar"
-              />
-              <HeroStat
-                label="Termine"
-                value={totalDeadlines}
+                label="Nächster Termin"
+                value={nextDeadlineValue}
                 icon={<CalendarDays className="h-5 w-5" />}
-                hint="im Planer"
+                hint={nextDeadlineHint}
+                valueClassName="text-destructive text-3xl sm:text-3xl"
+                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                to="/planner"
+              />
+              <HeroStat
+                label="Offene Termine"
+                value={openDeadlinesValue}
+                icon={<Clock3 className="h-5 w-5" />}
+                hint={openDeadlinesHint}
+                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                to="/planner"
+              />
+              <HeroStat
+                label="Neue Beiträge"
+                value={newPostsCount}
+                icon={<MessageSquare className="h-5 w-5" />}
+                hint={newPostsHint}
+                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                to="/forum"
+              />
+              <HeroStat
+                label="Neue Skripte"
+                value={newScriptsCount}
+                icon={<Files className="h-5 w-5" />}
+                hint={newScriptsHint}
                 tone="hot"
+                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                to="/skripte"
               />
             </div>
           </motion.section>
@@ -268,11 +317,13 @@ const DashboardPage = () => {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {subjectsList.length === 0 ? (
                 <div className="rounded-3xl border border-border/60 bg-card p-8 text-sm text-muted-foreground sm:col-span-2 xl:col-span-4">
-                  Keine Inhalte fuer die gewaehlte Filtereinstellung.
+                  Keine Inhalte für die gewählte Filtereinstellung.
                 </div>
               ) : (
                 subjectsList.map((subject) => {
-                  const subjectPosts = posts.filter((post) => post.tag === subject);
+                  const subjectPosts = posts.filter(
+                    (post) => post.tag === subject,
+                  );
                   const subjectScripts = scripts.filter(
                     (script) => script.subject === subject,
                   );
@@ -350,7 +401,7 @@ const DashboardPage = () => {
                   onClick={() => setSelectedSubject(null)}
                   disabled={!selectedSubject}
                 >
-                  Gesamtuebersicht
+                  Gesamtübersicht
                 </Button>
               </div>
             </div>
@@ -382,12 +433,18 @@ function HeroStat({
   hint,
   icon,
   tone,
+  valueClassName,
+  labelClassName,
+  to,
 }: {
   label: string;
   value: number | string;
   hint?: string;
   icon: React.ReactNode;
   tone?: "warn" | "ok" | "hot";
+  valueClassName?: string;
+  labelClassName?: string;
+  to?: string;
 }) {
   const toneClasses =
     tone === "warn"
@@ -398,24 +455,43 @@ function HeroStat({
           ? "from-accent/20 to-accent/5 text-accent"
           : "from-primary/15 to-primary/5 text-primary";
 
-  return (
+  const content = (
     <div
-      className={`rounded-2xl border border-border bg-gradient-to-br p-4 ${toneClasses}`}
+      className={`flex min-h-[156px] flex-col rounded-2xl border border-border bg-gradient-to-br p-4 transition hover:-translate-y-0.5 hover:shadow-md ${toneClasses}`}
     >
       <div className="mb-2 flex items-center gap-1.5 text-xs font-medium opacity-80">
         {icon}
       </div>
-      <p className="font-heading text-3xl font-bold leading-none text-foreground">
+      <p
+        className={`font-heading font-bold leading-none ${valueClassName ?? "text-3xl text-foreground"}`}
+      >
         {value}
       </p>
-      <p className="mt-1.5 text-xs font-medium text-muted-foreground">
+      <p
+        className={`mt-1.5 text-xs font-medium text-muted-foreground ${labelClassName ?? ""}`}
+      >
         {label}
       </p>
-      {hint && (
-        <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>
-      )}
+      <div className="mt-auto pt-2">
+        {hint && (
+          <p className="text-[10px] text-muted-foreground">{hint}</p>
+        )}
+      </div>
     </div>
   );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 function OverviewBlock({
