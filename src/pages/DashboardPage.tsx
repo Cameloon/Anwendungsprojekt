@@ -3,12 +3,12 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   Circle,
   MessageSquare,
   Plus,
   Users,
-  Flame,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -16,11 +16,10 @@ import Navbar from "@/components/Navbar";
 import GroupsPanel from "@/components/GroupsPanel";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
 
 const QUOTES = [
   "Der Weg ist das Ziel.",
-  "Kleine Schritte, große Wirkung.",
+  "Kleine Schritte, groesse Wirkung.",
   "Beginne - der Rest folgt.",
   "Heute ist ein guter Tag zum Lernen.",
 ];
@@ -33,24 +32,28 @@ const greeting = () => {
 };
 
 const DashboardPage = () => {
-  const { user } = useAuth();
   const profile = useProfile();
   const postsData = useQuery(api.posts.listRecent);
   const scriptsData = useQuery(api.scripts.listPublic);
-  const lecturesData = useQuery(api.semesterLectures.getLecturesForMyJahrgang, {});
+  const deadlinesData = useQuery(api.deadlines.listForUser);
+  const lecturesData = useQuery(
+    api.semesterLectures.getLecturesForMyJahrgang,
+    {},
+  );
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [overviewMode, setOverviewMode] = useState<"overview" | "latest">(
-    "overview",
-  );
   const name = profile?.display_name ?? "";
   const now = useMemo(() => new Date(), []);
 
   const posts = useMemo(() => postsData ?? [], [postsData]);
   const scripts = useMemo(() => scriptsData ?? [], [scriptsData]);
+  const deadlines = useMemo(() => deadlinesData ?? [], [deadlinesData]);
   const lectures = useMemo(() => lecturesData ?? [], [lecturesData]);
 
-  const subjectsList = useMemo(() => lectures.map((l) => l.lectureName).sort(), [lectures]);
+  const subjectsList = useMemo(
+    () => lectures.map((lecture) => lecture.lectureName).sort(),
+    [lectures],
+  );
 
   const selectedPosts = useMemo(() => {
     if (!selectedSubject) return [];
@@ -62,105 +65,135 @@ const DashboardPage = () => {
     return scripts.filter((script) => script.subject === selectedSubject);
   }, [scripts, selectedSubject]);
 
+  const selectedDeadlines = useMemo(() => {
+    if (!selectedSubject) return [];
+    return deadlines
+      .filter((deadline) => deadline.vorlesung === selectedSubject)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [deadlines, selectedSubject]);
+
   const latestPosts = useMemo(() => posts.slice(0, 5), [posts]);
   const latestScripts = useMemo(() => scripts.slice(0, 5), [scripts]);
+  const latestDeadlines = useMemo(
+    () =>
+      [...deadlines]
+        .sort((a, b) => {
+          if (a.done !== b.done) return Number(a.done) - Number(b.done);
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        })
+        .slice(0, 5),
+    [deadlines],
+  );
 
   const quote = useMemo(() => QUOTES[now.getDate() % QUOTES.length], [now]);
 
-  const overviewBlocks =
-    overviewMode === "latest"
-      ? [
-          {
-            title: "Aktuelle Forenbeiträge",
-            icon: <MessageSquare className="h-4 w-4" />,
-            linkTo: "/forum",
-            linkLabel: "Forum",
-            items: latestPosts.map((post) => ({
-              title: post.title,
-              meta: post.tag || "Forum",
-              extra: post.content,
-            })),
-            emptyText: "Keine Beiträge.",
-          },
-          {
-            title: "Neueste Skripte",
-            icon: <BookOpen className="h-4 w-4" />,
-            linkTo: "/skripte",
-            linkLabel: "Bibliothek",
-            items: latestScripts.map((script) => ({
-              title: script.title,
-              meta: `${script.subject} · ${script.authorName}`,
-              extra: script.description || "",
-            })),
-            emptyText: "Keine Skripte.",
-          },
-        ]
-      : selectedSubject
-        ? [
-            {
-              title: "Forenbeiträge",
-              icon: <MessageSquare className="h-4 w-4" />,
-              linkTo: "/forum",
-              linkLabel: "Forum",
-              items: selectedPosts.map((post) => ({
-                title: post.title,
-                meta: post.tag || "Forum",
-                extra: post.content,
-              })),
-              emptyText: "Keine Beiträge.",
-            },
-            {
-              title: "Skripte",
-              icon: <BookOpen className="h-4 w-4" />,
-              linkTo: "/skripte",
-              linkLabel: "Bibliothek",
-              items: selectedScripts.map((script) => ({
-                title: script.title,
-                meta: `${script.subject} · ${script.authorName}`,
-                extra: script.description || "",
-              })),
-              emptyText: "Keine Skripte.",
-            },
-          ]
-        : [
-            {
-              title: "Aktuelle Forenbeiträge",
-              icon: <MessageSquare className="h-4 w-4" />,
-              linkTo: "/forum",
-              linkLabel: "Forum",
-              items: latestPosts.map((post) => ({
-                title: post.title,
-                meta: post.tag || "Forum",
-                extra: post.content,
-              })),
-              emptyText: "Keine Beiträge.",
-            },
-            {
-              title: "Neueste Skripte",
-              icon: <BookOpen className="h-4 w-4" />,
-              linkTo: "/skripte",
-              linkLabel: "Bibliothek",
-              items: latestScripts.map((script) => ({
-                title: script.title,
-                meta: `${script.subject} · ${script.authorName}`,
-                extra: script.description || "",
-              })),
-              emptyText: "Keine Skripte.",
-            },
-          ];
+  const overviewBlocks = selectedSubject
+    ? [
+        {
+          title: "Forenbeitraege",
+          icon: <MessageSquare className="h-4 w-4" />,
+          linkTo: "/forum",
+          linkLabel: "Forum",
+          items: selectedPosts.map((post) => ({
+            title: post.title,
+            meta: post.tag || "Forum",
+            extra: post.content,
+          })),
+          emptyText: "Keine Beitraege.",
+        },
+        {
+          title: "Skripte",
+          icon: <BookOpen className="h-4 w-4" />,
+          linkTo: "/skripte",
+          linkLabel: "Bibliothek",
+          items: selectedScripts.map((script) => ({
+            title: script.title,
+            meta: `${script.subject} · ${script.authorName}`,
+            extra: script.description || "",
+          })),
+          emptyText: "Keine Skripte.",
+        },
+        {
+          title: "Termine",
+          icon: <CalendarDays className="h-4 w-4" />,
+          linkTo: "/planner",
+          linkLabel: "Planer",
+          items: selectedDeadlines.map((deadline) => ({
+            title: deadline.title,
+            meta: new Date(deadline.date).toLocaleDateString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }),
+            extra: deadline.note || "",
+            badgeClass: deadline.done
+              ? "bg-success/15 text-success"
+              : "bg-primary/10 text-primary",
+            badgeText: deadline.done ? "Erledigt" : "Offen",
+          })),
+          emptyText: "Keine Termine.",
+        },
+      ]
+    : [
+        {
+          title: "Alle Forenbeitraege",
+          icon: <MessageSquare className="h-4 w-4" />,
+          linkTo: "/forum",
+          linkLabel: "Forum",
+          items: latestPosts.map((post) => ({
+            title: post.title,
+            meta: post.tag || "Forum",
+            extra: post.content,
+          })),
+          emptyText: "Keine Beitraege.",
+        },
+        {
+          title: "Alle Skripte",
+          icon: <BookOpen className="h-4 w-4" />,
+          linkTo: "/skripte",
+          linkLabel: "Bibliothek",
+          items: latestScripts.map((script) => ({
+            title: script.title,
+            meta: `${script.subject} · ${script.authorName}`,
+            extra: script.description || "",
+          })),
+          emptyText: "Keine Skripte.",
+        },
+        {
+          title: "Alle Termine",
+          icon: <CalendarDays className="h-4 w-4" />,
+          linkTo: "/planner",
+          linkLabel: "Planer",
+          items: latestDeadlines.map((deadline) => ({
+            title: deadline.title,
+            meta: `${deadline.vorlesung || "Planer"} · ${new Date(deadline.date).toLocaleDateString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}`,
+            extra: deadline.note || "",
+            badgeClass: deadline.done
+              ? "bg-success/15 text-success"
+              : "bg-primary/10 text-primary",
+            badgeText: deadline.done ? "Erledigt" : "Offen",
+          })),
+          emptyText: "Keine Termine.",
+        },
+      ];
 
   const activeSubject = selectedSubject ?? "Alle Vorlesungen";
   const activeSubjectDescription = selectedSubject
-    ? `Inhalte für ${selectedSubject}`
+    ? `Inhalte fuer ${selectedSubject}`
     : "Gesamtansicht aller Vorlesungen";
 
   const totalPosts = posts.length;
   const totalScripts = scripts.length;
+  const totalDeadlines = deadlines.length;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="w-full px-4 pt-32 md:pt-24 pb-24 sm:px-6 lg:px-8">
+      <main className="w-full px-4 pt-32 pb-24 sm:px-6 md:pt-24 lg:px-8">
         <div className="mx-auto w-full max-w-7xl space-y-6">
           <motion.section
             initial={{ opacity: 0, y: 12 }}
@@ -213,19 +246,19 @@ const DashboardPage = () => {
                 label="Forum"
                 value={totalPosts}
                 icon={<MessageSquare className="h-5 w-5" />}
-                hint="Beiträge"
+                hint="Beitraege"
               />
               <HeroStat
                 label="Skripte"
                 value={totalScripts}
                 icon={<Circle className="h-5 w-5" />}
-                hint="verfügbar"
+                hint="verfuegbar"
               />
               <HeroStat
-                label="Woche"
-                value={now.getDay() || 7}
-                icon={<Flame className="h-5 w-5" />}
-                hint="Tag"
+                label="Termine"
+                value={totalDeadlines}
+                icon={<CalendarDays className="h-5 w-5" />}
+                hint="im Planer"
                 tone="hot"
               />
             </div>
@@ -235,17 +268,21 @@ const DashboardPage = () => {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {subjectsList.length === 0 ? (
                 <div className="rounded-3xl border border-border/60 bg-card p-8 text-sm text-muted-foreground sm:col-span-2 xl:col-span-4">
-                  Keine Inhalte für die gewählte Filtereinstellung.
+                  Keine Inhalte fuer die gewaehlte Filtereinstellung.
                 </div>
               ) : (
                 subjectsList.map((subject) => {
-                  const subjectPosts = posts.filter(
-                    (post) => post.tag === subject,
-                  );
+                  const subjectPosts = posts.filter((post) => post.tag === subject);
                   const subjectScripts = scripts.filter(
                     (script) => script.subject === subject,
                   );
-                  const total = subjectPosts.length + subjectScripts.length;
+                  const subjectDeadlines = deadlines.filter(
+                    (deadline) => deadline.vorlesung === subject,
+                  );
+                  const total =
+                    subjectPosts.length +
+                    subjectScripts.length +
+                    subjectDeadlines.length;
 
                   const active = selectedSubject === subject;
 
@@ -269,7 +306,7 @@ const DashboardPage = () => {
                       <h3 className="text-center font-heading text-xl font-medium leading-tight text-muted-foreground">
                         {subject}
                       </h3>
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-center text-[11px] text-muted-foreground">
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
                         <div className="rounded-2xl bg-background/80 py-2">
                           <p className="font-semibold text-foreground">
                             {subjectPosts.length}
@@ -281,6 +318,12 @@ const DashboardPage = () => {
                             {subjectScripts.length}
                           </p>
                           <p>Skripte</p>
+                        </div>
+                        <div className="rounded-2xl bg-background/80 py-2">
+                          <p className="font-semibold text-foreground">
+                            {subjectDeadlines.length}
+                          </p>
+                          <p>Termine</p>
                         </div>
                       </div>
                     </button>
@@ -303,27 +346,16 @@ const DashboardPage = () => {
               <div className="flex flex-col gap-2 self-start">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => setSelectedSubject(null)}
                   disabled={!selectedSubject}
                 >
-                  Zur Gesamtansicht
-                </Button>
-                <Button
-                  type="button"
-                  variant={overviewMode === "latest" ? "default" : "outline"}
-                  onClick={() =>
-                    setOverviewMode((current) =>
-                      current === "latest" ? "overview" : "latest",
-                    )
-                  }
-                >
-                  Aktuelle Uploads
+                  Gesamtuebersicht
                 </Button>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="mt-5 grid gap-4 xl:grid-cols-3">
               {overviewBlocks.map((block) => (
                 <OverviewBlock
                   key={block.title}
