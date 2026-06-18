@@ -35,11 +35,17 @@ describe("SkriptePage – Upload-Dialog", () => {
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
-  it("zeigt Fehlermeldungen für leere Pflichtfelder sofort nach dem Öffnen", () => {
+  it("Submit-Button ist deaktiviert solange keine Datei ausgewählt ist", () => {
     render(<SkriptePage />);
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
-    expect(screen.getByText("Mindestens 3 Zeichen.")).toBeInTheDocument();
-    expect(screen.getByText("Mindestens 2 Zeichen.")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
+      target: { value: "Testskript" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
+      target: { value: "Physik" },
+    });
+    // Pflichtfeld Datei fehlt → Button bleibt deaktiviert (FA: Datei ist Pflicht)
+    expect(screen.getByRole("button", { name: /Skript hochladen/i })).toBeDisabled();
   });
 
   it("verhindert Submission bei ungültigen Eingaben — Formular bleibt offen", () => {
@@ -49,16 +55,18 @@ describe("SkriptePage – Upload-Dialog", () => {
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
-  it("zeigt Beschreibungsfehler bei zu kurzem Text", () => {
+  it("zeigt Fehlermeldung bei ungültigem Dateityp", () => {
     render(<SkriptePage />);
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
-    fireEvent.change(screen.getByPlaceholderText("Kurze Beschreibung zum Inhalt"), {
-      target: { value: "Zu kurz" },
-    });
-    expect(screen.getByText("Mindestens 10 Zeichen oder leer lassen.")).toBeInTheDocument();
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const invalidFile = new File(["inhalt"], "dokument.txt", { type: "text/plain" });
+    Object.defineProperty(fileInput, "files", { value: [invalidFile], configurable: true });
+    fireEvent.change(fileInput);
+    // FA: "Upload verweigert mit erklärender Fehlermeldung bei falschem Format"
+    expect(screen.getByText(/Ungültiger Dateityp/i)).toBeInTheDocument();
   });
 
-  it("fügt neues Skript zur Liste hinzu bei gültiger Eingabe", () => {
+  it("fügt neues Skript zur Liste hinzu nach erfolgreichem Upload", () => {
     render(<SkriptePage />);
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
@@ -67,10 +75,12 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
       target: { value: "Physik" },
     });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const validFile = new File(["inhalt"], "skript.pdf", { type: "application/pdf" });
+    Object.defineProperty(fileInput, "files", { value: [validFile], configurable: true });
+    fireEvent.change(fileInput);
     fireEvent.click(screen.getByRole("button", { name: /Skript hochladen/i }));
-    // Formular geschlossen
     expect(screen.queryByPlaceholderText("Titel des Skripts")).not.toBeInTheDocument();
-    // Neuer Eintrag sichtbar
     expect(screen.getByText("Mein Testskript")).toBeInTheDocument();
   });
 
@@ -90,10 +100,15 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
       target: { value: "Mathematik" },
     });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const validFile = new File(["inhalt"], "skript.pdf", { type: "application/pdf" });
+    Object.defineProperty(fileInput, "files", { value: [validFile], configurable: true });
+    fireEvent.change(fileInput);
     fireEvent.click(screen.getByRole("button", { name: /^Privat$/i }));
     fireEvent.click(screen.getByRole("button", { name: /Skript hochladen/i }));
+    expect(screen.queryByPlaceholderText("Titel des Skripts")).not.toBeInTheDocument();
     expect(screen.getByText("Geheimes Skript")).toBeInTheDocument();
-    // mindestens ein Privat-Badge in der Liste (Seed hat auch einen)
+    // Privat-Badge für das neue Skript sichtbar (FA: private Sichtbarkeit)
     expect(screen.getAllByText(/Privat/i).length).toBeGreaterThanOrEqual(1);
   });
 

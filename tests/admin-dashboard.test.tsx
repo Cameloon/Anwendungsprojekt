@@ -11,8 +11,8 @@ vi.mock("@clerk/clerk-react", () => ({
 }));
 
 vi.mock("convex/react", () => ({
-  useQuery: vi.fn(() => null),
-  useMutation: vi.fn(() => vi.fn()),
+  useQuery: vi.fn(() => undefined),
+  useMutation: vi.fn(() => vi.fn(() => Promise.resolve())),
   ConvexProviderWithClerk: ({ children }: { children: React.ReactNode }) =>
     children,
 }));
