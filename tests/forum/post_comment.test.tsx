@@ -1,272 +1,433 @@
-// Test runner imports (Bun) and DOM emulation via JSDOM
-import { afterAll, beforeEach, describe, expect, it } from "bun:test";
-import { JSDOM } from "jsdom";
-import { mkdirSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import ForumPage from "@/pages/ForumPage";
+import PostDetailPage from "@/pages/PostDetailPage";
+import { ThemeProvider } from "@/hooks/useTheme";
 
-// Keys used by the app to store forum/forums/demo data in localStorage
-const storageKeys = [
-  "demo_user",
-  "demo_profile",
-  "forum_posts_v1",
-  "forums_v1",
-  "forum_groups_v1",
-  "dashboard_hidden_forums_v1",
-];
+// ── Types ──
 
-// Path to the auto-updated status markdown written by the test
-const statusDocPath = path.resolve(
-  process.cwd(),
-  "docs/forum_post_comment_test_status.md",
-);
-
-type TestEnv = {
-  render: typeof import("@testing-library/react").render;
-  fireEvent: typeof import("@testing-library/react").fireEvent;
-  screen: typeof import("@testing-library/react").screen;
-  waitFor: typeof import("@testing-library/react").waitFor;
-  within: typeof import("@testing-library/react").within;
-  App: typeof import("../../src/App.tsx").default;
+type PostComment = {
+  _id: string;
+  _creationTime: number;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  parentId?: string;
+  liked: boolean;
+  likeCount: number;
 };
 
-// Seed a demo authenticated user and profile in localStorage
-const seedDemoUser = () => {
-  localStorage.setItem(
-    "demo_user",
-    JSON.stringify({
-      id: "demo-test-user",
-      email: "test@example.com",
-      created_at: "2026-06-02T08:00:00.000Z",
-    }),
-  );
-  localStorage.setItem(
-    "demo_profile",
-    JSON.stringify({
-      display_name: "Test Nutzer",
-      studienfach: "Informatik",
-      matrikelnummer: "123456",
-      hochschule: "DHBW Mannheim",
-      jahrgang: "TINF25A",
-      avatar_url: null,
-      created_at: "2026-06-02T08:00:00.000Z",
-    }),
-  );
+type Post = {
+  _id: string;
+  _creationTime: number;
+  forumId: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  tag: "frage" | "lerngruppe" | "material" | "diskussion";
+  liked: boolean;
+  likeCount: number;
+  replies: number;
+  comments: PostComment[];
 };
 
-// Create a deterministic forum post fixture in localStorage so the test is
-// stable and reproducible across runs.
-const seedForumPost = () => {
-  localStorage.setItem(
-    "forum_posts_v1",
-    JSON.stringify([
-      {
-        id: "post-seed-1",
-        author: "Test Nutzer",
-        title: "Detaillierter Thread",
-        content: "Dies ist ein eindeutiger Beitrag für den UI-Test.",
-        date: "02.06.2026, 08:00",
-        likes: 0,
-        replies: 0,
-        tag: "diskussion",
-        visibility: "public",
-      },
-    ]),
-  );
+type Forum = {
+  _id: string;
+  name: string;
+  visibility: "public" | "private";
+  description: string;
+  members: { userId: string; displayName: string }[];
+  ownerId: string;
+  inviteCode: string;
 };
 
-// Setup a minimal JSDOM environment and bind common browser APIs to the
-// Node global so React and the app can run inside the test runner.
-const setupEnvironment = async (): Promise<TestEnv> => {
-  const dom = new JSDOM(
-    '<!doctype html><html><body><div id="root"></div></body></html>',
-    {
-      url: "http://localhost/",
+// ── Reactive in-memory store ──
+
+let forumsStore: Forum[] = [];
+let postsStore: Post[] = [];
+const listeners = new Set<() => void>();
+let postIdx = 0;
+let commentIdx = 0;
+let timeBase = 1_700_000_000_000;
+
+// Stable snapshot reference — only replaced on emit() so React's
+// useSyncExternalStore doesn't see spurious changes between renders.
+let snapshot = { forums: forumsStore, posts: postsStore };
+
+const getSnapshot = () => snapshot;
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+const emit = () => {
+  snapshot = { forums: forumsStore, posts: postsStore };
+  listeners.forEach((l) => l());
+};
+
+// ── Static mocks ──
+
+vi.mock("@/components/Navbar", () => ({
+  default: () => <nav aria-label="Mock Navbar" />,
+}));
+
+vi.mock("@/components/Whiteboard", () => ({
+  default: () => <div data-testid="whiteboard-mock" />,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+  Toaster: () => null,
+}));
+
+vi.mock("@clerk/clerk-react", () => ({
+  useUser: () => ({
+    isLoaded: true,
+    isSignedIn: true,
+    user: { id: "demo-test-user" },
+  }),
+  useClerk: () => ({ signOut: vi.fn() }),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: { id: "demo-test-user", email: "test@example.com" },
+    isAdmin: false,
+    loading: false,
+    signOut: async () => {},
+  }),
+}));
+
+vi.mock("@/hooks/useProfile", () => ({
+  useProfile: () => ({
+    display_name: "Test Nutzer",
+    studienfach: "Informatik",
+    matrikelnummer: "123456",
+    hochschule: "DHBW Mannheim",
+    jahrgang: "TINF25A",
+    avatar_url: null,
+    created_at: null,
+    role: "user",
+  }),
+}));
+
+vi.mock("../../convex/_generated/api", () => ({
+  api: {
+    forums: {
+      getAllAccessible: "forums.getAllAccessible",
+      getById: "forums.getById",
+      create: "forums.create",
+      join: "forums.join",
+      joinByCode: "forums.joinByCode",
+      leave: "forums.leave",
     },
-  );
-
-  const windowObject = dom.window as typeof globalThis.window;
-  globalThis.window = windowObject;
-  globalThis.document = windowObject.document;
-  globalThis.navigator = windowObject.navigator;
-  globalThis.localStorage = windowObject.localStorage;
-  globalThis.sessionStorage = windowObject.sessionStorage;
-  globalThis.history = windowObject.history;
-  globalThis.HTMLElement = windowObject.HTMLElement;
-  globalThis.Element = windowObject.Element;
-  globalThis.Node = windowObject.Node;
-  globalThis.MutationObserver = windowObject.MutationObserver;
-  globalThis.Event = windowObject.Event;
-  globalThis.CustomEvent = windowObject.CustomEvent;
-  globalThis.DOMRect = windowObject.DOMRect;
-  globalThis.getComputedStyle =
-    windowObject.getComputedStyle.bind(windowObject);
-  windowObject.scrollTo = () => {};
-  globalThis.scrollTo = windowObject.scrollTo.bind(windowObject);
-  globalThis.requestAnimationFrame =
-    windowObject.requestAnimationFrame?.bind(windowObject) ??
-    ((cb: any) => setTimeout(() => cb(Date.now()), 0));
-  globalThis.cancelAnimationFrame =
-    windowObject.cancelAnimationFrame?.bind(windowObject) ??
-    ((handle: number) => clearTimeout(handle));
-
-  const matchMedia =
-    windowObject.matchMedia?.bind(windowObject) ??
-    (() => ({
-      matches: false,
-      media: "",
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    }));
-
-  Object.defineProperty(windowObject, "matchMedia", { value: matchMedia });
-  globalThis.matchMedia = matchMedia;
-
-  const originalSetTimeout = globalThis.setTimeout.bind(globalThis);
-  globalThis.setTimeout = ((
-    handler: TimerHandler,
-    timeout?: number,
-    ...args: unknown[]
-  ) => {
-    if (timeout === 1600 && typeof handler === "function") {
-      return originalSetTimeout(() => {
-        handler(...args);
-      }, 0);
-    }
-    return originalSetTimeout(handler, timeout, ...args);
-  }) as typeof globalThis.setTimeout;
-
-  // Import React Testing Library and the application after the DOM has been
-  // bootstrapped (important: some libraries register test hooks at import
-  // time and expect a window/document to exist).
-  const rtl = await import("@testing-library/react");
-  const app = await import("../../src/App.tsx");
-
-  return { ...rtl, App: app.default };
-};
-
-// Initialize test environment (DOM + RTL + App)
-const env = await setupEnvironment();
-let suitePassed = false; // flag written to the status doc in afterAll
-
-// Helper that writes a small markdown file with last-run status so the
-// documentation in `docs/` is automatically updated by test runs.
-const writeStatusDoc = (status: "passed" | "failed", message: string) => {
-  mkdirSync(path.dirname(statusDocPath), { recursive: true });
-  writeFileSync(
-    statusDocPath,
-    [
-      "# Forum Post/Comment Test Status",
-      "",
-      `Last run: ${new Date().toISOString()}`,
-      "",
-      "- Test: `bun test tests/forum/post_comment.test.tsx`",
-      `- Status: **${status}**`,
-      `- Result: ${message}`,
-      "- Scope: deterministic seeded post + comment chronology in the UI",
-      "- Auto-update: this file is rewritten by the test itself after execution",
-      "",
-    ].join("\n"),
-  );
-};
-
-// Navigate the rendered app to the forum page and wait for the main UI to
-// appear (guard against transient animations/boot sequence using waitFor).
-const openForumPage = async () => {
-  window.history.pushState({}, "", "/forum");
-  env.render(<env.App />);
-  await env.waitFor(() => {
-    expect(
-      env.screen.getByRole("button", { name: /Neuer Beitrag/i }),
-    ).toBeTruthy();
-  });
-};
-
-// Type a comment in the composer and submit it. Wait for the comment text
-// to appear in the DOM before returning.
-const postComment = async (text: string) => {
-  env.fireEvent.change(
-    env.screen.getByPlaceholderText("Schreibe einen Kommentar…"),
-    {
-      target: { value: text },
+    posts: {
+      listByForum: "posts.listByForum",
+      getById: "posts.getById",
+      create: "posts.create",
+      toggleLike: "posts.toggleLike",
+      toggleCommentLike: "posts.toggleCommentLike",
+      addComment: "posts.addComment",
     },
-  );
-  env.fireEvent.click(env.screen.getByRole("button", { name: /Posten/i }));
-  await env.screen.findByText(text);
+    scripts: {
+      listPublic: "scripts.listPublic",
+    },
+    profiles: {
+      getMine: "profiles.getMine",
+    },
+    notifications: {
+      inviteToForum: "notifications.inviteToForum",
+    },
+  },
+}));
+
+vi.mock("convex/react", async () => {
+  const ReactModule = await import("react");
+
+  return {
+    useQuery: (query: string, args?: unknown) => {
+      const snap = ReactModule.useSyncExternalStore(subscribe, getSnapshot);
+
+      if (args === "skip") return undefined;
+
+      if (query === "forums.getAllAccessible") return snap.forums;
+
+      if (query === "posts.listByForum") {
+        const fid = (args as { forumId: string })?.forumId;
+        return [...snap.posts]
+          .filter((p) => p.forumId === fid)
+          .sort((a, b) => b._creationTime - a._creationTime);
+      }
+
+      if (query === "posts.getById") {
+        const pid = (args as { postId: string })?.postId;
+        return snap.posts.find((p) => p._id === pid) ?? null;
+      }
+
+      if (query === "forums.getById") {
+        const fid = (args as { forumId: string })?.forumId;
+        return snap.forums.find((f) => f._id === fid) ?? null;
+      }
+
+      if (query === "scripts.listPublic") return [];
+      if (query === "profiles.getMine") return null;
+
+      return undefined;
+    },
+
+    useMutation: (mutation: string) => {
+      if (mutation === "posts.create") {
+        return async (payload: {
+          forumId: string;
+          title: string;
+          content: string;
+          tag: string;
+        }) => {
+          const post: Post = {
+            _id: `post-${++postIdx}`,
+            _creationTime: timeBase + postIdx * 1_000,
+            forumId: payload.forumId,
+            authorId: "demo-test-user",
+            authorName: "Test Nutzer",
+            title: payload.title,
+            content: payload.content,
+            tag: payload.tag as Post["tag"],
+            liked: false,
+            likeCount: 0,
+            replies: 0,
+            comments: [],
+          };
+          postsStore = [...postsStore, post];
+          emit();
+          return post._id;
+        };
+      }
+
+      if (mutation === "posts.addComment") {
+        return async (payload: {
+          postId: string;
+          content: string;
+          parentId?: string;
+        }) => {
+          const comment: PostComment = {
+            _id: `comment-${++commentIdx}`,
+            _creationTime: timeBase + commentIdx * 1_000,
+            postId: payload.postId,
+            authorId: "demo-test-user",
+            authorName: "Test Nutzer",
+            content: payload.content,
+            parentId: payload.parentId,
+            liked: false,
+            likeCount: 0,
+          };
+          postsStore = postsStore.map((p) =>
+            p._id === payload.postId
+              ? { ...p, comments: [...p.comments, comment] }
+              : p,
+          );
+          emit();
+        };
+      }
+
+      if (mutation === "posts.toggleLike") {
+        return async ({ postId }: { postId: string }) => {
+          postsStore = postsStore.map((p) =>
+            p._id === postId
+              ? {
+                  ...p,
+                  liked: !p.liked,
+                  likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1,
+                }
+              : p,
+          );
+          emit();
+        };
+      }
+
+      return async () => {};
+    },
+
+    ConvexProviderWithClerk: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
+// ── Seed & render helpers ──
+
+const FORUM_ID = "forum-test-1";
+const FORUM_NAME = "Test Forum";
+
+const seedForum = () => {
+  forumsStore = [
+    {
+      _id: FORUM_ID,
+      name: FORUM_NAME,
+      visibility: "public",
+      description: "Test-Forum für UI-Tests",
+      members: [{ userId: "demo-test-user", displayName: "Test Nutzer" }],
+      ownerId: "demo-test-user",
+      inviteCode: "TEST01",
+    },
+  ];
+  snapshot = { forums: forumsStore, posts: postsStore };
 };
 
-// Test scenario: verifies that a seeded post is visible in the forum list,
-// opening its detail shows author/date/tag/content, and adding two
-// comments results in chronological order in the comments list.
+const renderForum = () =>
+  render(
+    <ThemeProvider>
+      <MemoryRouter initialEntries={["/forum"]}>
+        <ForumPage />
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+
+const renderPostDetail = (postId: string) =>
+  render(
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[`/forum/${FORUM_ID}/post/${postId}`]}>
+        <Routes>
+          <Route
+            path="/forum/:forumId/post/:postId"
+            element={<PostDetailPage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+
+// ── Test suite ──
+
 describe("Forum post and comment flow", () => {
-  // Prepare a clean localStorage and deterministic fixtures before each run
   beforeEach(() => {
     localStorage.clear();
-    for (const key of storageKeys) {
-      localStorage.removeItem(key);
-    }
-    seedDemoUser();
-    seedForumPost();
+    forumsStore = [];
+    postsStore = [];
+    postIdx = 0;
+    commentIdx = 0;
+    timeBase = 1_700_000_000_000;
+    listeners.clear();
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+    seedForum();
   });
 
-  // After the whole suite, persist a short status doc for visibility in docs/
-  afterAll(() => {
-    if (suitePassed) {
-      writeStatusDoc(
-        "passed",
-        "Seeded post rendered, detail view opened, and both comments appeared in chronological order.",
-      );
-    } else {
-      writeStatusDoc(
-        "failed",
-        "The forum post/comment UI flow did not complete successfully.",
-      );
-    }
-  });
+  it("creates a post and shows it with author and tag in the forum list", async () => {
+    renderForum();
 
-  it("shows a seeded post, opens the detail view, and keeps comments in chronological order", async () => {
-    await openForumPage();
+    // The "Neuer Beitrag" button is enabled only when the user is a member.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Neuer Beitrag/i }),
+      ).not.toBeDisabled();
+    });
 
-    const title = "Detaillierter Thread";
-    const content = "Dies ist ein eindeutiger Beitrag für den UI-Test.";
+    fireEvent.click(screen.getByRole("button", { name: /Neuer Beitrag/i }));
 
-    const postCard = await env.screen.findByText(title);
-    const forumArticle = postCard.closest("article");
-    expect(forumArticle).not.toBeNull();
+    await screen.findByPlaceholderText("Titel deines Beitrags");
 
-    const forumCard = forumArticle as HTMLElement;
-    expect(env.within(forumCard).getByText("Test Nutzer")).toBeTruthy();
-    expect(env.within(forumCard).getByText("02.06.2026, 08:00")).toBeTruthy();
-    expect(env.within(forumCard).getByText("Diskussion")).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText("Titel deines Beitrags"), {
+      target: { value: "Testbeitrag für Forum-UI" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Was möchtest du teilen?"),
+      { target: { value: "Das ist der ausführliche Inhalt des Testbeitrags." } },
+    );
 
-    env.fireEvent.click(forumCard);
+    // Select the "Diskussion" tag button (only tag buttons are in this group)
+    const tagButtons = screen
+      .getAllByRole("button")
+      .filter((b) => b.textContent === "Diskussion");
+    fireEvent.click(tagButtons[0]);
 
-    await env.screen.findByRole("heading", { name: title });
-    const detailArticle = env.screen
-      .getByRole("heading", { name: title })
+    fireEvent.click(screen.getByRole("button", { name: /^Veröffentlichen$/i }));
+
+    // Post card must appear in the list
+    await screen.findByText("Testbeitrag für Forum-UI");
+
+    const postArticle = screen
+      .getByText("Testbeitrag für Forum-UI")
       .closest("article");
-    expect(detailArticle).not.toBeNull();
+    expect(postArticle).not.toBeNull();
 
-    const postDetail = detailArticle as HTMLElement;
-    expect(env.within(postDetail).getByText("Test Nutzer")).toBeTruthy();
-    expect(env.within(postDetail).getByText("02.06.2026, 08:00")).toBeTruthy();
-    expect(env.within(postDetail).getByText("Diskussion")).toBeTruthy();
-    expect(env.within(postDetail).getByText(content)).toBeTruthy();
+    const article = postArticle as HTMLElement;
+    expect(within(article).getByText("Test Nutzer")).toBeInTheDocument();
+    // Tag badge is rendered inside the article as "Diskussion"
+    expect(within(article).getByText("Diskussion")).toBeInTheDocument();
+  });
 
-    await postComment("Erster Kommentar");
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    await postComment("Zweiter Kommentar");
+  it("shows post detail with author, tag and content; adds comments in chronological order", async () => {
+    const POST_ID = "post-detail-seed";
+    const POST_TITLE = "Detaillierter Thread";
+    const POST_CONTENT =
+      "Ausführlicher Inhalt dieses Beitrags für den Detail-Test.";
 
-    const firstComment = env.screen.getByText("Erster Kommentar");
-    const secondComment = env.screen.getByText("Zweiter Kommentar");
+    postsStore = [
+      {
+        _id: POST_ID,
+        _creationTime: timeBase,
+        forumId: FORUM_ID,
+        authorId: "demo-test-user",
+        authorName: "Test Nutzer",
+        title: POST_TITLE,
+        content: POST_CONTENT,
+        tag: "diskussion",
+        liked: false,
+        likeCount: 0,
+        replies: 0,
+        comments: [],
+      },
+    ];
+    snapshot = { forums: forumsStore, posts: postsStore };
+
+    renderPostDetail(POST_ID);
+
+    // Wait for the post heading to appear (query resolves)
+    await screen.findByRole("heading", { name: POST_TITLE });
+
+    const postArticle = screen
+      .getByRole("heading", { name: POST_TITLE })
+      .closest("article");
+    expect(postArticle).not.toBeNull();
+
+    const article = postArticle as HTMLElement;
+    expect(within(article).getByText("Test Nutzer")).toBeInTheDocument();
+    expect(within(article).getByText("Diskussion")).toBeInTheDocument();
+    expect(within(article).getByText(POST_CONTENT)).toBeInTheDocument();
+
+    // Add first comment
+    const textarea = screen.getByPlaceholderText("Schreibe einen Kommentar…");
+
+    fireEvent.change(textarea, { target: { value: "Erster Kommentar" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Posten$/i }));
+
+    await screen.findByText("Erster Kommentar");
+
+    // Add second comment (textarea clears after posting)
+    fireEvent.change(textarea, { target: { value: "Zweiter Kommentar" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Posten$/i }));
+
+    await screen.findByText("Zweiter Kommentar");
+
+    // Chronological order: first comment appears before second in the DOM
+    const firstNode = screen.getByText("Erster Kommentar");
+    const secondNode = screen.getByText("Zweiter Kommentar");
     expect(
-      firstComment.compareDocumentPosition(secondComment) &
+      firstNode.compareDocumentPosition(secondNode) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(env.screen.getByText("2 Kommentare")).toBeTruthy();
-    suitePassed = true;
+
+    // Comment count in the post's action row
+    expect(screen.getByText("2 Kommentare")).toBeInTheDocument();
   });
 });
