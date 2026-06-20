@@ -52,6 +52,8 @@
     --magenta-glow: 225 41% 71%;
     --success: 160 76% 36%;
     --info: 222 44% 62%;
+    --page-tint: 222 60% 92%;
+    --page-tint-strong: 225 75% 88%;
 
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-glow)) 50%, hsl(var(--accent)) 100%);
@@ -59,36 +61,112 @@
 
   /* Color themes (light) */
   .theme-violet {
+    --background: 268 55% 97%;
+    --card: 270 45% 99%;
+    --popover: 270 45% 99%;
+    --secondary: 270 38% 92%;
+    --muted: 270 30% 93%;
+    --muted-foreground: 266 18% 42%;
     --primary: 262 60% 55%;
     --primary-glow: 280 70% 70%;
     --accent: 280 60% 65%;
+    --sidebar-background: 270 42% 96%;
+    --sidebar-accent: 270 30% 91%;
     --ring: 262 60% 55%;
     --amber-glow: 262 60% 55%;
     --magenta-glow: 280 70% 70%;
+    --page-tint: 270 70% 92%;
+    --page-tint-strong: 285 80% 88%;
   }
   .theme-emerald {
+    --background: 155 40% 97%;
+    --card: 156 32% 99%;
+    --popover: 156 32% 99%;
+    --secondary: 156 28% 92%;
+    --muted: 156 20% 93%;
+    --muted-foreground: 160 16% 38%;
     --primary: 158 64% 38%;
     --primary-glow: 168 70% 55%;
     --accent: 168 65% 50%;
+    --sidebar-background: 156 28% 96%;
+    --sidebar-accent: 156 22% 91%;
     --ring: 158 64% 38%;
     --amber-glow: 158 64% 38%;
     --magenta-glow: 168 70% 55%;
+    --page-tint: 156 52% 90%;
+    --page-tint-strong: 170 62% 86%;
   }
   .theme-rose {
+    --background: 340 55% 97%;
+    --card: 340 42% 99%;
+    --popover: 340 42% 99%;
+    --secondary: 340 34% 92%;
+    --muted: 340 28% 93%;
+    --muted-foreground: 340 18% 40%;
     --primary: 340 75% 55%;
     --primary-glow: 20 85% 65%;
     --accent: 20 80% 60%;
+    --sidebar-background: 340 36% 96%;
+    --sidebar-accent: 340 24% 91%;
     --ring: 340 75% 55%;
     --amber-glow: 340 75% 55%;
     --magenta-glow: 20 85% 65%;
+    --page-tint: 340 75% 92%;
+    --page-tint-strong: 14 85% 88%;
   }
   .theme-amber {
+    --background: 38 70% 97%;
+    --card: 36 52% 99%;
+    --popover: 36 52% 99%;
+    --secondary: 34 40% 92%;
+    --muted: 34 30% 93%;
+    --muted-foreground: 26 18% 38%;
     --primary: 32 85% 50%;
     --primary-glow: 45 95% 60%;
     --accent: 14 80% 55%;
+    --sidebar-background: 34 42% 96%;
+    --sidebar-accent: 34 28% 91%;
     --ring: 32 85% 50%;
     --amber-glow: 32 85% 50%;
     --magenta-glow: 14 80% 55%;
+    --page-tint: 38 88% 90%;
+    --page-tint-strong: 24 85% 86%;
+  }
+  .theme-cyan {
+    --background: 194 60% 97%;
+    --card: 192 42% 99%;
+    --popover: 192 42% 99%;
+    --secondary: 192 34% 92%;
+    --muted: 192 26% 93%;
+    --muted-foreground: 197 18% 38%;
+    --primary: 192 75% 46%;
+    --primary-glow: 187 80% 62%;
+    --accent: 204 82% 60%;
+    --sidebar-background: 192 38% 96%;
+    --sidebar-accent: 192 24% 91%;
+    --ring: 192 75% 46%;
+    --amber-glow: 192 75% 46%;
+    --magenta-glow: 204 82% 60%;
+    --page-tint: 192 82% 90%;
+    --page-tint-strong: 205 90% 86%;
+  }
+  .theme-berry {
+    --background: 328 52% 97%;
+    --card: 328 40% 99%;
+    --popover: 328 40% 99%;
+    --secondary: 328 32% 92%;
+    --muted: 328 26% 93%;
+    --muted-foreground: 328 16% 40%;
+    --primary: 328 68% 45%;
+    --primary-glow: 346 74% 62%;
+    --accent: 12 84% 63%;
+    --sidebar-background: 328 36% 96%;
+    --sidebar-accent: 328 24% 91%;
+    --ring: 328 68% 45%;
+    --amber-glow: 328 68% 45%;
+    --magenta-glow: 12 84% 63%;
+    --page-tint: 328 75% 91%;
+    --page-tint-strong: 348 82% 87%;
   }
 
   .dark {
@@ -170,6 +248,22 @@
     --amber-glow: 38 95% 60%;
     --magenta-glow: 18 90% 60%;
   }
+  .dark.theme-cyan {
+    --primary: 190 85% 62%;
+    --primary-glow: 184 90% 68%;
+    --accent: 206 88% 70%;
+    --ring: 190 85% 62%;
+    --amber-glow: 190 85% 62%;
+    --magenta-glow: 206 88% 70%;
+  }
+  .dark.theme-berry {
+    --primary: 330 78% 68%;
+    --primary-glow: 348 82% 72%;
+    --accent: 14 88% 68%;
+    --ring: 330 78% 68%;
+    --amber-glow: 330 78% 68%;
+    --magenta-glow: 14 88% 68%;
+  }
 }
 
 @layer base {
@@ -179,6 +273,11 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    position: relative;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--page-tint-strong) / 0.9), transparent 38%),
+      radial-gradient(circle at bottom right, hsl(var(--page-tint) / 0.75), transparent 34%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
