@@ -52,8 +52,18 @@ let lecturesStore: Lecture[] = [];
 let peopleStore: Person[] = [];
 const listeners = new Set<() => void>();
 let nextId = 1;
+let currentSnapshot = {
+  deadlines: deadlinesStore,
+  lectures: lecturesStore,
+  people: peopleStore,
+};
 
 const emit = () => {
+  currentSnapshot = {
+    deadlines: deadlinesStore,
+    lectures: lecturesStore,
+    people: peopleStore,
+  };
   listeners.forEach((listener) => listener());
 };
 
@@ -83,6 +93,19 @@ vi.mock("@/hooks/useAuth", () => ({
     isAdmin: false,
     loading: false,
     signOut: async () => {},
+  }),
+}));
+
+vi.mock("@/hooks/useProfile", () => ({
+  useProfile: () => ({
+    display_name: "Planner Test User",
+    studienfach: "Wirtschaftsinformatik",
+    matrikelnummer: "1234567",
+    hochschule: "DHBW",
+    jahrgang: "WWI23A",
+    avatar_url: null,
+    created_at: "2026-06-09T08:00:00.000Z",
+    role: "user",
   }),
 }));
 
@@ -121,11 +144,7 @@ vi.mock("convex/react", async () => {
     return () => listeners.delete(listener);
   };
 
-  const getSnapshot = () => ({
-    deadlines: deadlinesStore,
-    lectures: lecturesStore,
-    people: peopleStore,
-  });
+  const getSnapshot = () => currentSnapshot;
 
   return {
     useQuery: (query: string) => {
@@ -252,6 +271,11 @@ describe("Planner CRUD + toggle flow", () => {
     deadlinesStore = [];
     lecturesStore = [{ _id: "lecture-1", lectureName: "Software Engineering" }];
     peopleStore = [{ userId: "invitee-1", displayName: "Max Mustermann" }];
+    currentSnapshot = {
+      deadlines: deadlinesStore,
+      lectures: lecturesStore,
+      people: peopleStore,
+    };
     nextId = 1;
     window.scrollTo = vi.fn();
     window.confirm = vi.fn(() => true);

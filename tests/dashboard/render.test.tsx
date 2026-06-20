@@ -1,7 +1,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import DashboardPage from "@/pages/DashboardPage";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
@@ -24,9 +24,19 @@ type Lecture = {
   lectureName: string;
 };
 
+type DeadlineItem = {
+  _id: string;
+  title: string;
+  date: string;
+  done: boolean;
+  vorlesung?: string;
+  note?: string;
+};
+
 let postsFixture: ForumPost[] = [];
 let scriptsFixture: ScriptItem[] = [];
 let lecturesFixture: Lecture[] = [];
+let deadlinesFixture: DeadlineItem[] = [];
 
 vi.mock("@/components/Navbar", () => ({
   default: () => <nav aria-label="Mock Navbar" />,
@@ -45,10 +55,24 @@ vi.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useProfile", () => ({
+  useProfile: () => ({
+    display_name: "Test Nutzer",
+    studienfach: "Informatik",
+    matrikelnummer: "123",
+    hochschule: "DHBW",
+    jahrgang: "TINF25A",
+    avatar_url: null,
+    created_at: "2026-06-09T08:00:00.000Z",
+    role: "user",
+  }),
+}));
+
 vi.mock("../../convex/_generated/api", () => ({
   api: {
     posts: { listRecent: "posts.listRecent" },
     scripts: { listPublic: "scripts.listPublic" },
+    deadlines: { listForUser: "deadlines.listForUser" },
     semesterLectures: { getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang" },
   },
 }));
@@ -60,6 +84,7 @@ vi.mock("convex/react", async () => {
     useQuery: (query: string) => {
       if (query === "posts.listRecent") return postsFixture;
       if (query === "scripts.listPublic") return scriptsFixture;
+      if (query === "deadlines.listForUser") return deadlinesFixture;
       if (query === "semesterLectures.getLecturesForMyJahrgang") return lecturesFixture;
       return [];
     },
@@ -111,6 +136,7 @@ describe("Dashboard render and widgets", () => {
     postsFixture = [];
     scriptsFixture = [];
     lecturesFixture = [];
+    deadlinesFixture = [];
   });
 
   it("shows current forum and scripts widgets and links navigate", async () => {
@@ -130,14 +156,23 @@ describe("Dashboard render and widgets", () => {
         description: "Algo",
       },
     ];
+    deadlinesFixture = [
+      {
+        _id: "deadline-1",
+        title: "Dashboard Termin",
+        date: "2026-11-20",
+        done: false,
+        vorlesung: "Informatik",
+      },
+    ];
 
     renderDashboard();
 
-    const postsHeading = await screen.findByRole("heading", { name: /Aktuelle Forenbeitr/i });
-    const scriptsHeading = screen.getByRole("heading", { name: /Neueste Skripte/i });
+    const postsHeading = await screen.findByRole("heading", { name: /Alle Forenbeitr/i });
+    const scriptsHeading = screen.getByRole("heading", { name: /Alle Skripte/i });
 
-    const postsBlock = postsHeading.closest("section") as HTMLElement;
-    const scriptsBlock = scriptsHeading.closest("section") as HTMLElement;
+    const postsBlock = postsHeading.parentElement?.parentElement as HTMLElement;
+    const scriptsBlock = scriptsHeading.parentElement?.parentElement as HTMLElement;
 
     expect(within(postsBlock).queryAllByRole("listitem").length).toBeGreaterThan(0);
     expect(within(scriptsBlock).queryAllByRole("listitem").length).toBeGreaterThan(0);
@@ -147,9 +182,35 @@ describe("Dashboard render and widgets", () => {
 
     cleanup();
     seedDemoAuth();
+    postsFixture = [
+      {
+        title: "Beitrag fuer Dashboard",
+        content: "Kurzbeschreibung",
+        tag: "Informatik",
+      },
+    ];
+    scriptsFixture = [
+      {
+        title: "Algorithmen Skript",
+        subject: "Informatik",
+        authorName: "Dr. A",
+        description: "Algo",
+      },
+    ];
+    lecturesFixture = [{ _id: "lecture-1", lectureName: "Informatik" }];
+    deadlinesFixture = [
+      {
+        _id: "deadline-1",
+        title: "Dashboard Termin",
+        date: "2026-11-20",
+        done: false,
+        vorlesung: "Informatik",
+      },
+    ];
     renderDashboard();
 
-    const refreshedScriptsBlock = (await screen.findByRole("heading", { name: /Neueste Skripte/i })).closest("section") as HTMLElement;
+    const refreshedScriptsBlock = (await screen.findByRole("heading", { name: /Alle Skripte/i }))
+      .parentElement?.parentElement as HTMLElement;
     fireEvent.click(within(refreshedScriptsBlock).getByRole("link", { name: /Bibliothek/i }));
     expect(await screen.findByText(/Skripte Route/i)).toBeInTheDocument();
   });
@@ -157,12 +218,13 @@ describe("Dashboard render and widgets", () => {
   it("shows empty-state text when no lectures, posts and scripts exist", async () => {
     renderDashboard();
 
-    expect(await screen.findByText(/Keine Inhalte fuer die gewaehlte Filtereinstellung|Keine Inhalte für die gewählte Filtereinstellung/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Keine Inhalte .* Filtereinstellung/i)).toBeInTheDocument();
 
-    const uploadButton = screen.getByRole("button", { name: /Aktuelle Uploads/i });
-    fireEvent.click(uploadButton);
+    const overviewButton = screen.getByRole("button", { name: /Gesamt/i });
+    expect(overviewButton).toBeDisabled();
 
-    expect(await screen.findByText(/Keine Beitraege|Keine Beiträge/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Keine Beitr/i)).toBeInTheDocument();
     expect(screen.getByText(/Keine Skripte/i)).toBeInTheDocument();
+    expect(screen.getByText(/Keine Termine/i)).toBeInTheDocument();
   });
 });
