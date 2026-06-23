@@ -226,14 +226,16 @@ export default defineSchema({
   feedback: defineTable({
     userId: v.string(),
     rating: v.number(),
-    category: v.union(
-      v.literal("bug"),
-      v.literal("idee"),
-      v.literal("lob"),
-      v.literal("sonstiges")
-    ),
-    message: v.string(),
+    message: v.optional(v.string()),
     updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  userReports: defineTable({
+    userId: v.string(),
+    type: v.union(v.literal("bug"), v.literal("feature")),
+    message: v.string(),
+    status: v.optional(v.union(v.literal("open"), v.literal("done"))),
+    createdAt: v.number(),
   }).index("by_user", ["userId"]),
 
   notifications: defineTable({

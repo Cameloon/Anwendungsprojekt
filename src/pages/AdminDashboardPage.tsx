@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { loadReports, dismissReport, subscribeReports, type PostReport } from "@/lib/reportsStore";
+import {
+  loadReports,
+  dismissReport,
+  subscribeReports,
+  type PostReport,
+} from "@/lib/reportsStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   AlertTriangle,
   BookMarked,
   CheckCircle2,
+  ChevronDown,
   Eye,
   GraduationCap,
+  Info,
   LayoutGrid,
   Loader2,
   Plus,
@@ -20,7 +27,23 @@ import {
   FileWarning,
   Settings2,
   FolderUp,
+  MessageCircleHeart,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as ChartTooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +98,13 @@ const AdminDashboardPage = () => {
   const saveLecture = useMutation(api.semesterLectures.manage);
   const deleteLecture = useMutation(api.semesterLectures.deleteLecture);
   const seedLectures = useMutation(api.semesterLectures.seedIfEmpty);
+  const feedbackStats = useQuery(api.feedback.getAdminStats, {});
+  const userReports = useQuery(api.userReports.getAdminReports, {});
+  const markReportDone = useMutation(api.userReports.markDone);
+  const [expandedReportType, setExpandedReportType] = useState<
+    "bug" | "feature" | null
+  >(null);
+  const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [reports, setReports] = useState<PostReport[]>(() => loadReports());
   const [newKurs, setNewKurs] = useState("");
@@ -101,7 +131,8 @@ const AdminDashboardPage = () => {
     } catch (err) {
       toast({
         title: "Fehler",
-        description: err instanceof Error ? err.message : "Freigabe fehlgeschlagen",
+        description:
+          err instanceof Error ? err.message : "Freigabe fehlgeschlagen",
         variant: "destructive",
       });
     } finally {
@@ -120,7 +151,8 @@ const AdminDashboardPage = () => {
     } catch (err) {
       toast({
         title: "Fehler",
-        description: err instanceof Error ? err.message : "Ablehnung fehlgeschlagen",
+        description:
+          err instanceof Error ? err.message : "Ablehnung fehlgeschlagen",
         variant: "destructive",
       });
     } finally {
@@ -128,9 +160,53 @@ const AdminDashboardPage = () => {
     }
   };
 
-  const pendingProfiles = profiles?.filter(
-    (p) => p.status === "pending",
-  ) ?? [];
+  const pendingProfiles = profiles?.filter((p) => p.status === "pending") ?? [];
+
+  const ratingMeta = [
+    {
+      value: 1,
+      emoji: "😞",
+      label: "Schlecht",
+      color: "hsl(var(--destructive))",
+    },
+    {
+      value: 2,
+      emoji: "😐",
+      label: "Okay",
+      color: "hsl(var(--muted-foreground))",
+    },
+    { value: 3, emoji: "🙂", label: "Gut", color: "hsl(var(--info))" },
+    { value: 4, emoji: "😍", label: "Super", color: "hsl(var(--success))" },
+  ];
+
+  const ratingChartData = feedbackStats
+    ? ratingMeta.map((m) => ({
+        ...m,
+        count: feedbackStats.byRating[m.value] ?? 0,
+        pct:
+          feedbackStats.total > 0
+            ? Math.round(
+                ((feedbackStats.byRating[m.value] ?? 0) / feedbackStats.total) *
+                  100,
+              )
+            : 0,
+      }))
+    : [];
+
+  const reportTypeMeta: Record<string, { label: string }> = {
+    bug: { label: "Fehler" },
+    feature: { label: "Optimierungsvorschläge" },
+  };
+
+  const avgRating =
+    feedbackStats && feedbackStats.total > 0
+      ? (
+          Object.entries(feedbackStats.byRating).reduce(
+            (sum, [r, c]) => sum + Number(r) * c,
+            0,
+          ) / feedbackStats.total
+        ).toFixed(1)
+      : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,7 +242,13 @@ const AdminDashboardPage = () => {
                   value={String(pendingProfiles.length)}
                   hint="Nutzer warten"
                 />
-                <MetricCard label="Meldungen" value={String(reports.filter((r) => r.status === "offen").length)} hint="Forum-Queue" />
+                <MetricCard
+                  label="Meldungen"
+                  value={String(
+                    reports.filter((r) => r.status === "offen").length,
+                  )}
+                  hint="Forum-Queue"
+                />
                 <MetricCard
                   label="Vorlesungen"
                   value={String(lectures?.length ?? "—")}
@@ -236,11 +318,7 @@ const AdminDashboardPage = () => {
                             </Badge>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {[
-                              p.matrikelnummer,
-                              p.studienfach,
-                              p.hochschule,
-                            ]
+                            {[p.matrikelnummer, p.studienfach, p.hochschule]
                               .filter(Boolean)
                               .join(" · ") || "Keine Details"}
                           </p>
@@ -337,33 +415,55 @@ const AdminDashboardPage = () => {
             >
               <div className="mb-4 grid gap-3 sm:grid-cols-4">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Kurs</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Kurs
+                  </label>
                   <Select value={newKurs} onValueChange={setNewKurs}>
                     <SelectTrigger>
                       <SelectValue placeholder="Kurs wählen" />
                     </SelectTrigger>
                     <SelectContent>
-                      {["INF", "TIF", "WIF", "BWL", "MAB", "ETE", "MEC", "DSA", "AI", "SEC", "WI"].map((k) => (
-                        <SelectItem key={k} value={k}>{k}</SelectItem>
+                      {[
+                        "INF",
+                        "TIF",
+                        "WIF",
+                        "BWL",
+                        "MAB",
+                        "ETE",
+                        "MEC",
+                        "DSA",
+                        "AI",
+                        "SEC",
+                        "WI",
+                      ].map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {k}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Semester</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Semester
+                  </label>
                   <Select value={newSemester} onValueChange={setNewSemester}>
                     <SelectTrigger>
                       <SelectValue placeholder="Semester" />
                     </SelectTrigger>
                     <SelectContent>
                       {SEMESTER_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={String(s)}>{s}.</SelectItem>
+                        <SelectItem key={s} value={String(s)}>
+                          {s}.
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Vorlesungsname</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Vorlesungsname
+                  </label>
                   <Input
                     value={newLectureName}
                     onChange={(e) => setNewLectureName(e.target.value)}
@@ -383,9 +483,19 @@ const AdminDashboardPage = () => {
                       lectureName: newLectureName.trim(),
                     });
                     setNewLectureName("");
-                    toast({ title: "Gespeichert", description: "Vorlesung wurde angelegt." });
+                    toast({
+                      title: "Gespeichert",
+                      description: "Vorlesung wurde angelegt.",
+                    });
                   } catch (err) {
-                    toast({ title: "Fehler", description: err instanceof Error ? err.message : "Speichern fehlgeschlagen", variant: "destructive" });
+                    toast({
+                      title: "Fehler",
+                      description:
+                        err instanceof Error
+                          ? err.message
+                          : "Speichern fehlgeschlagen",
+                      variant: "destructive",
+                    });
                   }
                 }}
               >
@@ -398,7 +508,9 @@ const AdminDashboardPage = () => {
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 ) : lectures.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">Noch keine Vorlesungen hinterlegt.</p>
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    Noch keine Vorlesungen hinterlegt.
+                  </p>
                 ) : (
                   lectures.map((lecture) => (
                     <div
@@ -418,9 +530,19 @@ const AdminDashboardPage = () => {
                         onClick={async () => {
                           try {
                             await deleteLecture({ id: lecture._id });
-                            toast({ title: "Gelöscht", description: `${lecture.lectureName} wurde entfernt.` });
+                            toast({
+                              title: "Gelöscht",
+                              description: `${lecture.lectureName} wurde entfernt.`,
+                            });
                           } catch (err) {
-                            toast({ title: "Fehler", description: err instanceof Error ? err.message : "Löschen fehlgeschlagen", variant: "destructive" });
+                            toast({
+                              title: "Fehler",
+                              description:
+                                err instanceof Error
+                                  ? err.message
+                                  : "Löschen fehlgeschlagen",
+                              variant: "destructive",
+                            });
                           }
                         }}
                       >
@@ -432,40 +554,348 @@ const AdminDashboardPage = () => {
               </div>
             </Panel>
 
-            <Panel
-              title="Material- und Upload-Regeln"
-              icon={<Settings2 className="h-4 w-4" />}
-              description="Formate, Größenlimits und Sichtbarkeit können zentral für Aufgaben und Beiträge definiert werden."
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <SettingTile
-                  label="Erlaubte Formate"
-                  value="PDF, DOCX, PPTX, PNG, JPG"
-                />
-                <SettingTile label="Max. Upload-Größe" value="10 MB Standard" />
-                <SettingTile
-                  label="Sichtbarkeit"
-                  value="private · course · group · public"
-                />
-                <SettingTile
-                  label="Quoten"
-                  value="pro Nutzer / Kurs konfigurierbar"
-                />
-              </div>
+            <div className="flex flex-col gap-6">
+              <Panel
+                title="Material- und Upload-Regeln"
+                icon={<Settings2 className="h-4 w-4" />}
+                description="Formate, Größenlimits und Sichtbarkeit können zentral für Aufgaben und Beiträge definiert werden."
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SettingTile
+                    label="Erlaubte Formate"
+                    value="PDF, DOCX, PPTX, PNG, JPG"
+                  />
+                  <SettingTile
+                    label="Max. Upload-Größe"
+                    value="10 MB Standard"
+                  />
+                  <SettingTile
+                    label="Sichtbarkeit"
+                    value="private · course · group · public"
+                  />
+                  <SettingTile
+                    label="Quoten"
+                    value="pro Nutzer / Kurs konfigurierbar"
+                  />
+                </div>
 
-              <div className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 text-accent" />
-                  <div>
-                    <p className="font-medium">Protokollpflicht</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Moderationsaktionen, Upload-Freigaben und Löschungen
-                      sollten mit Zeitstempel dokumentiert werden.
-                    </p>
+                <div className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 text-accent" />
+                    <div>
+                      <p className="font-medium">Protokollpflicht</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Moderationsaktionen, Upload-Freigaben und Löschungen
+                        sollten mit Zeitstempel dokumentiert werden.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Panel>
+              </Panel>
+
+              <Panel
+                title="Nutzerzufriedenheit"
+                icon={<MessageCircleHeart className="h-4 w-4" />}
+                description="Anonyme Bewertungen der Nutzer — Basis sind alle abgegebenen Rückmeldungen — Customer Satisfaction Score (CSAT)."
+              >
+                {feedbackStats === undefined ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-2xl border border-border/60 bg-background/80 p-4 text-center">
+                        <p className="text-2xl font-semibold">
+                          {feedbackStats.total}
+                        </p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                          Rückmeldungen
+                        </p>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-2xl border border-border/60 bg-background/80 p-4 text-center cursor-default">
+                              <p className="text-2xl font-semibold">
+                                {feedbackStats.totalUsers > 0
+                                  ? Math.round(
+                                      (feedbackStats.total /
+                                        feedbackStats.totalUsers) *
+                                        100,
+                                    )
+                                  : 0}
+                                %
+                              </p>
+                              <p className="mt-1 flex items-center justify-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                Rücklaufquote
+                                <Info className="h-3 w-3 shrink-0" />
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-[200px] text-center text-xs"
+                          >
+                            Anteil der Nutzer, die bisher eine Bewertung
+                            abgegeben haben ({feedbackStats.total} von{" "}
+                            {feedbackStats.totalUsers})
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-2xl border border-border/60 bg-background/80 p-4 text-center cursor-default">
+                              <p className="text-2xl font-semibold">
+                                {avgRating ?? "—"}
+                              </p>
+                              <p className="mt-1 flex items-center justify-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                Ø Bewertung
+                                <Info className="h-3 w-3 shrink-0" />
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-[200px] text-center text-xs"
+                          >
+                            Gewichteter Durchschnitt aller Bewertungen auf einer
+                            Skala von 1 (😞 Schlecht) bis 4 (😍 Super)
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    {feedbackStats.total === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">
+                        Noch keine Rückmeldungen eingegangen.
+                      </p>
+                    ) : (
+                      <div>
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Bewertungsverteilung
+                        </p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart
+                            data={ratingChartData}
+                            barSize={40}
+                            margin={{ top: 4, right: 0, bottom: 0, left: -20 }}
+                          >
+                            <XAxis
+                              dataKey="label"
+                              tick={{
+                                fontSize: 12,
+                                fill: "hsl(var(--muted-foreground))",
+                              }}
+                              axisLine={false}
+                              tickLine={false}
+                              tickFormatter={(v, i) =>
+                                `${ratingChartData[i]?.emoji ?? ""} ${v}`
+                              }
+                            />
+                            <YAxis
+                              tickFormatter={(v) => `${v}%`}
+                              tick={{
+                                fontSize: 11,
+                                fill: "hsl(var(--muted-foreground))",
+                              }}
+                              axisLine={false}
+                              tickLine={false}
+                              domain={[0, 100]}
+                            />
+                            <ChartTooltip
+                              cursor={{ fill: "hsl(var(--muted)/0.15)" }}
+                              content={({ active, payload }) => {
+                                if (!active || !payload?.length) return null;
+                                const d = payload[0]
+                                  .payload as (typeof ratingChartData)[0];
+                                return (
+                                  <div className="rounded-xl border border-border/60 bg-card px-3 py-2 text-sm shadow-md">
+                                    <p className="font-medium">
+                                      {d.emoji} {d.label}
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                      {d.count} Stimmen · {d.pct}%
+                                    </p>
+                                  </div>
+                                );
+                              }}
+                            />
+                            <Bar dataKey="pct" radius={[6, 6, 0, 0]}>
+                              {ratingChartData.map((entry) => (
+                                <Cell
+                                  key={entry.value}
+                                  fill={entry.color}
+                                  fillOpacity={0.85}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+
+                        <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Meldungen
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["bug", "feature"] as const).map((type) => {
+                            const count =
+                              feedbackStats.reports.byType[type] ?? 0;
+                            const isExpanded = expandedReportType === type;
+                            return (
+                              <button
+                                key={type}
+                                onClick={() =>
+                                  setExpandedReportType(
+                                    isExpanded ? null : type,
+                                  )
+                                }
+                                className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all ${
+                                  isExpanded
+                                    ? "border-primary/40 bg-primary/5"
+                                    : "border-border/60 bg-background/80 hover:border-border"
+                                }`}
+                              >
+                                <div>
+                                  <p className="text-lg font-semibold">
+                                    {count}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {reportTypeMeta[type]?.label ?? type}
+                                  </p>
+                                </div>
+                                <motion.span
+                                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="text-muted-foreground"
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </motion.span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <AnimatePresence>
+                          {expandedReportType && (
+                            <motion.div
+                              key={expandedReportType}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3 space-y-2">
+                                {userReports === undefined ? (
+                                  <div className="flex justify-center py-4">
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                  </div>
+                                ) : (
+                                  (() => {
+                                    const forType = userReports.filter(
+                                      (r) => r.type === expandedReportType,
+                                    );
+                                    const open = forType.filter(
+                                      (r) => !r.status || r.status === "open",
+                                    );
+                                    const done = forType
+                                      .filter((r) => r.status === "done")
+                                      .slice(0, 10);
+
+                                    const formatDate = (ts: number) =>
+                                      new Date(ts).toLocaleDateString("de-DE", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      });
+
+                                    return (
+                                      <>
+                                        {open.length === 0 && (
+                                          <p className="py-3 text-center text-sm text-muted-foreground">
+                                            Keine offenen Meldungen.
+                                          </p>
+                                        )}
+                                        {open.map((report) => (
+                                          <div
+                                            key={report._id}
+                                            className="flex items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 p-4"
+                                          >
+                                            <div className="min-w-0">
+                                              <p className="text-sm text-foreground">
+                                                {report.message}
+                                              </p>
+                                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                                {formatDate(report.createdAt)}
+                                              </p>
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="shrink-0"
+                                              disabled={
+                                                markingDone === report._id
+                                              }
+                                              onClick={async () => {
+                                                setMarkingDone(report._id);
+                                                try {
+                                                  await markReportDone({
+                                                    id: report._id,
+                                                  });
+                                                } finally {
+                                                  setMarkingDone(null);
+                                                }
+                                              }}
+                                            >
+                                              {markingDone === report._id ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                              ) : (
+                                                "Erledigt"
+                                              )}
+                                            </Button>
+                                          </div>
+                                        ))}
+
+                                        {done.length > 0 && (
+                                          <>
+                                            <div className="flex items-center gap-3 py-1">
+                                              <div className="h-px flex-1 bg-border/60" />
+                                              <span className="text-[11px] text-muted-foreground">
+                                                Erledigt
+                                              </span>
+                                              <div className="h-px flex-1 bg-border/60" />
+                                            </div>
+                                            {done.map((report) => (
+                                              <div
+                                                key={report._id}
+                                                className="rounded-2xl border border-border/40 bg-background/40 p-4 opacity-50"
+                                              >
+                                                <p className="text-sm text-muted-foreground line-through">
+                                                  {report.message}
+                                                </p>
+                                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                                  {formatDate(report.createdAt)}
+                                                </p>
+                                              </div>
+                                            ))}
+                                          </>
+                                        )}
+                                      </>
+                                    );
+                                  })()
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Panel>
+            </div>
           </section>
 
           <section className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
