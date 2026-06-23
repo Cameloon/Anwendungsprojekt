@@ -59,7 +59,7 @@ const DashboardPage = () => {
 
   const selectedPosts = useMemo(() => {
     if (!selectedSubject) return [];
-    return posts.filter((post) => post.tag === selectedSubject);
+    return posts.filter((post) => post.vorlesung === selectedSubject);
   }, [posts, selectedSubject]);
 
   const selectedScripts = useMemo(() => {
@@ -322,7 +322,7 @@ const DashboardPage = () => {
               ) : (
                 subjectsList.map((subject) => {
                   const subjectPosts = posts.filter(
-                    (post) => post.tag === subject,
+                    (post) => post.vorlesung === subject,
                   );
                   const subjectScripts = scripts.filter(
                     (script) => script.subject === subject,

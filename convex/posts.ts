@@ -516,8 +516,14 @@ export const listRecent = query({
       accessibleIds.includes(p.forumId)
     );
 
+    const forumMap = new Map(forums.map((f) => [f._id, f]));
+
     const enriched = await Promise.all(
-      accessiblePosts.map((p) => enrichPost(ctx, p, identity.subject))
+      accessiblePosts.map(async (p) => {
+        const post = await enrichPost(ctx, p, identity.subject);
+        const forum = forumMap.get(p.forumId);
+        return { ...post, vorlesung: forum?.vorlesung ?? null };
+      })
     );
 
     return enriched.slice(0, 20);
