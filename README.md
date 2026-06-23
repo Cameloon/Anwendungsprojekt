@@ -64,12 +64,13 @@ Die Anwendung ist danach unter [http://localhost:5173](http://localhost:5173) er
 
 ### Übersicht der wichtigsten Befehle
 
-| Bun                | npm                  | Beschreibung                   |
-| ------------------ | -------------------- | ------------------------------ |
-| `bun dev`          | `npm run dev`        | Entwicklungsserver starten     |
-| `npx convex dev`   | `npx convex dev`     | Convex Backend synchronisieren |
-| `bun run build`    | `npm run build`      | Produktions-Build nach `dist/` |
-| `bun run test`     | `npm test`           | Tests ausführen (Vitest)       |
+| Bun                          | npm             | Beschreibung                                              |
+| ---------------------------- | --------------- | --------------------------------------------------------- |
+| `bun dev`                    | `npm run dev`   | Entwicklungsserver starten                                |
+| `npx convex dev`             | `npx convex dev`| Convex Backend synchronisieren                            |
+| `bun run build`              | `npm run build` | Produktions-Build nach `dist/`                            |
+| `bun run test`               | `npm test`      | Tests ausführen (Vitest)                                  |
+| `bun run update-test-status` | —               | Tests ausführen + `docs/test-uebersicht.md` aktualisieren |
 
 ---
 
