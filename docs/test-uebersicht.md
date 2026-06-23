@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-06-23 08:53 UTC -->
+<!-- Letzte Aktualisierung: 2026-06-23 13:31 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 47 | 0 | 4 | 0 |
+| 45 | 0 | 6 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -37,6 +37,12 @@
 - ✅ shows current forum and scripts widgets and links navigate
 - ✅ shows empty-state text when no lectures, posts and scripts exist
 
+## tests/planner/crud.test.tsx
+
+### Planner CRUD + toggle flow
+
+- ✅ creates, edits, toggles and deletes an appointment
+
 ## tests/forum/author_controls.test.tsx
 
 ### Forum – Autor-Kontrolle: Edit/Delete-Buttons
@@ -53,21 +59,15 @@
 - ✅ creates a post and shows it with author and tag in the forum list
 - ✅ shows post detail with author, tag and content; adds comments in chronological order
 
-## tests/planner/crud.test.tsx
-
-### Planner CRUD + toggle flow
-
-- ✅ creates, edits, toggles and deletes an appointment
-
 ## tests/skripte/upload_ui.test.tsx
 
 ### SkriptePage – Upload-Dialog
 
 - ✅ Upload-Formular ist initial ausgeblendet
 - ✅ öffnet das Formular beim Klick auf Hochladen
-- ✅ Submit-Button ist deaktiviert solange keine Datei ausgewählt ist
+- 🔜 Submit-Button ist deaktiviert solange keine Datei ausgewählt ist
 - ✅ verhindert Submission bei ungültigen Eingaben — Formular bleibt offen
-- ✅ zeigt Fehlermeldung bei ungültigem Dateityp
+- 🔜 zeigt Fehlermeldung bei ungültigem Dateityp
 - ✅ fügt neues Skript zur Liste hinzu nach erfolgreichem Upload
 - ✅ Sichtbarkeit-Buttons Öffentlich und Privat sind im Formular sichtbar
 - ✅ privates Skript zeigt Privat-Badge in der Liste

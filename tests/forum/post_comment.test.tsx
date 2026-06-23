@@ -132,6 +132,7 @@ vi.mock("../../convex/_generated/api", () => ({
       join: "forums.join",
       joinByCode: "forums.joinByCode",
       leave: "forums.leave",
+      ensureAllgemeinForum: "forums.ensureAllgemeinForum",
     },
     posts: {
       listByForum: "posts.listByForum",
@@ -140,6 +141,7 @@ vi.mock("../../convex/_generated/api", () => ({
       toggleLike: "posts.toggleLike",
       toggleCommentLike: "posts.toggleCommentLike",
       addComment: "posts.addComment",
+      deletePost: "posts.deletePost",
     },
     scripts: {
       listPublic: "scripts.listPublic",
@@ -149,6 +151,9 @@ vi.mock("../../convex/_generated/api", () => ({
     },
     notifications: {
       inviteToForum: "notifications.inviteToForum",
+    },
+    semesterLectures: {
+      ensureLectureForums: "semesterLectures.ensureLectureForums",
     },
   },
 }));
