@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-06-23 08:01 UTC -->
+<!-- Letzte Aktualisierung: 2026-06-23 08:53 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 46 | 0 | 1 | 0 |
+| 47 | 0 | 4 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -37,12 +37,27 @@
 - ✅ shows current forum and scripts widgets and links navigate
 - ✅ shows empty-state text when no lectures, posts and scripts exist
 
+## tests/forum/author_controls.test.tsx
+
+### Forum – Autor-Kontrolle: Edit/Delete-Buttons
+
+- 🔜 Autor sieht Bearbeiten- und Löschen-Buttons am eigenen Beitrag
+- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
+- 🔜 Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
+- 🔜 Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
+
 ## tests/forum/post_comment.test.tsx
 
 ### Forum post and comment flow
 
 - ✅ creates a post and shows it with author and tag in the forum list
 - ✅ shows post detail with author, tag and content; adds comments in chronological order
+
+## tests/planner/crud.test.tsx
+
+### Planner CRUD + toggle flow
+
+- ✅ creates, edits, toggles and deletes an appointment
 
 ## tests/skripte/upload_ui.test.tsx
 
@@ -64,12 +79,6 @@
 - ✅ validateFileSize(26214400 Bytes) → ""
 - ✅ validateFileSize(26214401 Bytes) → "Datei darf maximal 25 MB groß sein."
 - ✅ validateFileSize(52428800 Bytes) → "Datei darf maximal 25 MB groß sein."
-
-## tests/planner/crud.test.tsx
-
-### Planner CRUD + toggle flow
-
-- ✅ creates, edits, toggles and deletes an appointment
 
 ## tests/unit/validation.test.ts
 
