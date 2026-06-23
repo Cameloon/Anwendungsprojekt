@@ -223,6 +223,19 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_kurs_semester", ["kurs", "semesterNumber"]),
 
+  feedback: defineTable({
+    userId: v.string(),
+    rating: v.number(),
+    category: v.union(
+      v.literal("bug"),
+      v.literal("idee"),
+      v.literal("lob"),
+      v.literal("sonstiges")
+    ),
+    message: v.string(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   notifications: defineTable({
     type: v.union(
       v.literal("forum_invite"),

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MessageCircleHeart,
   Send,
@@ -9,12 +9,15 @@ import {
   Lightbulb,
   Palette,
   Zap,
+  Pencil,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 type Category = "bug" | "idee" | "lob" | "sonstiges";
 
@@ -65,6 +68,19 @@ const FeedbackButton = () => {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
+  const existingFeedback = useQuery(api.feedback.getMyFeedback);
+  const submitFeedback = useMutation(api.feedback.submit);
+
+  const hasExisting = existingFeedback != null;
+
+  useEffect(() => {
+    if (open && existingFeedback) {
+      setRating(existingFeedback.rating);
+      setCategory(existingFeedback.category as Category);
+      setMessage(existingFeedback.message);
+    }
+  }, [open, existingFeedback]);
+
   const reset = () => {
     setRating(null);
     setCategory(null);
@@ -83,13 +99,23 @@ const FeedbackButton = () => {
       toast.error("Bitte schreibe mindestens 5 Zeichen.");
       return;
     }
+    if (rating === null || category === null) return;
 
     setSending(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setSending(false);
-    setDone(true);
-    toast.success("Danke! Deine Rückmeldung wurde gespeichert.");
-    setTimeout(() => handleClose(false), 1800);
+    try {
+      await submitFeedback({ rating, category, message });
+      setDone(true);
+      toast.success(
+        hasExisting
+          ? "Dein Feedback wurde aktualisiert."
+          : "Danke! Deine Rückmeldung wurde gespeichert."
+      );
+      setTimeout(() => handleClose(false), 1800);
+    } catch {
+      toast.error("Fehler beim Speichern. Bitte versuche es erneut.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const selectedRating = ratings.find((item) => item.value === rating);
@@ -107,10 +133,16 @@ const FeedbackButton = () => {
         aria-label="Feedback geben"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <MessageCircleHeart className="h-5 w-5" />
+          {hasExisting ? (
+            <Pencil className="h-5 w-5" />
+          ) : (
+            <MessageCircleHeart className="h-5 w-5" />
+          )}
         </span>
         <span className="hidden sm:block text-left">
-          <span className="block leading-tight">Feedback</span>
+          <span className="block leading-tight">
+            {hasExisting ? "Feedback bearbeiten" : "Feedback"}
+          </span>
           <span className="block text-xs font-normal text-muted-foreground">
             Idee, Fehler oder Lob
           </span>
@@ -138,7 +170,9 @@ const FeedbackButton = () => {
                   Vielen Dank!
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Danke! Deine Rückmeldung wurde gespeichert.
+                  {hasExisting
+                    ? "Dein Feedback wurde aktualisiert."
+                    : "Danke! Deine Rückmeldung wurde gespeichert."}
                 </p>
               </motion.div>
             ) : (
@@ -161,7 +195,7 @@ const FeedbackButton = () => {
                       <MessageCircleHeart className="h-4 w-4 text-primary" />
                     </div>
                     <span className="text-xs font-medium text-muted-foreground">
-                      Feedback
+                      {hasExisting ? "Feedback bearbeiten" : "Feedback"}
                     </span>
                   </div>
                   <h3 className="font-heading text-xl font-bold">
@@ -287,7 +321,9 @@ const FeedbackButton = () => {
                           ) : (
                             <>
                               <Send className="h-4 w-4" />
-                              Feedback senden
+                              {hasExisting
+                                ? "Feedback aktualisieren"
+                                : "Feedback senden"}
                             </>
                           )}
                         </Button>
