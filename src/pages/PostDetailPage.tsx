@@ -8,19 +8,23 @@ import {
   Send,
   FileText,
   ExternalLink,
+  Flag,
   Reply,
   X,
+  Trash2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { ReportDialog } from "@/components/ReportDialog";
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
@@ -93,7 +97,10 @@ function PostDetailPage() {
   const { forumId, postId } = useParams<{ forumId: string; postId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const profile = useProfile();
   const me = user?.id || "";
+  const displayName = profile?.display_name || "Unbekannt";
+  const isAdmin = profile?.role === "admin";
 
   const post = useQuery(
     api.posts.getById,
@@ -108,9 +115,11 @@ function PostDetailPage() {
   const toggleLikeMutation = useMutation(api.posts.toggleLike);
   const toggleCommentLikeMutation = useMutation(api.posts.toggleCommentLike);
   const addCommentMutation = useMutation(api.posts.addComment);
+  const deleteCommentMutation = useMutation(api.posts.deleteComment);
 
   const [comment, setComment] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (post === undefined) {
     return (
@@ -183,6 +192,16 @@ function PostDetailPage() {
     setComment("");
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm("Kommentar wirklich löschen?")) return;
+    try {
+      await deleteCommentMutation({ commentId: commentId as Id<"postComments"> });
+      toast.success("Kommentar gelöscht");
+    } catch {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
   const backTo = forum ? `/forum/${forum._id}` : "/forum";
 
   return (
@@ -200,7 +219,13 @@ function PostDetailPage() {
       replyTo={replyTo}
       startReply={startReply}
       cancelReply={cancelReply}
+      reportOpen={reportOpen}
+      setReportOpen={setReportOpen}
+      me={me}
+      reportedBy={displayName}
       linkedScripts={linkedScripts}
+      isAdmin={isAdmin}
+      handleDeleteComment={handleDeleteComment}
     />
   );
 }
@@ -221,7 +246,13 @@ function PostDetailLayout({
   replyTo,
   startReply,
   cancelReply,
+  reportOpen,
+  setReportOpen,
+  me,
+  reportedBy,
   linkedScripts,
+  isAdmin,
+  handleDeleteComment,
 }: {
   post: EnrichedPost;
   forumName: string | null;
@@ -236,7 +267,13 @@ function PostDetailLayout({
   replyTo: { id: string; name: string } | null;
   startReply: (c: PostComment) => void;
   cancelReply: () => void;
+  reportOpen: boolean;
+  setReportOpen: (open: boolean) => void;
+  me: string;
+  reportedBy: string;
   linkedScripts: ScriptInfo[];
+  isAdmin: boolean;
+  handleDeleteComment: (commentId: string) => void;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -324,6 +361,14 @@ function PostDetailLayout({
                 <MessageSquare className="h-3.5 w-3.5" />
                 {comments.length} {comments.length === 1 ? "Kommentar" : "Kommentare"}
               </span>
+              <button
+                onClick={() => setReportOpen(true)}
+                title="Beitrag melden"
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Melden
+              </button>
             </div>
           </motion.article>
 
@@ -415,6 +460,15 @@ function PostDetailLayout({
                           >
                             <Reply className="h-3 w-3" /> Antworten
                           </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteComment(comment._id)}
+                              className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors"
+                              title="Kommentar löschen (Admin)"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -440,6 +494,15 @@ function PostDetailLayout({
           </div>
         </div>
       </div>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        postId={post._id}
+        postTitle={post.title}
+        forumName={forumName ?? "Forum"}
+        reportedBy={reportedBy}
+      />
     </div>
   );
 }
