@@ -1,3 +1,4 @@
+//App Page for uploading Lecture Notes or other Study Materials
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
