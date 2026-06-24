@@ -75,6 +75,7 @@ vi.mock("../../convex/_generated/api", () => ({
       listVisible: "scripts.listVisible",
       create: "scripts.create",
       deleteScript: "scripts.deleteScript",
+      generateUploadUrl: "scripts.generateUploadUrl",
     },
   },
 }));
@@ -124,6 +125,10 @@ vi.mock("convex/react", async () => {
         };
       }
 
+      if (mutation === "scripts.generateUploadUrl") {
+        return async () => "https://fake-upload.example.com";
+      }
+
       return async () => {};
     },
 
@@ -159,7 +164,7 @@ describe("SkriptePage – Upload-Dialog", () => {
     render(<SkriptePage />);
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     // Kein Titel → Validierung schlägt fehl → Formular bleibt offen
-    fireEvent.click(screen.getByRole("button", { name: /Skript hochladen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
@@ -175,7 +180,7 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
       target: { value: "Physik" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Skript hochladen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));
 
     await waitFor(() =>
       expect(screen.queryByPlaceholderText("Titel des Skripts")).not.toBeInTheDocument(),
@@ -200,7 +205,7 @@ describe("SkriptePage – Upload-Dialog", () => {
       target: { value: "Mathematik" },
     });
     fireEvent.click(screen.getByRole("button", { name: /^Privat$/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Skript hochladen/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));
 
     await waitFor(() =>
       expect(screen.queryByPlaceholderText("Titel des Skripts")).not.toBeInTheDocument(),

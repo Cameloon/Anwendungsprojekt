@@ -1,5 +1,4 @@
-//App Page for uploading Lecture Notes or other Study Materials
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -12,19 +11,51 @@ import {
   Globe,
   Lock,
   Trash2,
+  Loader2,
+  X,
+  File,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { validateSubject, validateScriptDescription } from "@/lib/validation";
+import {
+  validateSubject,
+  validateScriptDescription,
+  validateFileSize,
+  FILE_MAX_BYTES,
+} from "@/lib/validation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+];
+
+function inferScriptType(file: File): "PDF" | "DOCX" | "Notiz" {
+  if (file.type === "application/pdf") return "PDF";
+  if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  )
+    return "DOCX";
+  return "Notiz";
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const subjectColors: Record<string, string> = {
   Mathematik: "bg-info/15 text-info border-info/20",
@@ -60,10 +91,12 @@ const SkriptePage = () => {
   const me = user?.id || "";
   const displayName = profile?.display_name || "Unbekannt";
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
 
   const createMutation = useMutation(api.scripts.create);
   const deleteMutation = useMutation(api.scripts.deleteScript);
+  const generateUploadUrlMutation = useMutation(api.scripts.generateUploadUrl);
 
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
@@ -72,6 +105,10 @@ const SkriptePage = () => {
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [fileError, setFileError] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawScripts: any[] = (scriptsQuery ?? []) as any[];
@@ -96,29 +133,107 @@ const SkriptePage = () => {
     return ["alle", ...Array.from(set)];
   }, [scripts]);
 
+  const handleFileSelect = (file: File | null) => {
+    setFileError("");
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFileError("Nur PDF, DOCX und Bilder (PNG, JPG, WebP) sind erlaubt.");
+      return;
+    }
+    const sizeErr = validateFileSize(file.size);
+    if (sizeErr) {
+      setFileError(sizeErr);
+      return;
+    }
+    setSelectedFile(file);
+  };
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileSelect(e.target.files?.[0] ?? null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFileSelect(e.dataTransfer.files?.[0] ?? null);
+  };
+
   const addScript = async () => {
     const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
     const nextSubjectError = validateSubject(subject);
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextSubjectError || nextDescriptionError) return;
+
+    if (!selectedFile) {
+      try {
+        await createMutation({
+          title: title.trim(),
+          subject: subject.trim(),
+          description: description.trim(),
+          pages: 0,
+          type: "Notiz",
+          visibility,
+        });
+        toast.success("Skript erstellt");
+      } catch {
+        toast.error("Fehler beim Erstellen");
+      }
+      resetForm();
+      return;
+    }
+
+    setUploading(true);
     try {
+      const uploadUrl = await generateUploadUrlMutation();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": selectedFile.type },
+        body: selectedFile,
+      });
+      if (!result.ok) throw new Error("Upload fehlgeschlagen");
+      const { storageId } = (await result.json()) as { storageId: Id<"_storage"> };
+
       await createMutation({
         title: title.trim(),
         subject: subject.trim(),
         description: description.trim(),
         pages: 0,
-        type: "Notiz",
+        type: inferScriptType(selectedFile),
         visibility,
+        storageId,
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size,
       });
-      toast.success("Skript erstellt");
-      setTitle("");
-      setSubject("");
-      setDescription("");
-      setVisibility("public");
-      setShowUpload(false);
+      toast.success("Skript hochgeladen");
     } catch {
-      toast.error("Fehler beim Erstellen");
+      toast.error("Fehler beim Hochladen");
     }
+    setUploading(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setSubject("");
+    setDescription("");
+    setVisibility("public");
+    setShowUpload(false);
+    setSelectedFile(null);
+    setFileError("");
   };
 
   const removeScript = async (id: string) => {
@@ -262,11 +377,63 @@ const SkriptePage = () => {
                     />
                     {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
                   </div>
-                  <div className="border-2 border-dashed border-border rounded-xl p-8 text-center text-muted-foreground text-sm cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
-                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
-                    <p className="font-medium text-foreground">Datei hierher ziehen</p>
-                    <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-xl p-6 text-center text-muted-foreground text-sm cursor-pointer transition-colors ${
+                      dragging
+                        ? "border-primary border-solid bg-primary/10"
+                        : selectedFile
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-border hover:border-primary/40 hover:bg-primary/5"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+                      onChange={onFileInputChange}
+                      className="hidden"
+                    />
+                    {selectedFile ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <File className="h-6 w-6 text-primary" />
+                        <div className="text-left">
+                          <p className="font-medium text-foreground truncate max-w-[300px]">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-[10px] mt-0.5">
+                            {formatFileSize(selectedFile.size)} · {inferScriptType(selectedFile)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFile(null);
+                            setFileError("");
+                          }}
+                          className="p-1 rounded-full hover:bg-secondary transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
+                        <p className="font-medium text-foreground">Datei hierher ziehen</p>
+                        <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
+                      </>
+                    )}
                   </div>
+                  {fileError && <p className="text-xs text-destructive">{fileError}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibility("public")}
@@ -290,10 +457,22 @@ const SkriptePage = () => {
                     </button>
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" onClick={() => setShowUpload(false)}>
+                    <Button variant="outline" onClick={resetForm} disabled={uploading}>
                       Abbrechen
                     </Button>
-                    <Button onClick={addScript}>Skript hochladen</Button>
+                    <Button onClick={addScript} disabled={uploading}>
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Lädt hoch…
+                        </>
+                      ) : selectedFile ? (
+                        <>
+                          <Upload className="h-4 w-4 mr-1" /> Skript hochladen
+                        </>
+                      ) : (
+                        "Als Notiz speichern"
+                      )}
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -395,7 +574,7 @@ const SkriptePage = () => {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {script.url && (
-                      <a href={script.url} download className="inline-flex">
+                      <a href={script.url} target="_blank" download className="inline-flex">
                         <Button
                           variant="ghost"
                           size="icon"
