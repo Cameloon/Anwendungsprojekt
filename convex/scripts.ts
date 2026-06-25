@@ -1,5 +1,18 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getType } from "./schema";
+
+// ─── Helpers ───
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveSubject(ctx: any, subject: any): Promise<string> {
+  const type = getType(subject);
+  if (type === null) {
+    return subject as string;
+  }
+  const lecture = await ctx.db.get(subject.lectureId);
+  return lecture?.lectureName ?? "Unbekannt";
+}
 
 // ─── Queries ───
 
@@ -18,6 +31,7 @@ export const listVisible = query({
       visible.map(async (s) => ({
         ...s,
         url: s.storageId ? await ctx.storage.getUrl(s.storageId) : undefined,
+        subject: await resolveSubject(ctx, s.subject),
       }))
     );
   },
@@ -28,7 +42,7 @@ export const listPublic = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const all = await ctx.db.query("scripts").collect();
 
     const publicScripts = all.filter((s) => s.visibility !== "private");
@@ -37,6 +51,7 @@ export const listPublic = query({
       publicScripts.map(async (s) => ({
         ...s,
         url: s.storageId ? await ctx.storage.getUrl(s.storageId) : undefined,
+        subject: await resolveSubject(ctx, s.subject),
       }))
     );
   },
@@ -47,12 +62,13 @@ export const getById = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const script = await ctx.db.get(args.scriptId);
     if (!script) return null;
     return {
       ...script,
       url: script.storageId ? await ctx.storage.getUrl(script.storageId) : undefined,
+      subject: await resolveSubject(ctx, script.subject),
     };
   },
 });
@@ -64,11 +80,14 @@ export const listBySubject = query({
     if (!identity) throw new Error("Not authenticated");
     const all = await ctx.db.query("scripts").collect();
 
-    const filtered = all.filter(
-      (s) =>
-        s.subject === args.subject &&
-        (s.visibility !== "private" || s.authorId === identity.subject)
-    );
+    const filtered = [];
+    for (const s of all) {
+      if (s.visibility === "private" && s.authorId !== identity.subject) continue;
+      const resolved = await resolveSubject(ctx, s.subject);
+      if (resolved === args.subject) {
+        filtered.push(s);
+      }
+    }
 
     return await Promise.all(
       filtered.map(async (s) => ({
@@ -88,9 +107,9 @@ export const getDistinctSubjects = query({
     const subjects = new Set<string>();
 
     for (const s of all) {
-      if (s.visibility !== "private" || s.authorId === identity.subject) {
-        subjects.add(s.subject);
-      }
+      if (s.visibility === "private" && s.authorId !== identity.subject) continue;
+      const resolved = await resolveSubject(ctx, s.subject);
+      subjects.add(resolved);
     }
 
     return Array.from(subjects).sort();
@@ -111,7 +130,10 @@ export const generateUploadUrl = mutation({
 export const create = mutation({
   args: {
     title: v.string(),
-    subject: v.string(),
+    subject: v.union(
+      v.string(),
+      v.object({ type: v.literal("lecture"), lectureId: v.id("semesterLectures") }),
+    ),
     description: v.string(),
     pages: v.number(),
     type: v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("Notiz")),
@@ -133,7 +155,7 @@ export const create = mutation({
     const now = Date.now();
     const scriptId = await ctx.db.insert("scripts", {
       title: args.title.trim(),
-      subject: args.subject.trim(),
+      subject: args.subject,
       description: args.description.trim(),
       authorId: identity.subject,
       authorName,
@@ -156,7 +178,12 @@ export const update = mutation({
   args: {
     scriptId: v.id("scripts"),
     title: v.optional(v.string()),
-    subject: v.optional(v.string()),
+    subject: v.optional(
+      v.union(
+        v.string(),
+        v.object({ type: v.literal("lecture"), lectureId: v.id("semesterLectures") }),
+      ),
+    ),
     description: v.optional(v.string()),
     pages: v.optional(v.number()),
     type: v.optional(
@@ -175,7 +202,9 @@ export const update = mutation({
 
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.title !== undefined) patch.title = args.title.trim();
-    if (args.subject !== undefined) patch.subject = args.subject.trim();
+    if (args.subject !== undefined) {
+      patch.subject = typeof args.subject === "string" ? args.subject.trim() : args.subject;
+    }
     if (args.description !== undefined) patch.description = args.description.trim();
     if (args.pages !== undefined) patch.pages = args.pages;
     if (args.type !== undefined) patch.type = args.type;

@@ -1,6 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+export function getType(obj: any): null | string {
+  if(typeof obj.type == "string") {
+      return obj.type
+  } else {
+    return null
+  }
+  
+}
+
 export default defineSchema({
   profiles: defineTable({
     userId: v.string(),
@@ -190,7 +199,10 @@ export default defineSchema({
 
   scripts: defineTable({
     title: v.string(),
-    subject: v.string(),
+    subject: v.union(
+      v.string(),
+      v.object({ type: v.literal("lecture"), lectureId: v.id("semesterLectures") }),
+    ),
     description: v.string(),
     authorId: v.string(),
     authorName: v.string(),

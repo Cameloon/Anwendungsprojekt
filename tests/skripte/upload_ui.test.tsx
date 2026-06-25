@@ -27,6 +27,23 @@ const emitScripts = () => {
 
 vi.mock("../../src/components/Navbar", () => ({ default: () => null }));
 
+vi.mock("@/components/ui/combobox", () => ({
+  default: ({ value, onChange, options, placeholder }: any) => (
+    <select
+      data-testid="subject-combobox"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((opt: any) => {
+        const v = typeof opt === "string" ? opt : opt.value;
+        const l = typeof opt === "string" ? opt : opt.label;
+        return <option key={v} value={v}>{l}</option>;
+      })}
+    </select>
+  ),
+}));
+
 vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -81,16 +98,31 @@ vi.mock("../../convex/_generated/api", () => ({
       list: "sections.list",
       seedDefaultSections: "sections.seedDefaultSections",
     },
+    semesterLectures: {
+      getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang",
+    },
   },
 }));
 
 vi.mock("convex/react", async () => {
   const ReactModule = await import("react");
 
+  const lectureData = [
+    { _id: "lecture-1", _creationTime: Date.now(), kurs: "TINF", semesterNumber: 3, lectureName: "Webprogrammierung", createdAt: Date.now() },
+    { _id: "lecture-2", _creationTime: Date.now(), kurs: "TINF", semesterNumber: 3, lectureName: "Software Engineering", createdAt: Date.now() },
+  ];
+
+  function resolveSubject(subj: any): string {
+    if (typeof subj === "string") return subj;
+    const lecture = lectureData.find((l) => l._id === subj.lectureId);
+    return lecture?.lectureName ?? "Unbekannt";
+  }
+
   return {
     useQuery: (query: string) => {
       const snap = ReactModule.useSyncExternalStore(subscribeScripts, getScriptSnapshot);
-      if (query === "scripts.listVisible") return snap.scripts;
+      if (query === "scripts.listVisible") return snap.scripts.map((s: any) => ({ ...s, subject: resolveSubject(s.subject) }));
+      if (query === "semesterLectures.getLecturesForMyJahrgang") return lectureData;
       if (query === "sections.list") return [];
       return undefined;
     },
@@ -182,8 +214,8 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
       target: { value: "Mein Testskript" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
-      target: { value: "Physik" },
+    fireEvent.change(screen.getByTestId("subject-combobox"), {
+      target: { value: "lecture-1" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));
 
@@ -206,8 +238,8 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
       target: { value: "Geheimes Skript" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Fach / Modul"), {
-      target: { value: "Mathematik" },
+    fireEvent.change(screen.getByTestId("subject-combobox"), {
+      target: { value: "lecture-2" },
     });
     fireEvent.click(screen.getByRole("button", { name: /^Privat$/i }));
     fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));

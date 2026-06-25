@@ -16,14 +16,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+type ComboboxOption = string | { value: string; label: string };
+
 interface ComboboxProps {
   value: string;
   onChange: (value: string) => void;
-  options: readonly string[];
+  options: readonly ComboboxOption[];
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
+}
+
+function isObjectOption(opt: ComboboxOption): opt is { value: string; label: string } {
+  return typeof opt === "object" && "value" in opt && "label" in opt;
+}
+
+function getOptionValue(opt: ComboboxOption): string {
+  return isObjectOption(opt) ? opt.value : opt;
+}
+
+function getOptionLabel(opt: ComboboxOption): string {
+  return isObjectOption(opt) ? opt.label : opt;
 }
 
 const Combobox = ({
@@ -37,6 +51,10 @@ const Combobox = ({
 }: ComboboxProps) => {
   const [open, setOpen] = useState(false);
 
+  const selectedLabel = options
+    .filter((o) => getOptionValue(o) === value)
+    .map(getOptionLabel)[0];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -46,7 +64,7 @@ const Combobox = ({
           aria-expanded={open}
           className={cn("w-full justify-between font-normal", className)}
         >
-          {value || placeholder}
+          {selectedLabel || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -56,24 +74,28 @@ const Combobox = ({
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  onSelect={() => {
-                    onChange(option === value ? "" : option);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {option}
-                </CommandItem>
-              ))}
+              {options.map((option) => {
+                const optionValue = getOptionValue(option);
+                const optionLabel = getOptionLabel(option);
+                return (
+                  <CommandItem
+                    key={optionValue}
+                    value={optionLabel}
+                    onSelect={() => {
+                      onChange(optionValue === value ? "" : optionValue);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === optionValue ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {optionLabel}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

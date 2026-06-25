@@ -21,11 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
-  validateSubject,
   validateScriptDescription,
   validateFileSize,
   FILE_MAX_BYTES,
 } from "@/lib/validation";
+import Combobox from "@/components/ui/combobox";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
@@ -93,6 +93,9 @@ const SkriptePage = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
+  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang);
+  const lectures = lecturesQuery ?? [];
+  const lectureOptions = lectures.map((l) => ({ value: l._id, label: l.lectureName }));
 
   const createMutation = useMutation(api.scripts.create);
   const deleteMutation = useMutation(api.scripts.deleteScript);
@@ -100,7 +103,7 @@ const SkriptePage = () => {
 
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
+  const [lectureId, setLectureId] = useState("");
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
@@ -171,17 +174,20 @@ const SkriptePage = () => {
     handleFileSelect(e.dataTransfer.files?.[0] ?? null);
   };
 
+  const subjectArg = lectureId
+    ? ({ type: "lecture" as const, lectureId: lectureId as Id<"semesterLectures"> } as const)
+    : "";
+
   const addScript = async () => {
     const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-    const nextSubjectError = validateSubject(subject);
     const nextDescriptionError = validateScriptDescription(description);
-    if (nextTitleError || nextSubjectError || nextDescriptionError) return;
+    if (nextTitleError || nextDescriptionError) return;
 
     if (!selectedFile) {
       try {
         await createMutation({
           title: title.trim(),
-          subject: subject.trim(),
+          subject: subjectArg,
           description: description.trim(),
           pages: 0,
           type: "Notiz",
@@ -208,7 +214,7 @@ const SkriptePage = () => {
 
       await createMutation({
         title: title.trim(),
-        subject: subject.trim(),
+        subject: subjectArg,
         description: description.trim(),
         pages: 0,
         type: inferScriptType(selectedFile),
@@ -228,7 +234,7 @@ const SkriptePage = () => {
 
   const resetForm = () => {
     setTitle("");
-    setSubject("");
+    setLectureId("");
     setDescription("");
     setVisibility("public");
     setShowUpload(false);
@@ -285,7 +291,6 @@ const SkriptePage = () => {
 
   // derived validation messages (live) so they update/clear automatically
   const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const subjectError = subject.trim().length > 0 ? validateSubject(subject) : "";
   const descriptionError = description.trim().length > 0 ? validateScriptDescription(description) : "";
 
   return (
@@ -359,12 +364,12 @@ const SkriptePage = () => {
                       {titleError && <p className="text-xs text-destructive">{titleError}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Input
-                        placeholder="Fach / Modul"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
+                      <Combobox
+                        value={lectureId}
+                        onChange={setLectureId}
+                        options={lectureOptions}
+                        placeholder="Fach / Modul auswählen"
                       />
-                      {subjectError && <p className="text-xs text-destructive">{subjectError}</p>}
                     </div>
                   </div>
                   <div className="space-y-1">
