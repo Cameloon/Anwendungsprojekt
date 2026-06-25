@@ -33,9 +33,10 @@ Fehlende Übersicht zu Abgabeterminen bei klassischer Dokumentation von Aufgaben
 
 ### Tech Stack
 
-- Frontend: React & TS
-- Daten und Backend: Next.js, Convex
+- Frontend: Vite + React 18 & TypeScript
+- Daten und Backend: Convex (BaaS, serverless)
 - Authentication: Clerk
+- UI-Bibliothek: shadcn/ui + Tailwind CSS
 - Projektmanagement: github Projekt
 
 ### Mockup / Prototyp

@@ -46,7 +46,8 @@
 │  │  ┌──────────────────────────────▼───────────────────────────┐  │  │
 │  │  │                  Datenzugriffs-Schicht                    │  │  │
 │  │  │  Convex React Client  │  LocalStorage Stores (Demo)       │  │  │
-│  │  │  TanStack Query       │  forumsStore / scriptsStore etc.  │  │  │
+│  │  │  (useQuery/useMutation│  forumsStore / scriptsStore etc.  │  │  │
+│  │  │  aus convex/react)    │                                   │  │  │
 │  │  └──────────────────────────────────────────────────────────┘  │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
@@ -58,10 +59,14 @@
 │                        │     └───────────────────────────┘
 │  ┌──────────────────┐  │
 │  │  Convex-Datenbank│  │     ┌───────────────────────────┐
-│  │  (profiles-Tab.) │◄────►  │   Clerk (Auth Provider)   │
-│  └──────────────────┘  │     │   JWT-Ausstellung +        │
-│  ┌──────────────────┐  │     │   Benutzerverwaltung       │
-│  │  Server Functions│  │     └───────────────────────────┘
+│  │  (19 Tabellen:   │◄────►  │   Clerk (Auth Provider)   │
+│  │  profiles, forums│  │     │   JWT-Ausstellung +        │
+│  │  posts, deadlines│  │     │   Benutzerverwaltung       │
+│  │  scripts, groups │  │     └───────────────────────────┘
+│  │  u.v.m.)         │  │
+│  └──────────────────┘  │
+│  ┌──────────────────┐  │
+│  │  Server Functions│  │
 │  │  (queries /      │  │
 │  │   mutations /    │  │
 │  │   actions)       │  │
@@ -116,10 +121,14 @@ Convex       ──── JWT-Validierung ────────────�
 | `/dashboard` | Nutzer | Persönliches Dashboard |
 | `/admin-dashboard` | Admin | Nutzerverwaltung & Admintools |
 | `/forum` | Nutzer | Kursübergreifendes Forum |
-| `/forum/:id` | Nutzer | Kurs-/Gruppenspezifisches Forum |
+| `/forum/:forumId` | Nutzer | Kurs-/Gruppenspezifisches Forum |
+| `/forum/:forumId/post/:postId` | Nutzer | Einzelner Post mit Kommentaren |
 | `/planner` | Nutzer | Terminplaner |
 | `/skripte` | Nutzer | Vorlesungsmaterial-Upload & -Verwaltung |
 | `/profile` | Nutzer | Nutzerprofil |
+| `/impressum` | öffentlich | Impressum |
+| `/datenschutz` | öffentlich | Datenschutzerklärung |
+| `/nutzungsordnung` | öffentlich | Nutzungsordnung |
 
 ---
 

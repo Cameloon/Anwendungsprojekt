@@ -59,7 +59,7 @@ bun dev
 npm run dev
 ```
 
-Die Anwendung ist danach unter [http://localhost:5173](http://localhost:5173) erreichbar.
+Die Anwendung ist danach unter [http://localhost:8080](http://localhost:8080) erreichbar.
 
 > **Hinweis:** Beide Prozesse (`convex dev` und `bun dev`) müssen gleichzeitig laufen. Am einfachsten zwei Terminalfenster öffnen.
 
@@ -77,54 +77,17 @@ Die Anwendung ist danach unter [http://localhost:5173](http://localhost:5173) er
 
 ## Team / Namenszuordnung GitHub
 
-- Sofia Antropova -> antropos-v
-- Daniel Beljaew -> Cameloon, Dan
-- Niklas Brietenhahn -> niklas-b1
-- Alexia Dinu -> dinua23
-- Daniela Maier -> njela0
-
-### Bun Commands Overview
-
-Development - full-stack dev server with hot reload
-
-    bun dev
-
-Static Site - build optimized assets to disk (no backend)
-
-    bun run build
-
-Production - serve a full-stack production build
-
-    bun start
-
+- Sofia Antropova → antropos-v
+- Daniel Beljaew → Cameloon, Dan
+- Niklas Brietenhahn → niklas-b1
+- Alexia Dinu → dinua23
+- Daniela Maier → njela0
 
 ### Backend Dashboard
 
 <https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/>
 
-    Sofia Antropova -> antropos-v
-    Daniel Beljaew -> Cameloon, Dan
-    Niklas Brietenhahn -> niklas-b1
-    Alexia Dinu -> dinua23
-    Daniela Maier -> njela0
-
-### Bun Commands
-
-    To install dependencies:
-        bun install / npm install
-
-
-    Development - full-stack dev server with hot reload
-        bun dev / npm run dev
-
-    To connect to convex db set .env variables and run:
-        npx convex dev
-
-
-
-### Backend Dashboard
-
-<https://dashboard.convex.dev/t/daniel-beljaew/studentplanner/vivid-antelope-341>
+---
 
 ## Projektmanagement Hinweise
 
