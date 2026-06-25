@@ -417,6 +417,28 @@ export const deleteComment = mutation({
   },
 });
 
+export const updateComment = mutation({
+  args: {
+    commentId: v.id("postComments"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) throw new Error("Comment not found");
+
+    const admin = await isAdmin(ctx, identity.subject);
+    if (comment.authorId !== identity.subject && !admin)
+      throw new Error("Not authorized");
+
+    await ctx.db.patch(args.commentId, {
+      content: args.content.trim(),
+    });
+  },
+});
+
 // ─── Likes ───
 
 export const toggleLike = mutation({

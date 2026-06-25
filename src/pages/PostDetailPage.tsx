@@ -13,6 +13,8 @@ import {
   X,
   Trash2,
   CalendarDays,
+  Pencil,
+  Check,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -119,10 +121,13 @@ function PostDetailPage() {
   const toggleCommentLikeMutation = useMutation(api.posts.toggleCommentLike);
   const addCommentMutation = useMutation(api.posts.addComment);
   const deleteCommentMutation = useMutation(api.posts.deleteComment);
+  const updateCommentMutation = useMutation(api.posts.updateComment);
 
   const [comment, setComment] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   if (post === undefined) {
     return (
@@ -208,6 +213,31 @@ function PostDetailPage() {
     }
   };
 
+  const handleStartEdit = (c: PostComment) => {
+    setEditingCommentId(c._id);
+    setEditingContent(c.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId || !editingContent.trim()) return;
+    try {
+      await updateCommentMutation({
+        commentId: editingCommentId as Id<"postComments">,
+        content: editingContent,
+      });
+      setEditingCommentId(null);
+      setEditingContent("");
+      toast.success("Kommentar bearbeitet");
+    } catch {
+      toast.error("Fehler beim Bearbeiten");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
   const backTo = forum ? `/forum?forumId=${forum._id}` : "/forum";
 
   return (
@@ -233,6 +263,12 @@ function PostDetailPage() {
       linkedDeadlines={linkedDeadlines}
       isAdmin={isAdmin}
       handleDeleteComment={handleDeleteComment}
+      editingCommentId={editingCommentId}
+      editingContent={editingContent}
+      setEditingContent={setEditingContent}
+      handleStartEdit={handleStartEdit}
+      handleSaveEdit={handleSaveEdit}
+      handleCancelEdit={handleCancelEdit}
     />
   );
 }
@@ -261,6 +297,12 @@ function PostDetailLayout({
   linkedDeadlines,
   isAdmin,
   handleDeleteComment,
+  editingCommentId,
+  editingContent,
+  setEditingContent,
+  handleStartEdit,
+  handleSaveEdit,
+  handleCancelEdit,
 }: {
   post: EnrichedPost;
   forumName: string | null;
@@ -283,6 +325,12 @@ function PostDetailLayout({
   linkedDeadlines: any[];
   isAdmin: boolean;
   handleDeleteComment: (commentId: string) => void;
+  editingCommentId: string | null;
+  editingContent: string;
+  setEditingContent: (v: string) => void;
+  handleStartEdit: (c: PostComment) => void;
+  handleSaveEdit: () => void;
+  handleCancelEdit: () => void;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -471,7 +519,38 @@ function PostDetailLayout({
                           <span className="text-sm font-semibold">{comment.authorName}</span>
                           <span className="text-[10px] text-muted-foreground">{formatDate(comment._creationTime)}</span>
                         </div>
-                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{comment.content}</p>
+                        {editingCommentId === comment._id ? (
+                          <div className="mt-1">
+                            <Textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              rows={2}
+                              className="resize-none text-sm mb-1.5"
+                              onKeyDown={(e) => {
+                                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleSaveEdit();
+                                if (e.key === "Escape") handleCancelEdit();
+                              }}
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={handleSaveEdit}
+                                disabled={!editingContent.trim()}
+                                className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-40"
+                              >
+                                <Check className="h-3 w-3" /> Speichern
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <X className="h-3 w-3" /> Abbrechen
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{comment.content}</p>
+                        )}
                         <div className="flex items-center gap-2 mt-1.5">
                           <button
                             onClick={() => handleToggleCommentLike(comment._id)}
@@ -490,11 +569,20 @@ function PostDetailLayout({
                           >
                             <Reply className="h-3 w-3" /> Antworten
                           </button>
-                          {isAdmin && (
+                          {comment.authorId === me && editingCommentId !== comment._id && (
+                            <button
+                              onClick={() => handleStartEdit(comment)}
+                              className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                              title="Kommentar bearbeiten"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          )}
+                          {(isAdmin || comment.authorId === me) && (
                             <button
                               onClick={() => handleDeleteComment(comment._id)}
                               className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors"
-                              title="Kommentar löschen (Admin)"
+                              title={isAdmin && comment.authorId !== me ? "Kommentar löschen (Admin)" : "Kommentar löschen"}
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>

@@ -48,18 +48,6 @@ Klickt ein Nutzer im Dashboard-Forum-Feed auf den Titel eines Beitrags, landet e
 
 ---
 
-### BUG-003: PostDetailPage – Kommentar löschen nur für Admins sichtbar
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Forum – Beitragsdetail
-**Priorität:** Hoch
-**Beschreibung:**
-Der Löschen-Button für Kommentare wird nur Admins angezeigt (`{isAdmin && …}`). Das Backend erlaubt es dem Verfasser, den eigenen Kommentar zu löschen, die UI bietet diese Möglichkeit jedoch nicht an. Nutzer können ihre eigenen Kommentare nicht entfernen.
-**Fundort:** `src/pages/PostDetailPage.tsx`, Zeile 463
-
----
-
 ### BUG-004: PlannerPage – Datei-Upload im Termin-Dialog ist ein toter Stub
 
 **Datum erfasst:** 25-06-2026
@@ -120,10 +108,37 @@ Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), u
 
 ---
 
+### BUG-009: ReportDialog – Meldungen werden in localStorage statt Convex gespeichert
+
+**Datum erfasst:** 25-06-2026
+**Verfasser:** CC
+**Komponente/Bereich:** Forum – Melden-Funktion
+**Priorität:** Mittel
+**Beschreibung:**
+Der „Melden"-Button in `PostDetailPage` und `ForumPage` öffnet einen `ReportDialog`, der Meldungen über `addReport` aus `src/lib/reportsStore.ts` in localStorage speichert. Dadurch sind Meldungen nur im Browser des meldenden Nutzers sichtbar – der Admin sieht im Dashboard nur Meldungen aus dem eigenen Browser, nicht die anderer Nutzer. Eine persistente, geräteübergreifende Auswertung ist nicht möglich.
+Behebung erfordert Schema-Erweiterung (neues Feld in `userReports` oder separate `postReports`-Tabelle) sowie Anpassung von `ReportDialog` auf eine Convex-Mutation.
+**Fundort:** `src/components/ReportDialog.tsx`, `src/lib/reportsStore.ts`
+
+---
+
 ## Bugs in Bearbeitung
 
 Hinweis: Bearbeiter mit Kürzel ergänzen
 
+---
+
 ## Erledigte Bugs
 
 Hinweis: "Datum erledigt" ergänzen
+
+### BUG-003: PostDetailPage – Kommentar löschen nur für Admins sichtbar
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 25-06-2026
+**Verfasser:** CC
+**Bearbeitet durch** DM (CC)
+**Komponente/Bereich:** Forum – Beitragsdetail
+**Priorität:** Hoch
+**Beschreibung:**
+Der Löschen-Button für Kommentare wird nur Admins angezeigt (`{isAdmin && …}`). Das Backend erlaubt es dem Verfasser, den eigenen Kommentar zu löschen, die UI bietet diese Möglichkeit jedoch nicht an. Nutzer können ihre eigenen Kommentare nicht entfernen.
+**Fundort:** `src/pages/PostDetailPage.tsx`, Zeile 463

@@ -26,10 +26,10 @@ Diese Datei beschreibt die funktionalen Anforderungen in Must/Should/Could/Wont�
   - Akzeptanzkriterien: 1) Erstellen einer Aufgabe speichert alle Pflichtfelder und erscheint sofort im Dashboard.
 
 - **Foren / Diskussionen**
-  - Beschreibung: Allgemeines Forum (gesamter Kurs), vorlesungsbasierte Foren, Threads mit Posts und Kommentaren, Anzeige von Autor, Zeitstempel, Edit/Remove durch den Author des Posts erlauben (mit Bearbeitungsdatum).
+  - Beschreibung: Allgemeines Forum (gesamter Kurs), vorlesungsbasierte Foren, Threads mit Posts und Kommentaren, Anzeige von Autor, Zeitstempel, Edit/Remove von Kommentaren durch den Author des Kommentars erlauben (mit Bearbeitungsdatum).
   - Foren können nach Vorlesungen gefiltert werden.
   - Rechte: Nur Kursmitglieder dürfen in kursinternen Foren posten, Moderatoren/Admins können Posts moderieren (siehe Authentifizierung & Rollen).
-  - Akzeptanzkriterien: 1) Ein Thread zeigt korrekt alle Kommentare in chronologischer Reihenfolge. 2) Editieren/Löschen nur durch Autor oder Moderator möglich; Moderationsaktionen werden protokolliert.
+  - Akzeptanzkriterien: 1) Ein Thread zeigt korrekt alle Kommentare in chronologischer Reihenfolge. 2) Editieren/Löschen von Kommentaren durch Autor möglich; Editieren/Löschen von Posts nur durch Moderator möglich; Moderationsaktionen werden protokolliert.
 
 - **Materialien**
   - Beschreibung: Attachments zu Aufgaben/Postings anhängen; zentrale Bibliothek für Kursmaterialien.
