@@ -207,6 +207,7 @@ export default defineSchema({
     fileSize: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    lectureId: v.optional(v.id("semesterLectures")),
   }).index("by_author", ["authorId"]),
 
   moderationLog: defineTable({
