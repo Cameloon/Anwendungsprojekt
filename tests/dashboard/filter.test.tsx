@@ -76,6 +76,7 @@ vi.mock("../../convex/_generated/api", () => ({
     scripts: { listPublic: "scripts.listPublic" },
     deadlines: { listForUser: "deadlines.listForUser" },
     semesterLectures: { getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang" },
+    sections: { list: "sections.list", seedDefaultSections: "sections.seedDefaultSections" },
   },
 }));
 
@@ -85,6 +86,7 @@ vi.mock("convex/react", () => ({
       if (query === "scripts.listPublic") return scriptsFixture;
       if (query === "deadlines.listForUser") return deadlinesFixture;
       if (query === "semesterLectures.getLecturesForMyJahrgang") return lecturesFixture;
+      if (query === "sections.list") return [];
       return [];
     },
     useMutation: vi.fn(),

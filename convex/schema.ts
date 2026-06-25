@@ -17,7 +17,7 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_user", ["userId"]),
+  }).index("by_user", ["userId"]).index("by_jahrgang", ["jahrgang"]),
 
   forums: defineTable({
     name: v.string(),
@@ -32,11 +32,26 @@ export default defineSchema({
     jahrgang: v.optional(v.string()),
     ownerId: v.optional(v.string()),
     deadlineId: v.optional(v.id("deadlines")),
+    sectionId: v.optional(v.id("sections")),
+    isLectureForum: v.optional(v.boolean()),
+    semesterNumber: v.optional(v.number()),
+    archived: v.optional(v.boolean()),
+    archivedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_inviteCode", ["inviteCode"])
     .index("by_owner", ["ownerId"])
-    .index("by_deadline", ["deadlineId"]),
+    .index("by_deadline", ["deadlineId"])
+    .index("by_section", ["sectionId"]),
+
+  forumArchiveStates: defineTable({
+    forumId: v.id("forums"),
+    userId: v.string(),
+    archivedAt: v.number(),
+  })
+    .index("by_forum_user", ["forumId", "userId"])
+    .index("by_user", ["userId"])
+    .index("by_forum", ["forumId"]),
 
   forumMembers: defineTable({
     forumId: v.id("forums"),
@@ -76,13 +91,26 @@ export default defineSchema({
     ),
     sketch: v.optional(v.string()),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedDeadlineIds: v.optional(v.array(v.id("deadlines"))),
     source: v.optional(v.string()),
     taskId: v.optional(v.string()),
+    deadlineId: v.optional(v.id("deadlines")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_forum", ["forumId"])
-    .index("by_author", ["authorId"]),
+    .index("by_author", ["authorId"])
+    .index("by_deadline", ["deadlineId"]),
+
+  postFiles: defineTable({
+    postId: v.id("posts"),
+    name: v.string(),
+    storageId: v.id("_storage"),
+    fileType: v.string(),
+    fileSize: v.number(),
+    uploadedBy: v.string(),
+    createdAt: v.number(),
+  }).index("by_post", ["postId"]),
 
   postComments: defineTable({
     postId: v.id("posts"),
@@ -126,6 +154,8 @@ export default defineSchema({
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
+    linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedGroupIds: v.optional(v.array(v.id("groups"))),
     ownerId: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -201,10 +231,24 @@ export default defineSchema({
     description: v.string(),
     inviteCode: v.string(),
     ownerId: v.string(),
+    deadlineId: v.optional(v.id("deadlines")),
+    archived: v.optional(v.boolean()),
+    archivedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_inviteCode", ["inviteCode"])
-    .index("by_owner", ["ownerId"]),
+    .index("by_owner", ["ownerId"])
+    .index("by_deadline", ["deadlineId"]),
+
+  groupFiles: defineTable({
+    groupId: v.id("groups"),
+    name: v.string(),
+    storageId: v.id("_storage"),
+    fileType: v.string(),
+    fileSize: v.number(),
+    uploadedBy: v.string(),
+    createdAt: v.number(),
+  }).index("by_group", ["groupId"]),
 
   groupMembers: defineTable({
     groupId: v.id("groups"),
@@ -216,12 +260,27 @@ export default defineSchema({
     .index("by_group", ["groupId"])
     .index("by_user", ["userId"]),
 
+  sections: defineTable({
+    name: v.string(),
+    description: v.string(),
+    accessRule: v.optional(v.string()),
+    displayOrder: v.number(),
+    createdAt: v.number(),
+  }).index("by_order", ["displayOrder"]),
+
   semesterLectures: defineTable({
     kurs: v.string(),
     semesterNumber: v.number(),
     lectureName: v.string(),
     createdAt: v.number(),
   }).index("by_kurs_semester", ["kurs", "semesterNumber"]),
+
+  jahrgangLectures: defineTable({
+    jahrgang: v.string(),
+    lectureName: v.string(),
+    semesterNumber: v.number(),
+    createdAt: v.number(),
+  }).index("by_jahrgang", ["jahrgang"]),
 
   feedback: defineTable({
     userId: v.string(),

@@ -22,6 +22,8 @@ import {
   Globe,
   Lock,
   GraduationCap,
+  Archive,
+  ChevronDown,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -79,6 +81,8 @@ interface DeadlineItem {
   visibility: "public" | "private";
   invitees: string[];
   allowedKurse: string[];
+  linkedScriptIds?: string[];
+  linkedGroupIds?: string[];
   ownerId: string;
 }
 
@@ -101,6 +105,8 @@ function PlannerPage() {
   const deadlinesQuery = useQuery(api.deadlines.listForUser);
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang, {});
   const jahrgangPeopleQuery = useQuery(api.profiles.listSameJahrgang, {});
+  const scriptsQuery = useQuery(api.scripts.listVisible);
+  const groupsQuery = useQuery(api.groups.listForUser, {});
 
   const createMutation = useMutation(api.deadlines.create);
   const updateMutation = useMutation(api.deadlines.update);
@@ -126,9 +132,13 @@ function PlannerPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("alle");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [doneOpen, setDoneOpen] = useState(true);
+  const [archiveOpen, setArchiveOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"files" | "forum">("files");
   const [newMessage, setNewMessage] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const [linkedScriptIds, setLinkedScriptIds] = useState<string[]>([]);
+  const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [vorlesung, setVorlesung] = useState("");
   const [inviteeSearch, setInviteeSearch] = useState("");
@@ -159,6 +169,8 @@ function PlannerPage() {
     vorlesung: d.vorlesung,
     invitees: d.invitees ?? [],
     allowedKurse: d.allowedKurse ?? [],
+    linkedScriptIds: d.linkedScriptIds ?? [],
+    linkedGroupIds: d.linkedGroupIds ?? [],
     ownerId: d.ownerId,
   }));
 
@@ -168,6 +180,8 @@ function PlannerPage() {
     setCategory("abgabe");
     setNote("");
     setPendingAttachments([]);
+    setLinkedScriptIds([]);
+    setLinkedGroupIds([]);
     setVisibility("private");
     setVorlesung("");
     setInviteeSearch("");
@@ -237,6 +251,8 @@ function PlannerPage() {
           vorlesung: vorlesung || undefined,
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
+          linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
+          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"groups">[]) : undefined,
         });
         if (inviteeIds.length) {
           const existingInvitees = (deadlines.find((d) => d.id === editingId)?.invitees ?? []);
@@ -262,6 +278,8 @@ function PlannerPage() {
           vorlesung: vorlesung || undefined,
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
+          linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
+          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"groups">[]) : undefined,
         });
         if (inviteeIds.length) {
           await inviteMutation({
@@ -285,6 +303,8 @@ function PlannerPage() {
     setDate(d.date);
     setCategory(d.category);
     setNote(d.note ?? "");
+    setLinkedScriptIds(d.linkedScriptIds ?? []);
+    setLinkedGroupIds(d.linkedGroupIds ?? []);
     setVorlesung(d.vorlesung ?? "");
     setVisibility(d.visibility);
     const people = jahrgangPeopleQuery ?? [];
@@ -432,6 +452,16 @@ function PlannerPage() {
       openDeadline={openDeadline}
       displayName={displayName}
       me={me}
+      scripts={scriptsQuery ?? []}
+      groups={groupsQuery ?? []}
+      linkedScriptIds={linkedScriptIds}
+      setLinkedScriptIds={setLinkedScriptIds}
+      linkedGroupIds={linkedGroupIds}
+      setLinkedGroupIds={setLinkedGroupIds}
+      doneOpen={doneOpen}
+      setDoneOpen={setDoneOpen}
+      archiveOpen={archiveOpen}
+      setArchiveOpen={setArchiveOpen}
     />
   );
 }
@@ -487,9 +517,19 @@ function PlannerLayout({
   selectInvitee,
   highlightIndex,
   setHighlightIndex,
-  openDeadline,
+   openDeadline,
   displayName,
   me,
+  scripts,
+  groups,
+  linkedScriptIds,
+  setLinkedScriptIds,
+  linkedGroupIds,
+  setLinkedGroupIds,
+  doneOpen,
+  setDoneOpen,
+  archiveOpen,
+  setArchiveOpen,
 }: {
   deadlines: DeadlineItem[];
   filtered: DeadlineItem[];
@@ -544,6 +584,18 @@ function PlannerLayout({
   openDeadline: DeadlineItem | null;
   displayName: string;
   me: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scripts: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  groups: any[];
+  linkedScriptIds: string[];
+  setLinkedScriptIds: (v: string[]) => void;
+  linkedGroupIds: string[];
+  setLinkedGroupIds: (v: string[]) => void;
+  doneOpen: boolean;
+  setDoneOpen: (v: boolean) => void;
+  archiveOpen: boolean;
+  setArchiveOpen: (v: boolean) => void;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -632,6 +684,66 @@ function PlannerLayout({
                         {lectures.map((l: any) => (
                           <SelectItem key={l._id} value={l.lectureName}>{l.lectureName}</SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Skripte verlinken (optional)</p>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {linkedScriptIds.map((id) => {
+                        const s = scripts.find((x: any) => x._id === id);
+                        if (!s) return null;
+                        return (
+                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                            <FileText className="h-3 w-3" />
+                            {s.title}
+                            <button onClick={() => setLinkedScriptIds((prev) => prev.filter((x) => x !== id))} className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <Select value="" onValueChange={(id) => { if (id && !linkedScriptIds.includes(id)) setLinkedScriptIds((prev) => [...prev, id]); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Skript auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scripts
+                          .filter((s: any) => !linkedScriptIds.includes(s._id))
+                          .map((s: any) => (
+                            <SelectItem key={s._id} value={s._id}>{s.title}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Gruppen verlinken (optional)</p>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {linkedGroupIds.map((id) => {
+                        const g = groups.find((x: any) => x._id === id);
+                        if (!g) return null;
+                        return (
+                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                            <Users className="h-3 w-3" />
+                            {g.name}
+                            <button onClick={() => setLinkedGroupIds((prev) => prev.filter((x) => x !== id))} className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <Select value="" onValueChange={(id) => { if (id && !linkedGroupIds.includes(id)) setLinkedGroupIds((prev) => [...prev, id]); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Gruppe auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups
+                          .filter((g: any) => !linkedGroupIds.includes(g._id))
+                          .map((g: any) => (
+                            <SelectItem key={g._id} value={g._id}>{g.name}</SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -752,13 +864,20 @@ function PlannerLayout({
 
           {/* Deadline list */}
           <div className="space-y-2">
-            {filtered.length === 0 && (
+            {(() => {
+              const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+              const activeFiltered = filtered.filter((d) => !d.done && new Date(d.date).getTime() > thirtyDaysAgo);
+              const doneFiltered = filtered.filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo);
+              const archivedFiltered = filtered.filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo);
+              return (
+                <>
+            {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
               <div className="glass-card p-10 text-center">
                 <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
                 <p className="text-muted-foreground">Keine Termine gefunden.</p>
               </div>
-            )}
-            {filtered.map((d) => {
+            ) : null}
+            {activeFiltered.map((d) => {
               const diff = new Date(d.date).getTime() - Date.now();
               const overdue = diff < 0 && !d.done;
               const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
@@ -771,7 +890,7 @@ function PlannerLayout({
                   layout
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className={`glass-card p-4 flex items-center gap-3 ${d.done ? "opacity-60" : ""}`}
+                  className={`glass-card p-4 flex items-center gap-3 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
                 >
                   {isOwn ? (
                     <button onClick={() => toggleDone(d.id)} className="shrink-0">
@@ -861,6 +980,215 @@ function PlannerLayout({
                 </motion.div>
               );
             })}
+            {doneFiltered.length > 0 && (
+              <>
+                <div className="relative flex items-center pt-6 pb-1">
+                  <div className="flex-grow border-t border-border/30" />
+                  <button onClick={() => setDoneOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Erledigt</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${doneOpen ? "" : "-rotate-90"}`} />
+                  </button>
+                  <div className="flex-grow border-t border-border/30" />
+                </div>
+                {doneOpen && doneFiltered.map((d) => {
+                  const messageCount = d.messages?.length ?? 0;
+                  const fileCount = d.attachments?.length ?? 0;
+                  const isOwn = d.ownerId === me;
+                  return (
+                    <motion.div
+                      key={d.id}
+                      layout
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="glass-card p-4 flex items-center gap-3 bg-muted/70 opacity-50"
+                    >
+                      {isOwn ? (
+                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        </button>
+                      ) : (
+                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        </button>
+                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                          {categoryLabels[d.category]}
+                        </span>
+                        {d.vorlesung && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                            <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                            {d.vorlesung}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                          </span>
+                          {d.visibility === "private" && (
+                            <span className="inline-flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Privat
+                            </span>
+                          )}
+                          {d.invitees.length > 0 && (
+                            <span>{d.invitees.length} Eingeladene</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {fileCount > 0 && (
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                            <Paperclip className="h-3 w-3" /> {fileCount}
+                          </span>
+                        )}
+                        {messageCount > 0 && (
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                            <MessageSquare className="h-3 w-3" /> {messageCount}
+                          </span>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                        {isOwn || d.visibility === "public" ? (
+                          <>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </>
+            )}
+            {archivedFiltered.length > 0 && (
+              <>
+                <div className="relative flex items-center pt-6 pb-1">
+                  <div className="flex-grow border-t border-border/30" />
+                  <button onClick={() => setArchiveOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
+                    <Archive className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Archiv (&gt; 30 Tage)</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${archiveOpen ? "" : "-rotate-90"}`} />
+                  </button>
+                  <div className="flex-grow border-t border-border/30" />
+                </div>
+                {archiveOpen && archivedFiltered.map((d) => {
+                  const diff = new Date(d.date).getTime() - Date.now();
+                  const overdue = diff < 0 && !d.done;
+                  const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
+                  const messageCount = d.messages?.length ?? 0;
+                  const fileCount = d.attachments?.length ?? 0;
+                  const isOwn = d.ownerId === me;
+                  return (
+                    <motion.div
+                      key={d.id}
+                      layout
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="glass-card p-4 flex items-center gap-3 opacity-60"
+                    >
+                      {isOwn ? (
+                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                          {d.done ? (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          ) : (
+                            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                          )}
+                        </button>
+                      ) : d.invitees?.includes(me) ? (
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
+                            <Check className="h-3 w-3" /> Annehmen
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
+                            <X className="h-3 w-3" /> Ablehnen
+                          </Button>
+                        </div>
+                      ) : (
+                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                          {d.done ? (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          ) : (
+                            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                          )}
+                        </button>
+                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                          {categoryLabels[d.category]}
+                        </span>
+                        {d.vorlesung && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                            <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                            {d.vorlesung}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
+                            {d.title}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                          </span>
+                          {d.visibility === "private" && (
+                            <span className="inline-flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Privat
+                            </span>
+                          )}
+                          {d.invitees.length > 0 && (
+                            <span>{d.invitees.length} Eingeladene</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {fileCount > 0 && (
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                            <Paperclip className="h-3 w-3" /> {fileCount}
+                          </span>
+                        )}
+                        {messageCount > 0 && (
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                            <MessageSquare className="h-3 w-3" /> {messageCount}
+                          </span>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                        {isOwn || d.visibility === "public" ? (
+                          <>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </>
+            )}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>

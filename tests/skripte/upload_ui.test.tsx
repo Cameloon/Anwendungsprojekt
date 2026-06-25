@@ -77,6 +77,10 @@ vi.mock("../../convex/_generated/api", () => ({
       deleteScript: "scripts.deleteScript",
       generateUploadUrl: "scripts.generateUploadUrl",
     },
+    sections: {
+      list: "sections.list",
+      seedDefaultSections: "sections.seedDefaultSections",
+    },
   },
 }));
 
@@ -87,6 +91,7 @@ vi.mock("convex/react", async () => {
     useQuery: (query: string) => {
       const snap = ReactModule.useSyncExternalStore(subscribeScripts, getScriptSnapshot);
       if (query === "scripts.listVisible") return snap.scripts;
+      if (query === "sections.list") return [];
       return undefined;
     },
 

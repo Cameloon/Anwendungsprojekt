@@ -17,6 +17,7 @@ import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as profiles from "../profiles.js";
 import type * as scripts from "../scripts.js";
+import type * as sections from "../sections.js";
 import type * as semesterLectures from "../semesterLectures.js";
 import type * as userReports from "../userReports.js";
 
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   profiles: typeof profiles;
   scripts: typeof scripts;
+  sections: typeof sections;
   semesterLectures: typeof semesterLectures;
   userReports: typeof userReports;
 }>;

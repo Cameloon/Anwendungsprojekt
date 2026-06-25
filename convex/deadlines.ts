@@ -105,6 +105,8 @@ export const create = mutation({
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
+    linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedGroupIds: v.optional(v.array(v.id("groups"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -124,6 +126,8 @@ export const create = mutation({
       visibility: args.visibility,
       invitees,
       allowedKurse: args.allowedKurse?.filter(Boolean),
+      linkedScriptIds: args.linkedScriptIds,
+      linkedGroupIds: args.linkedGroupIds,
       ownerId: identity.subject,
       createdAt: now,
       updatedAt: now,
@@ -176,6 +180,8 @@ export const update = mutation({
     ),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
+    linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedGroupIds: v.optional(v.array(v.id("groups"))),
     done: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -199,6 +205,8 @@ export const update = mutation({
     if (args.visibility !== undefined) patch.visibility = args.visibility;
     if (args.invitees !== undefined) patch.invitees = args.invitees?.filter(Boolean);
     if (args.allowedKurse !== undefined) patch.allowedKurse = args.allowedKurse?.filter(Boolean);
+    if (args.linkedScriptIds !== undefined) patch.linkedScriptIds = args.linkedScriptIds;
+    if (args.linkedGroupIds !== undefined) patch.linkedGroupIds = args.linkedGroupIds;
     if (args.done !== undefined) patch.done = args.done;
     if (args.visibility === "public" && !args.invitees) {
       patch.invitees = await getJahrgangUserIds(ctx, identity.subject);

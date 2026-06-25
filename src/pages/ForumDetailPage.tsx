@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
+  Archive,
   ArrowLeft,
   MessageSquare,
   Plus,
@@ -15,6 +16,8 @@ import {
   UserPlus,
   Copy,
   ExternalLink,
+  Trash2,
+  CalendarDays,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -59,6 +63,7 @@ interface PostItem {
   likeCount: number;
   commentCount: number;
   linkedScriptIds?: string[];
+  linkedDeadlineIds?: string[];
 }
 
 interface MemberItem {
@@ -77,6 +82,7 @@ interface ForumDetailData {
   standort?: string;
   inviteCode: string;
   ownerId?: string;
+  archivedByMe?: boolean;
   members: MemberItem[];
 }
 
@@ -84,6 +90,14 @@ interface ScriptItem {
   _id: string;
   title: string;
   subject: string;
+}
+
+interface DeadlineItem {
+  _id: string;
+  title: string;
+  date: string;
+  category: string;
+  done: boolean;
 }
 
 // ── Helpers ──
@@ -123,12 +137,20 @@ const ForumDetailPage = () => {
     forumId ? { forumId: forumId as Id<"forums"> } : "skip"
   );
   const allScripts = useQuery(api.scripts.listPublic);
+  const allDeadlines = useQuery(api.deadlines.listForUser);
 
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
   const createPostMutation = useMutation(api.posts.create);
   const toggleLikeMutation = useMutation(api.posts.toggleLike);
   const inviteMutation = useMutation(api.notifications.inviteToForum);
+  const archiveForumMutation = useMutation(api.forums.archive);
+  const unarchiveForumMutation = useMutation(api.forums.unarchive);
+  const deleteForumMutation = useMutation(api.forums.deleteForum);
+  const deletePostMutation = useMutation(api.posts.deletePost);
+  const deleteCommentMutation = useMutation(api.posts.deleteComment);
+  const profile = useProfile();
+  const isAdmin = profile?.role === "admin";
 
   const [showPostForm, setShowPostForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -136,6 +158,8 @@ const ForumDetailPage = () => {
   const [tag, setTag] = useState("diskussion");
   const [linkedScriptIds, setLinkedScriptIds] = useState<string[]>([]);
   const [scriptPickerOpen, setScriptPickerOpen] = useState(false);
+  const [linkedDeadlineIds, setLinkedDeadlineIds] = useState<string[]>([]);
+  const [deadlinePickerOpen, setDeadlinePickerOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteNames, setInviteNames] = useState("");
 
@@ -187,6 +211,7 @@ const ForumDetailPage = () => {
     standort: rawForum.standort,
     inviteCode: rawForum.inviteCode,
     ownerId: rawForum.ownerId,
+    archivedByMe: rawForum.archivedByMe,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     members: rawMembers.map((m: any) => ({ userId: m.userId, displayName: m.displayName })),
   };
@@ -204,12 +229,21 @@ const ForumDetailPage = () => {
     likeCount: p.likeCount ?? 0,
     commentCount: (p.comments ?? []).length,
     linkedScriptIds: p.linkedScriptIds,
+    linkedDeadlineIds: p.linkedDeadlineIds,
   }));
 
   const scripts: ScriptItem[] = (allScripts ?? []).map((s: any) => ({
     _id: s._id,
     title: s.title,
     subject: s.subject,
+  }));
+
+  const deadlines: DeadlineItem[] = (allDeadlines ?? []).map((d: any) => ({
+    _id: d._id,
+    title: d.title,
+    date: d.date,
+    category: d.category,
+    done: d.done,
   }));
 
   const titleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
@@ -228,10 +262,12 @@ const ForumDetailPage = () => {
         tag: tag as "frage" | "lerngruppe" | "material" | "diskussion",
         visibility: forum.visibility,
         linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
+        linkedDeadlineIds: linkedDeadlineIds.length ? (linkedDeadlineIds as Id<"deadlines">[]) : undefined,
       });
       setTitle("");
       setContent("");
       setLinkedScriptIds([]);
+      setLinkedDeadlineIds([]);
       setShowPostForm(false);
       toast.success("Beitrag veröffentlicht");
     } catch {
@@ -290,6 +326,9 @@ const ForumDetailPage = () => {
   const toggleLink = (id: string) =>
     setLinkedScriptIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+  const toggleDeadlineLink = (id: string) =>
+    setLinkedDeadlineIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
   return (
     <ForumDetailLayout
       forum={forum}
@@ -311,6 +350,11 @@ const ForumDetailPage = () => {
       scriptPickerOpen={scriptPickerOpen}
       setScriptPickerOpen={setScriptPickerOpen}
       scripts={scripts}
+      linkedDeadlineIds={linkedDeadlineIds}
+      toggleDeadlineLink={toggleDeadlineLink}
+      deadlinePickerOpen={deadlinePickerOpen}
+      setDeadlinePickerOpen={setDeadlinePickerOpen}
+      deadlines={deadlines}
       handlePost={handlePost}
       handleToggleLike={handleToggleLike}
       handleJoin={handleJoin}
@@ -323,6 +367,10 @@ const ForumDetailPage = () => {
       setInviteNames={setInviteNames}
       inviteError={inviteError}
       handleInvite={handleInvite}
+      isAdmin={isAdmin}
+      deleteForumMutation={deleteForumMutation}
+      deletePostMutation={deletePostMutation}
+      deleteCommentMutation={deleteCommentMutation}
     />
   );
 }
@@ -351,6 +399,11 @@ function ForumDetailLayout({
   scriptPickerOpen,
   setScriptPickerOpen,
   scripts,
+  linkedDeadlineIds,
+  toggleDeadlineLink,
+  deadlinePickerOpen,
+  setDeadlinePickerOpen,
+  deadlines,
   handlePost,
   handleToggleLike,
   handleJoin,
@@ -363,6 +416,10 @@ function ForumDetailLayout({
   setInviteNames,
   inviteError,
   handleInvite,
+  isAdmin,
+  deleteForumMutation,
+  deletePostMutation,
+  deleteCommentMutation,
 }: {
   forum: ForumDetailData;
   posts: PostItem[];
@@ -383,6 +440,11 @@ function ForumDetailLayout({
   scriptPickerOpen: boolean;
   setScriptPickerOpen: (v: boolean) => void;
   scripts: ScriptItem[];
+  linkedDeadlineIds: string[];
+  toggleDeadlineLink: (id: string) => void;
+  deadlinePickerOpen: boolean;
+  setDeadlinePickerOpen: (v: boolean) => void;
+  deadlines: DeadlineItem[];
   handlePost: () => void;
   handleToggleLike: (id: string) => void;
   handleJoin: () => void;
@@ -395,6 +457,10 @@ function ForumDetailLayout({
   setInviteNames: (v: string) => void;
   inviteError: string;
   handleInvite: () => void;
+  isAdmin: boolean;
+  deleteForumMutation: (args: any) => any;
+  deletePostMutation: (args: any) => any;
+  deleteCommentMutation: (args: any) => any;
 }) {
   const Icon = forum.visibility === "public" ? Hash : Lock;
 
@@ -455,14 +521,28 @@ function ForumDetailLayout({
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInviteOpen(true)}>
                   <UserPlus className="h-4 w-4" /> Einladen
                 </Button>
-                {forum.visibility === "public" && !isMember && (
-                  <Button size="sm" onClick={handleJoin}>
-                    Beitreten
-                  </Button>
-                )}
                 {!isOwner && isMember && (
                   <Button size="sm" variant="ghost" onClick={handleLeave}>
                     Verlassen
+                  </Button>
+                )}
+                {isMember && (
+                  forum.archivedByMe ? (
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => { try { await unarchiveForumMutation({ forumId: forum.id as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler"); } }}>
+                      <Archive className="h-4 w-4" /> Wiederherstellen
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => { try { await archiveForumMutation({ forumId: forum.id as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler"); } }}>
+                      <Archive className="h-4 w-4" /> Archivieren
+                    </Button>
+                  )
+                )}
+                {isAdmin && (
+                  <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => {
+                    if (!window.confirm(`Forum „${forum.name}" wirklich löschen?`)) return;
+                    try { await deleteForumMutation({ forumId: forum.id as any }); toast.success("Forum gelöscht"); navigate("/forum"); } catch { toast.error("Fehler"); }
+                  }}>
+                    <Trash2 className="h-4 w-4" /> Löschen
                   </Button>
                 )}
               </div>
@@ -495,15 +575,15 @@ function ForumDetailLayout({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-heading font-semibold">Beiträge ({posts.length})</h2>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setShowPostForm((v) => !v)}
-                  disabled={!isMember}
-                  title={isMember ? "" : "Tritt bei, um zu posten"}
-                >
-                  <Plus className="h-4 w-4" /> Neuer Beitrag
-                </Button>
+                {isMember ? (
+                  <Button size="sm" className="gap-1.5" onClick={() => setShowPostForm((v) => !v)}>
+                    <Plus className="h-4 w-4" /> Neuer Beitrag
+                  </Button>
+                ) : forum.visibility === "public" ? (
+                  <Button size="sm" className="gap-1.5" onClick={handleJoin}>
+                    <Users className="h-4 w-4" /> Beitreten
+                  </Button>
+                ) : null}
               </div>
 
               {showPostForm && isMember && (
@@ -552,6 +632,35 @@ function ForumDetailLayout({
                               <FileText className="h-3 w-3" />
                               {s.title}
                               <button onClick={() => toggleLink(id)} className="ml-0.5 hover:text-destructive">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Linked deadlines */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-xs text-muted-foreground">Deadlines verlinken</p>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setDeadlinePickerOpen(true)}>
+                        <CalendarDays className="h-3.5 w-3.5" /> Auswählen
+                      </Button>
+                    </div>
+                    {linkedDeadlineIds.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground">Keine Deadlines verlinkt</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {linkedDeadlineIds.map((id) => {
+                          const d = deadlines.find((x) => x._id === id);
+                          if (!d) return null;
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">
+                              <CalendarDays className="h-3 w-3" />
+                              {d.title}
+                              <button onClick={() => toggleDeadlineLink(id)} className="ml-0.5 hover:text-destructive">
                                 <X className="h-3 w-3" />
                               </button>
                             </span>
@@ -614,6 +723,26 @@ function ForumDetailLayout({
                         })}
                       </div>
                     )}
+                    {p.linkedDeadlineIds && p.linkedDeadlineIds.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {p.linkedDeadlineIds.map((id) => {
+                          const d = deadlines.find((x) => x._id === id);
+                          if (!d) return null;
+                          return (
+                            <Link
+                              key={id}
+                              to="/planner"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md bg-warning/10 text-warning hover:bg-warning/20"
+                            >
+                              <CalendarDays className="h-3 w-3" />
+                              {d.title}
+                              <ExternalLink className="h-3 w-3 opacity-60" />
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleLike(p.id); }}
@@ -625,6 +754,15 @@ function ForumDetailLayout({
                         {p.likeCount}
                       </button>
                       <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {p.commentCount}</span>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (window.confirm(`Beitrag „${p.title}" wirklich löschen?`)) deletePostMutation({ postId: p.id as any }); }}
+                          className="ml-auto inline-flex items-center gap-1 text-destructive hover:text-destructive/80 transition-colors"
+                          title="Beitrag löschen (Admin)"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))
@@ -757,6 +895,54 @@ function ForumDetailLayout({
           </div>
           <div className="flex justify-end pt-2 border-t">
             <Button onClick={() => setScriptPickerOpen(false)}>Fertig</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deadline picker */}
+      <Dialog open={deadlinePickerOpen} onOpenChange={setDeadlinePickerOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-warning" /> Deadlines verlinken
+            </DialogTitle>
+            <DialogDescription>
+              Wähle Deadlines aus, die in diesem Beitrag verlinkt werden sollen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-1.5">
+            {deadlines.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Keine Deadlines verfügbar
+              </p>
+            ) : (
+              deadlines.map((d) => {
+                const checked = linkedDeadlineIds.includes(d._id);
+                return (
+                  <button
+                    key={d._id}
+                    onClick={() => toggleDeadlineLink(d._id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      checked
+                        ? "bg-warning/5 border-warning/40"
+                        : "border-border hover:bg-secondary/40"
+                    } ${d.done ? "opacity-50" : ""}`}
+                  >
+                    <CalendarDays className="h-4 w-4 text-warning shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{d.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {d.date} · {d.category}
+                      </p>
+                    </div>
+                    {checked && <span className="text-xs text-warning font-medium">Verlinkt</span>}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className="flex justify-end pt-2 border-t">
+            <Button onClick={() => setDeadlinePickerOpen(false)}>Fertig</Button>
           </div>
         </DialogContent>
       </Dialog>

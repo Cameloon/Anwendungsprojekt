@@ -133,6 +133,8 @@ vi.mock("../../convex/_generated/api", () => ({
       joinByCode: "forums.joinByCode",
       leave: "forums.leave",
       ensureAllgemeinForum: "forums.ensureAllgemeinForum",
+      archiveForum: "forums.archiveForum",
+      unarchiveForum: "forums.unarchiveForum",
     },
     posts: {
       listByForum: "posts.listByForum",
@@ -154,6 +156,10 @@ vi.mock("../../convex/_generated/api", () => ({
     },
     semesterLectures: {
       ensureLectureForums: "semesterLectures.ensureLectureForums",
+    },
+    sections: {
+      list: "sections.list",
+      seedDefaultSections: "sections.seedDefaultSections",
     },
   },
 }));
@@ -188,6 +194,7 @@ vi.mock("convex/react", async () => {
 
       if (query === "scripts.listPublic") return [];
       if (query === "profiles.getMine") return null;
+      if (query === "sections.list") return [];
 
       return undefined;
     },

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Archive,
   MessageSquare,
   Plus,
   ThumbsUp,
@@ -8,7 +9,6 @@ import {
   Search,
   Clock,
   Users,
-  Globe,
   Lock,
   Presentation,
   X,
@@ -16,11 +16,15 @@ import {
   LogIn,
   Copy,
   TrendingUp,
+  Globe,
   ExternalLink,
   FileText,
   Flag,
   Trash2,
   Shield,
+  Upload,
+  Calendar,
+  CalendarDays,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Whiteboard from "@/components/Whiteboard";
@@ -42,7 +46,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { DHBW_STANDORTE } from "@/lib/dhbw";
 import { JAHRGAENGE } from "@/lib/jahrgang";
@@ -93,6 +97,7 @@ interface FPostItem {
   commentCount: number;
   sketch?: string;
   linkedScriptIds?: string[];
+  linkedDeadlineIds?: string[];
   standort?: string;
   studiengang?: string;
   kurs?: string;
@@ -113,6 +118,17 @@ interface FForumItem {
   professor?: string;
   standort?: string;
   jahrgang?: string;
+  sectionId?: string;
+  archivedByMe?: boolean;
+  deadlineId?: string;
+}
+
+interface FSectionItem {
+  _id: string;
+  name: string;
+  description: string;
+  accessRule?: string;
+  displayOrder: number;
 }
 
 interface FScriptItem {
@@ -134,6 +150,8 @@ function ForumPage() {
 
   const forumsQuery = useQuery(api.forums.getAllAccessible);
   const allScriptsQuery = useQuery(api.scripts.listPublic);
+  const allDeadlinesQuery = useQuery(api.deadlines.listForUser);
+  const sectionsQuery = useQuery(api.sections.list);
 
   const createForumMutation = useMutation(api.forums.create);
   const createPostMutation = useMutation(api.posts.create);
@@ -142,22 +160,48 @@ function ForumPage() {
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
   const inviteMutation = useMutation(api.notifications.inviteToForum);
-  const ensureLectureForumsMutation = useMutation(api.semesterLectures.ensureLectureForums);
-  const ensureAllgemeinForumMutation = useMutation(api.forums.ensureAllgemeinForum);
+  const inviteJahrgangMutation = useMutation(api.notifications.inviteJahrgangToForum);
   const deletePostMutation = useMutation(api.posts.deletePost);
+  const archiveForumMutation = useMutation(api.forums.archive);
+  const unarchiveForumMutation = useMutation(api.forums.unarchive);
+  const deleteForumMutation = useMutation(api.forums.deleteForum);
+  const seedSectionsMutation = useMutation(api.sections.seedDefaultSections);
+  const ensureDefaultForumsMutation = useMutation(api.forums.ensureDefaultSZIAndConnectForums);
+  const seedAllJahrgangForumsMutation = useMutation(api.semesterLectures.seedAllJahrgangForums);
+  const archiveOldLectureForumsMutation = useMutation(api.forums.archiveOldLectureForums);
+  const myLecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang);
+  const jahrgangPeopleQuery = useQuery(api.profiles.listSameJahrgang);
 
   const [adminViewJahrgang, setAdminViewJahrgang] = useState<string>("");
 
-  // Auto-create/join forums on every mount (idempotent — cheap and semester-safe)
+  // Seed sections, default forums, ALL jahrgang lecture forums, and auto-archive old ones
   useEffect(() => {
-    const jg = isAdmin && adminViewJahrgang && adminViewJahrgang !== "ALL" ? adminViewJahrgang : myJahrgang;
-    if (jg) {
-      ensureLectureForumsMutation({ jahrgang: jg }).catch(() => {});
-      ensureAllgemeinForumMutation({ jahrgang: jg }).catch(() => {});
-    }
-  }, [myJahrgang, adminViewJahrgang, isAdmin, ensureLectureForumsMutation, ensureAllgemeinForumMutation]);
+    (async () => {
+      try { await seedSectionsMutation(); } catch {}
+      try { await ensureDefaultForumsMutation(); } catch {}
+      try { await seedAllJahrgangForumsMutation(); } catch {}
+      try { await archiveOldLectureForumsMutation(); } catch {}
+    })();
+  }, [seedSectionsMutation, ensureDefaultForumsMutation, seedAllJahrgangForumsMutation, archiveOldLectureForumsMutation]);
 
-  const [activeForumId, setActiveForumId] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlForumId = searchParams.get("forumId") || "";
+  const [activeForumId, setActiveForumId_] = useState<string>(urlForumId);
+  const setActiveForumId = (id: string) => {
+    setActiveForumId_(id);
+    if (id) {
+      setSearchParams({ forumId: id }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
+  const activeForumIdRef = useRef(activeForumId);
+  activeForumIdRef.current = activeForumId;
+  useEffect(() => {
+    if (urlForumId && urlForumId !== activeForumIdRef.current) {
+      setActiveForumId_(urlForumId);
+    }
+  }, [urlForumId]);
   const lastForumIdRef = useRef<string>("");
   const [showPostForm, setShowPostForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -167,6 +211,8 @@ function ForumPage() {
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [linkedScriptIds, setLinkedScriptIds] = useState<string[]>([]);
   const [scriptPickerOpen, setScriptPickerOpen] = useState(false);
+  const [linkedDeadlineIds, setLinkedDeadlineIds] = useState<string[]>([]);
+  const [deadlinePickerOpen, setDeadlinePickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string>("alle");
   const [sort, setSort] = useState<Sort>("neu");
@@ -176,14 +222,16 @@ function ForumPage() {
   const [reportTarget, setReportTarget] = useState<{ postId: string; postTitle: string } | null>(null);
   const [fName, setFName] = useState("");
   const [fDesc, setFDesc] = useState("");
-  const [fVisibility, setFVisibility] = useState<"public" | "private">("public");
-  const [fKurs, setFKurs] = useState("");
   const [fVorlesung, setFVorlesung] = useState("");
   const [fProfessor, setFProfessor] = useState("");
   const [fStandort, setFStandort] = useState<string>("");
-  const [fAllowedKurse, setFAllowedKurse] = useState("");
-  const [fJahrgangOnly, setFJahrgangOnly] = useState(true);
-  const [fInvitees, setFInvitees] = useState("");
+  const [selectedInvitees, setSelectedInvitees] = useState<{ userId: string; displayName: string }[]>([]);
+  const [inviteeSearch, setInviteeSearch] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const [fSectionId, setFSectionId] = useState<string>("");
+  const [fVisibility, setFVisibility] = useState<"public" | "private">("public");
+  const [postFiles, setPostFiles] = useState<{ name: string; storageId: string; fileType: string; fileSize: number }[]>([]);
+  const [postDeadlineId, setPostDeadlineId] = useState<string>("");
   const [joinCode, setJoinCode] = useState("");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,6 +257,31 @@ function ForumPage() {
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allDeadlines: { _id: string; title: string; date: string; category: string; done: boolean }[] = useMemo(
+    () =>
+      (allDeadlinesQuery ?? []).map((d: any) => ({
+        _id: d._id,
+        title: d.title,
+        date: d.date,
+        category: d.category,
+        done: d.done,
+      })),
+    [allDeadlinesQuery]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sections: FSectionItem[] = useMemo(
+    () => (sectionsQuery ?? []) as FSectionItem[],
+    [sectionsQuery]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const myLectures: { _id: string; lectureName: string }[] = useMemo(
+    () => (myLecturesQuery ?? []).map((l: any) => ({ _id: l._id, lectureName: l.lectureName })),
+    [myLecturesQuery]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const forums: FForumItem[] = useMemo(
     () =>
       rawForums.map((f: any) => ({
@@ -227,6 +300,9 @@ function ForumPage() {
         vorlesung: f.vorlesung,
         professor: f.professor,
         standort: f.standort,
+        sectionId: f.sectionId,
+        archivedByMe: f.archivedByMe,
+        deadlineId: f.deadlineId,
       })),
     [rawForums]
   );
@@ -264,6 +340,7 @@ function ForumPage() {
         commentCount: (p.comments ?? []).length,
         sketch: p.sketch,
         linkedScriptIds: p.linkedScriptIds,
+        linkedDeadlineIds: p.linkedDeadlineIds,
         standort: p.standort,
         studiengang: p.studiengang,
         kurs: p.kurs,
@@ -313,11 +390,13 @@ function ForumPage() {
         tag: tag as "frage" | "lerngruppe" | "material" | "diskussion",
         sketch,
         linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
+        linkedDeadlineIds: linkedDeadlineIds.length ? (linkedDeadlineIds as Id<"deadlines">[]) : undefined,
       });
       setTitle("");
       setContent("");
       setSketch(undefined);
       setLinkedScriptIds([]);
+      setLinkedDeadlineIds([]);
       setShowPostForm(false);
     } catch {
       toast.error("Fehler beim Veröffentlichen");
@@ -338,36 +417,43 @@ function ForumPage() {
       toast.error("Bitte einen längeren Forum-Namen vergeben");
       return;
     }
+    if (!fSectionId) {
+      toast.error("Bitte eine Sektion auswählen");
+      return;
+    }
+    const selectedSection = sections.find((s) => s._id === fSectionId);
+    const isDeinJahrgang = selectedSection?.name === "Dein Jahrgang";
     try {
       const result = await createForumMutation({
         name: fName,
         description: fDesc,
         visibility: fVisibility,
-        kurs: fKurs || undefined,
         vorlesung: fVorlesung || undefined,
         professor: fProfessor || undefined,
         standort: fStandort || profile?.hochschule || undefined,
-        allowedKurse: fAllowedKurse
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        jahrgang: fJahrgangOnly ? myJahrgang : undefined,
+        jahrgang: isDeinJahrgang ? myJahrgang : undefined,
+        sectionId: fSectionId as any,
       });
-      const inviteNames = fInvitees.split(",").map((s) => s.trim()).filter(Boolean);
-      if (inviteNames.length) {
+      if (fVisibility === "public" && isDeinJahrgang && myJahrgang) {
+        await inviteJahrgangMutation({
+          forumId: result.forumId as Id<"forums">,
+          forumName: fName,
+          jahrgang: myJahrgang,
+          fromName: displayName,
+        });
+      } else if (fVisibility === "private" && selectedInvitees.length > 0) {
         await inviteMutation({
           forumId: result.forumId as Id<"forums">,
           forumName: fName,
-          recipientIds: inviteNames,
-          recipientNames: inviteNames,
-          fromName: me,
+          recipientIds: selectedInvitees.map((p) => p.userId),
+          recipientNames: selectedInvitees.map((p) => p.displayName),
+          fromName: displayName,
         });
       }
-      toast.success(
-        inviteNames.length
-          ? `Forum „${fName}" erstellt · ${inviteNames.length} Einladung(en) versendet`
-          : `Forum „${fName}" erstellt`
-      );
+      const inviteCount = fVisibility === "public" && isDeinJahrgang
+        ? "alle Mitglieder deines Jahrgangs"
+        : `${selectedInvitees.length} Einladung(en)`;
+      toast.success(`Forum „${fName}" erstellt · ${inviteCount} versendet`);
       resetForumForm();
       setCreateOpen(false);
       setActiveForumId(result.forumId);
@@ -420,14 +506,51 @@ function ForumPage() {
   const resetForumForm = () => {
     setFName("");
     setFDesc("");
-    setFVisibility("public");
-    setFKurs("");
     setFVorlesung("");
     setFProfessor("");
     setFStandort("");
-    setFAllowedKurse("");
-    setFJahrgangOnly(true);
-    setFInvitees("");
+    setFVisibility("public");
+    setSelectedInvitees([]);
+    setInviteeSearch("");
+    setHighlightIndex(0);
+    setFSectionId("");
+  };
+
+  const selectInvitee = (p: { userId: string; displayName: string }) => {
+    setSelectedInvitees((prev) => [...prev, p]);
+    setInviteeSearch("");
+    setHighlightIndex(0);
+  };
+
+  const removeInvitee = (userId: string) => {
+    setSelectedInvitees((prev) => prev.filter((s) => s.userId !== userId));
+  };
+
+  const getFilteredInvitees = () =>
+    ((jahrgangPeopleQuery as { userId: string; displayName: string }[]) ?? []).filter(
+      (p) =>
+        p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
+        !selectedInvitees.some((s) => s.userId === p.userId),
+    );
+
+  const handleInviteeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const filtered = getFilteredInvitees().slice(0, 8);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filtered.length > 0) {
+        const idx = Math.min(highlightIndex, filtered.length - 1);
+        selectInvitee(filtered[idx]);
+      }
+    } else if (e.key === "Escape") {
+      setInviteeSearch("");
+      setHighlightIndex(0);
+    }
   };
 
   const tags = [
@@ -441,6 +564,7 @@ function ForumPage() {
   return (
     <ForumPageLayout
       forums={forums}
+      sections={sections}
       activeForum={activeForum}
       activeForumId={activeForumId}
       setActiveForumId={setActiveForumId}
@@ -458,23 +582,27 @@ function ForumPage() {
       setFName={setFName}
       fDesc={fDesc}
       setFDesc={setFDesc}
-      fVisibility={fVisibility}
-      setFVisibility={setFVisibility}
-      fKurs={fKurs}
-      setFKurs={setFKurs}
       fVorlesung={fVorlesung}
       setFVorlesung={setFVorlesung}
       fProfessor={fProfessor}
       setFProfessor={setFProfessor}
       fStandort={fStandort}
       setFStandort={setFStandort}
-      fAllowedKurse={fAllowedKurse}
-      setFAllowedKurse={setFAllowedKurse}
-      fJahrgangOnly={fJahrgangOnly}
-      setFJahrgangOnly={setFJahrgangOnly}
-      fInvitees={fInvitees}
-      setFInvitees={setFInvitees}
+      selectedInvitees={selectedInvitees}
+      inviteeSearch={inviteeSearch}
+      setInviteeSearch={setInviteeSearch}
+      highlightIndex={highlightIndex}
+      setHighlightIndex={setHighlightIndex}
+      selectInvitee={selectInvitee}
+      removeInvitee={removeInvitee}
+      getFilteredInvitees={getFilteredInvitees}
+      handleInviteeKeyDown={handleInviteeKeyDown}
+      fSectionId={fSectionId}
+      setFSectionId={setFSectionId}
+      fVisibility={fVisibility}
+      setFVisibility={setFVisibility}
       forumNameError={forumNameError}
+      myLectures={myLectures}
       handleCreateForum={handleCreateForum}
       resetForumForm={resetForumForm}
       joinCode={joinCode}
@@ -500,6 +628,11 @@ function ForumPage() {
       scriptPickerOpen={scriptPickerOpen}
       setScriptPickerOpen={setScriptPickerOpen}
       pubScripts={pubScripts}
+      allDeadlines={allDeadlines}
+      linkedDeadlineIds={linkedDeadlineIds}
+      setLinkedDeadlineIds={setLinkedDeadlineIds}
+      deadlinePickerOpen={deadlinePickerOpen}
+      setDeadlinePickerOpen={setDeadlinePickerOpen}
       postTitleError={postTitleError}
       postContentError={postContentError}
       addPost={addPost}
@@ -520,7 +653,10 @@ function ForumPage() {
       adminViewJahrgang={adminViewJahrgang}
       setAdminViewJahrgang={setAdminViewJahrgang}
       handleDeletePost={handleDeletePost}
+      archiveForum={async (forumId: string) => { try { await archiveForumMutation({ forumId: forumId as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler beim Archivieren"); } }}
+      unarchiveForum={async (forumId: string) => { try { await unarchiveForumMutation({ forumId: forumId as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler beim Wiederherstellen"); } }}
       postsQuery={postsQuery}
+      deleteForumMutation={deleteForumMutation}
     />
   );
 }
@@ -529,6 +665,7 @@ function ForumPage() {
 
 function ForumPageLayout({
   forums,
+  sections,
   activeForum,
   activeForumId,
   setActiveForumId,
@@ -546,22 +683,25 @@ function ForumPageLayout({
   setFName,
   fDesc,
   setFDesc,
-  fVisibility,
-  setFVisibility,
-  fKurs,
-  setFKurs,
   fVorlesung,
   setFVorlesung,
   fProfessor,
   setFProfessor,
   fStandort,
   setFStandort,
-  fAllowedKurse,
-  setFAllowedKurse,
-  fJahrgangOnly,
-  setFJahrgangOnly,
-  fInvitees,
-  setFInvitees,
+  selectedInvitees,
+  inviteeSearch,
+  setInviteeSearch,
+  highlightIndex,
+  setHighlightIndex,
+  selectInvitee,
+  removeInvitee,
+  getFilteredInvitees,
+  handleInviteeKeyDown,
+  fSectionId,
+  setFSectionId,
+  fVisibility,
+  setFVisibility,
   forumNameError,
   handleCreateForum,
   resetForumForm,
@@ -588,6 +728,11 @@ function ForumPageLayout({
   scriptPickerOpen,
   setScriptPickerOpen,
   pubScripts,
+  allDeadlines,
+  linkedDeadlineIds,
+  setLinkedDeadlineIds,
+  deadlinePickerOpen,
+  setDeadlinePickerOpen,
   postTitleError,
   postContentError,
   addPost,
@@ -608,9 +753,14 @@ function ForumPageLayout({
   adminViewJahrgang,
   setAdminViewJahrgang,
   handleDeletePost,
+  archiveForum,
+  unarchiveForum,
   postsQuery,
+  myLectures,
+  deleteForumMutation,
 }: {
   forums: FForumItem[];
+  sections: FSectionItem[];
   activeForum: FForumItem | undefined;
   activeForumId: string;
   setActiveForumId: (id: string) => void;
@@ -628,22 +778,25 @@ function ForumPageLayout({
   setFName: (v: string) => void;
   fDesc: string;
   setFDesc: (v: string) => void;
-  fVisibility: "public" | "private";
-  setFVisibility: (v: "public" | "private") => void;
-  fKurs: string;
-  setFKurs: (v: string) => void;
   fVorlesung: string;
   setFVorlesung: (v: string) => void;
   fProfessor: string;
   setFProfessor: (v: string) => void;
   fStandort: string;
   setFStandort: (v: string) => void;
-  fAllowedKurse: string;
-  setFAllowedKurse: (v: string) => void;
-  fJahrgangOnly: boolean;
-  setFJahrgangOnly: (v: boolean) => void;
-  fInvitees: string;
-  setFInvitees: (v: string) => void;
+  selectedInvitees: { userId: string; displayName: string }[];
+  inviteeSearch: string;
+  setInviteeSearch: (v: string) => void;
+  highlightIndex: number;
+  setHighlightIndex: (v: number) => void;
+  selectInvitee: (p: { userId: string; displayName: string }) => void;
+  removeInvitee: (userId: string) => void;
+  getFilteredInvitees: () => { userId: string; displayName: string }[];
+  handleInviteeKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  fSectionId: string;
+  setFSectionId: (v: string) => void;
+  fVisibility: "public" | "private";
+  setFVisibility: (v: "public" | "private") => void;
   forumNameError: string;
   handleCreateForum: () => void;
   resetForumForm: () => void;
@@ -670,6 +823,11 @@ function ForumPageLayout({
   scriptPickerOpen: boolean;
   setScriptPickerOpen: (v: boolean) => void;
   pubScripts: FScriptItem[];
+  allDeadlines: { _id: string; title: string; date: string; category: string; done: boolean }[];
+  linkedDeadlineIds: string[];
+  setLinkedDeadlineIds: (v: string[]) => void;
+  deadlinePickerOpen: boolean;
+  setDeadlinePickerOpen: (v: boolean) => void;
   postTitleError: string;
   postContentError: string;
   addPost: () => void;
@@ -690,8 +848,89 @@ function ForumPageLayout({
   adminViewJahrgang: string;
   setAdminViewJahrgang: (v: string) => void;
   handleDeletePost: (postId: string) => void;
+  archiveForum: (forumId: string) => Promise<void>;
+  unarchiveForum: (forumId: string) => Promise<void>;
   postsQuery: any;
+  myLectures: { _id: string; lectureName: string }[];
+  deleteForumMutation: (args: any) => any;
 }) {
+  const SectionCard = ({ title, icon, forums: secForums, activeForumId, setActiveForumId, me }: {
+    title: string;
+    icon: React.ReactNode;
+    forums: FForumItem[];
+    activeForumId: string;
+    setActiveForumId: (id: string) => void;
+    me: string;
+  }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [secSearch, setSecSearch] = useState("");
+    const filteredSec = secForums.filter((f) =>
+      f.name.toLowerCase().includes(secSearch.toLowerCase())
+    );
+    const visibleSec = expanded ? filteredSec : filteredSec.slice(0, 4);
+
+    return (
+      <div className="glass-card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            {icon} {title}
+          </p>
+        </div>
+        {secForums.length > 4 && (
+          <div className="relative mb-2">
+            <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Forum suchen…"
+              value={secSearch}
+              onChange={(e) => setSecSearch(e.target.value)}
+              className="h-7 pl-7 text-xs"
+            />
+          </div>
+        )}
+        <div className="space-y-0.5">
+          {visibleSec.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-1 py-2">Keine Foren</p>
+          ) : (
+            visibleSec.map((f) => (
+              <div
+                key={f.id}
+                className={`group flex items-center rounded-lg transition-colors ${
+                  f.id === activeForumId ? "bg-primary/10" : "hover:bg-secondary/60"
+                }`}
+              >
+                <button
+                  onClick={() => setActiveForumId(f.id)}
+                  className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${
+                    f.id === activeForumId ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                  }`}
+                >
+                  <Hash className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-sm font-medium truncate flex-1">{f.name}</span>
+                  <span className="text-[10px] text-muted-foreground/70 shrink-0">{f.members.length}</span>
+                </button>
+                <Link
+                  to={`/forum/${f.id}`}
+                  className="px-2 py-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
+                  title="Detailansicht öffnen"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ))
+          )}
+        </div>
+        {filteredSec.length > 4 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full text-xs text-muted-foreground hover:text-foreground mt-1.5 py-1 transition-colors"
+          >
+            {expanded ? "Weniger anzeigen" : `${filteredSec.length - 4} weitere anzeigen`}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const ForumItem = ({ f }: { f: FForumItem }) => {
     const Icon = f.visibility === "public" ? Hash : Lock;
     const active = f.id === activeForumId;
@@ -745,8 +984,9 @@ function ForumPageLayout({
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
             {/* Sidebar */}
             <aside className="lg:sticky lg:top-24 lg:self-start space-y-4">
+              {/* Header: actions */}
               <div className="glass-card p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                   <h3 className="font-heading font-semibold text-sm">Foren</h3>
                   <div className="flex gap-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setJoinOpen(true)} title="Privatem Forum beitreten">
@@ -758,7 +998,7 @@ function ForumPageLayout({
                   </div>
                 </div>
                 {isAdmin && (
-                  <div className="mt-3 mb-2">
+                  <div className="mt-3">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
                       <Shield className="h-3 w-3" /> Admin: Jahrgang filtern
                     </p>
@@ -775,27 +1015,72 @@ function ForumPageLayout({
                     </Select>
                   </div>
                 )}
-                <div className="mt-4">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Öffentlich</p>
-                  {publicForums.length === 0 ? (
-                    <p className="text-xs text-muted-foreground px-1 py-1">Keine öffentlichen Foren</p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {publicForums.map((f) => (<ForumItem key={f.id} f={f} />))}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Privat / Gruppen</p>
-                  {privateForums.length === 0 ? (
-                    <p className="text-xs text-muted-foreground px-1 py-1">Tritt bei via Code oder erstelle eines.</p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {privateForums.map((f) => (<ForumItem key={f.id} f={f} />))}
-                    </div>
-                  )}
-                </div>
               </div>
+
+              {/* Section cards */}
+              {(() => {
+                const sectionMap = new Map<string, FForumItem[]>();
+                const noSection: FForumItem[] = [];
+
+                for (const f of forums) {
+                  if (f.archivedByMe) continue;
+                  if (f.sectionId) {
+                    const arr = sectionMap.get(f.sectionId) || [];
+                    arr.push(f);
+                    sectionMap.set(f.sectionId, arr);
+                  } else {
+                    noSection.push(f);
+                  }
+                }
+
+                const myJahrgangSection = sections.find((s) => s.name === "Dein Jahrgang");
+                const sziSection = sections.find((s) => s.name === "SZI");
+                const connectSection = sections.find((s) => s.name === "Connect");
+
+                const renderSectionCard = (
+                  title: string,
+                  icon: React.ReactNode,
+                  sectionId: string | undefined,
+                  extraForums?: FForumItem[]
+                ) => {
+                  const secForums = [...(sectionId ? sectionMap.get(sectionId) || [] : []), ...(extraForums || [])];
+
+                  return (
+                    <SectionCard title={title} icon={icon} forums={secForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                  );
+                };
+
+                // Private forums visible to user (exclude ones already in a section to avoid duplicates)
+                const userPrivateForums = privateForums.filter(
+                  (f) => (f.members.some((m) => m.userId === me) || isAdmin) && !f.sectionId
+                );
+
+                return (
+                  <>
+                    {renderSectionCard("Dein Jahrgang", <Hash className="h-3.5 w-3.5" />, myJahrgangSection?._id, userPrivateForums)}
+                    {renderSectionCard("SZI", <Hash className="h-3.5 w-3.5" />, sziSection?._id)}
+                    {renderSectionCard("Connect", <Hash className="h-3.5 w-3.5" />, connectSection?._id)}
+                    {noSection.length > 0 && (
+                      <div className="glass-card p-4">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Weitere</p>
+                        <div className="space-y-0.5">
+                          {noSection.map((f) => (<ForumItem key={f.id} f={f} />))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Archive section */}
+              {(() => {
+                const archivedForums = forums.filter(
+                  (f) => f.archivedByMe
+                );
+                return (
+                  <SectionCard title="Archiv" icon={<Archive className="h-3.5 w-3.5" />} forums={archivedForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                );
+              })()}
 
               {activeForum && (
                 <div className="glass-card p-4 space-y-3">
@@ -834,11 +1119,27 @@ function ForumPageLayout({
                     </Button>
                   </Link>
                   <div className="flex gap-2">
-                    {!isAdmin && activeForum.visibility === "public" && !isMember && (
-                      <Button size="sm" className="w-full" onClick={() => handleJoinPublic(activeForum.id)}>Beitreten</Button>
-                    )}
                     {!isAdmin && !isOwner && isMember && (
                       <Button size="sm" variant="outline" className="w-full" onClick={() => handleLeave(activeForum.id)}>Verlassen</Button>
+                    )}
+                    {isMember && (
+                      activeForum.archivedByMe ? (
+                        <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => unarchiveForum(activeForum.id)}>
+                          <Archive className="h-3.5 w-3.5" /> Wiederherstellen
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="w-full gap-1.5 text-destructive" onClick={() => archiveForum(activeForum.id)}>
+                          <Archive className="h-3.5 w-3.5" /> Archivieren
+                        </Button>
+                      )
+                    )}
+                    {isAdmin && (
+                      <Button size="sm" variant="outline" className="w-full gap-1.5 text-destructive" onClick={async () => {
+                        if (!window.confirm(`Forum „${activeForum.name}" wirklich löschen? Alle Beiträge, Kommentare und Dateien werden unwiderruflich gelöscht.`)) return;
+                        try { await deleteForumMutation({ forumId: activeForum.id as any }); toast.success("Forum gelöscht"); setActiveForumId(""); } catch { toast.error("Fehler beim Löschen"); }
+                      }}>
+                        <Trash2 className="h-3.5 w-3.5" /> Löschen
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -872,14 +1173,15 @@ function ForumPageLayout({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowPostForm((v) => !v)}
-                    className="gap-2"
-                  disabled={!isAdmin && !isMember}
-                  title={isAdmin || isMember ? "" : "Tritt dem Forum bei, um zu posten"}
-                  >
-                    <Plus className="h-4 w-4" /> Neuer Beitrag
-                  </Button>
+                  {isMember || isAdmin ? (
+                    <Button onClick={() => setShowPostForm((v) => !v)} className="gap-2">
+                      <Plus className="h-4 w-4" /> Neuer Beitrag
+                    </Button>
+                  ) : activeForum?.visibility === "public" ? (
+                    <Button onClick={() => handleJoinPublic(activeForum.id)} className="gap-2">
+                      <Users className="h-4 w-4" /> Beitreten
+                    </Button>
+                  ) : null}
                 </div>
               </motion.div>
 
@@ -950,6 +1252,33 @@ function ForumPageLayout({
                                   <FileText className="h-3 w-3" />
                                   {s.title}
                                   <button type="button" onClick={() => setLinkedScriptIds((prev) => prev.filter((x) => x !== id))} className="ml-0.5 hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs text-muted-foreground">Deadlines verlinken</p>
+                          <Button type="button" size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setDeadlinePickerOpen(true)}>
+                            <CalendarDays className="h-3.5 w-3.5" /> Auswählen
+                          </Button>
+                        </div>
+                        {linkedDeadlineIds.length === 0 ? (
+                          <p className="text-[11px] text-muted-foreground">Keine Deadlines verlinkt</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {linkedDeadlineIds.map((id) => {
+                              const d = allDeadlines.find((x) => x._id === id);
+                              if (!d) return null;
+                              return (
+                                <span key={id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">
+                                  <CalendarDays className="h-3 w-3" />
+                                  {d.title}
+                                  <button type="button" onClick={() => setLinkedDeadlineIds((prev) => prev.filter((x) => x !== id))} className="ml-0.5 hover:text-destructive">
                                     <X className="h-3 w-3" />
                                   </button>
                                 </span>
@@ -1063,6 +1392,20 @@ function ForumPageLayout({
                               })}
                             </div>
                           )}
+                          {post.linkedDeadlineIds && post.linkedDeadlineIds.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {post.linkedDeadlineIds.map((id) => {
+                                const d = allDeadlines.find((x) => x._id === id);
+                                if (!d) return null;
+                                return (
+                                  <Link key={id} to="/planner" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning hover:bg-warning/20">
+                                    <CalendarDays className="h-3 w-3" />
+                                    {d.title}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
                           {(post.standort || post.studiengang || post.kurs || post.vorlesung || post.professor) && (
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               {post.standort && (<span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{post.standort}</span>)}
@@ -1135,63 +1478,132 @@ function ForumPageLayout({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary" /> Neues Forum erstellen</DialogTitle>
             <DialogDescription>
-              Erstelle ein themenbezogenes Forum. Öffentliche Foren erscheinen für alle in der Liste, private nur für eingeladene Personen oder Kurse.
+              Wähle eine Sektion und ob alle Jahrgangsmitglieder eingeladen werden (öffentlich) oder du Personen gezielt einlädst (privat).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Input placeholder="Name des Forums (z. B. Mathe 2 – Prof. Müller)" value={fName} onChange={(e) => setFName(e.target.value)} />
             {forumNameError && <p className="text-xs text-destructive">{forumNameError}</p>}
             <Textarea placeholder="Kurzbeschreibung (optional)" value={fDesc} onChange={(e) => setFDesc(e.target.value)} rows={2} />
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Sektion *</p>
+              <select
+                value={fSectionId}
+                onChange={(e) => { setFSectionId(e.target.value); setFVorlesung(""); }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Sektion auswählen</option>
+                {sections.filter((s) => ["Dein Jahrgang", "SZI", "Connect"].includes(s.name)).map((s) => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-2">
-              <Input placeholder="Kurs (z. B. WWI23A)" value={fKurs} onChange={(e) => setFKurs(e.target.value)} />
-              <Input placeholder="Vorlesung (optional)" value={fVorlesung} onChange={(e) => setFVorlesung(e.target.value)} />
+              {fSectionId && (() => {
+                const sec = sections.find((s) => s._id === fSectionId);
+                return sec?.name === "Dein Jahrgang" ? (
+                  <select value={fVorlesung} onChange={(e) => setFVorlesung(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                    <option value="">Vorlesung (optional)</option>
+                    {myLectures.map((l) => (<option key={l._id} value={l.lectureName}>{l.lectureName}</option>))
+}
+                  </select>
+                ) : (
+                  <Input placeholder="Vorlesung (optional)" value={fVorlesung} onChange={(e) => setFVorlesung(e.target.value)} />
+                );
+              })()}
               <Input placeholder="Professor (optional)" value={fProfessor} onChange={(e) => setFProfessor(e.target.value)} />
               <select value={fStandort} onChange={(e) => setFStandort(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
                 <option value="">Standort (optional)</option>
                 {DHBW_STANDORTE.map((s) => (<option key={s} value={s}>{s}</option>))}
               </select>
             </div>
+
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Sichtbarkeit</p>
-              <div className="flex gap-2">
+              <p className="text-xs text-muted-foreground mb-2">Sichtbarkeit & Einladungen</p>
+              <div className="flex gap-2 mb-3">
                 <button
                   onClick={() => setFVisibility("public")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
                     fVisibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
                   }`}
-                ><Globe className="h-4 w-4" /> Öffentlich</button>
+                >
+                  <Globe className="h-4 w-4" /> Öffentlich
+                </button>
                 <button
                   onClick={() => setFVisibility("private")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
                     fVisibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
                   }`}
-                ><Lock className="h-4 w-4" /> Privat</button>
+                >
+                  <Lock className="h-4 w-4" /> Privat
+                </button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {fVisibility === "public" ? "Jeder kann das Forum in der Liste sehen und beitreten." : "Nur über Einladungscode oder zugelassene Kurse zugänglich."}
-              </p>
+              {(() => {
+                const sec = sections.find((s) => s._id === fSectionId);
+                const isDeinJahrgang = sec?.name === "Dein Jahrgang";
+                if (fVisibility === "public") {
+                  return (
+                    <p className="text-xs text-muted-foreground italic">
+                      {isDeinJahrgang
+                        ? "Alle Mitglieder deines Jahrgangs werden automatisch eingeladen."
+                        : "Das Forum ist öffentlich sichtbar und kann über den Einladungscode geteilt werden."}
+                    </p>
+                  );
+                }
+                return (
+                  <>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {selectedInvitees.map((s) => (
+                        <Badge key={s.userId} variant="secondary" className="gap-1 pr-1 text-xs">
+                          {s.displayName}
+                          <button onClick={() => removeInvitee(s.userId)} className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        placeholder="Namen suchen…"
+                        value={inviteeSearch}
+                        onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
+                        onFocus={() => {}}
+                        onBlur={() => setTimeout(() => setInviteeSearch(""), 200)}
+                        onKeyDown={handleInviteeKeyDown}
+                        autoComplete="off"
+                      />
+                      {inviteeSearch && (() => {
+                        const filtered = getFilteredInvitees().slice(0, 8);
+                        const safeIndex = Math.min(highlightIndex, filtered.length - 1);
+                        return (
+                          <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-36 overflow-y-auto">
+                            {filtered.length === 0 ? (
+                              <p className="px-3 py-2 text-xs text-muted-foreground">Keine Personen gefunden</p>
+                            ) : (
+                              filtered.map((p, i) => (
+                                <button
+                                  key={p.userId}
+                                  type="button"
+                                  className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${i === safeIndex ? "bg-accent" : "hover:bg-accent"}`}
+                                  onMouseDown={(e) => { e.preventDefault(); selectInvitee(p); }}
+                                  ref={i === safeIndex ? (el) => { if (el) el.scrollIntoView({ block: "nearest" }); } : undefined}
+                                >
+                                  {p.displayName}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">Eingeladene Personen erhalten eine Benachrichtigung und können annehmen oder ablehnen.</p>
+                  </>
+                );
+              })()}
             </div>
-            {fVisibility === "private" && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Zugelassene Kurse (komma-getrennt, optional)</p>
-                <Input placeholder="z. B. WWI23A, WWI23B" value={fAllowedKurse} onChange={(e) => setFAllowedKurse(e.target.value)} />
-                <p className="text-[11px] text-muted-foreground mt-1">Mitglieder dieser Kurse erhalten automatisch Zugriff. Zusätzlich kannst du den Einladungscode teilen.</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Personen einladen (komma-getrennt, optional)</p>
-              <Input placeholder="z. B. Anna M., Tim K." value={fInvitees} onChange={(e) => setFInvitees(e.target.value)} />
-              <p className="text-[11px] text-muted-foreground mt-1">Eingeladene Personen erhalten eine Benachrichtigung und können annehmen oder ablehnen.</p>
-            </div>
-            {myJahrgang && (
-              <label className="flex items-start gap-2 rounded-lg border bg-secondary/40 p-3 cursor-pointer select-none">
-                <input type="checkbox" checked={fJahrgangOnly} onChange={(e) => setFJahrgangOnly(e.target.checked)} className="mt-1 accent-primary" />
-                <span className="text-xs">
-                  <span className="font-medium text-foreground">Nur für Jahrgang {myJahrgang}</span>
-                  <span className="block text-muted-foreground mt-0.5">Nur Studierende dieses Jahrgangs sehen und betreten dieses Forum.</span>
-                </span>
-              </label>
-            )}
+
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => { resetForumForm(); setCreateOpen(false); }}>Abbrechen</Button>
               <Button onClick={handleCreateForum}>Forum erstellen</Button>
@@ -1220,6 +1632,46 @@ function ForumPageLayout({
         <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle>Whiteboard-Skizze</DialogTitle></DialogHeader>
           <Whiteboard height={460} saveLabel="Skizze übernehmen" onSave={(dataUrl) => { setSketch(dataUrl); setWhiteboardOpen(false); }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Deadline picker */}
+      <Dialog open={deadlinePickerOpen} onOpenChange={setDeadlinePickerOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-warning" /> Deadlines verlinken
+            </DialogTitle>
+            <DialogDescription>Wähle Deadlines aus, die in diesem Beitrag verlinkt werden sollen.</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-1.5">
+            {allDeadlines.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Keine Deadlines verfügbar</p>
+            ) : (
+              allDeadlines.map((d) => {
+                const checked = linkedDeadlineIds.includes(d._id);
+                return (
+                  <button
+                    key={d._id}
+                    onClick={() => setLinkedDeadlineIds((prev) => prev.includes(d._id) ? prev.filter((x) => x !== d._id) : [...prev, d._id])}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      checked ? "bg-warning/5 border-warning/40" : "border-border hover:bg-secondary/40"
+                    } ${d.done ? "opacity-50" : ""}`}
+                  >
+                    <CalendarDays className="h-4 w-4 text-warning shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{d.title}</p>
+                      <p className="text-xs text-muted-foreground">{d.date} · {d.category}</p>
+                    </div>
+                    {checked && <span className="text-xs text-warning font-medium">Verlinkt</span>}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className="flex justify-end pt-2 border-t">
+            <Button onClick={() => setDeadlinePickerOpen(false)}>Fertig</Button>
+          </div>
         </DialogContent>
       </Dialog>
 

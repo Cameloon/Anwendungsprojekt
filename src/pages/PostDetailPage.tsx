@@ -12,6 +12,7 @@ import {
   Reply,
   X,
   Trash2,
+  CalendarDays,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ interface EnrichedPost {
   comments: PostComment[];
   sketch?: string;
   linkedScriptIds?: string[];
+  linkedDeadlineIds?: string[];
 }
 
 interface ForumInfo {
@@ -111,6 +113,7 @@ function PostDetailPage() {
     forumId ? { forumId: forumId as Id<"forums"> } : "skip"
   ) as ForumInfo | null | undefined;
   const allScripts = useQuery(api.scripts.listPublic) as ScriptInfo[] | undefined;
+  const allDeadlines = useQuery(api.deadlines.listForUser);
 
   const toggleLikeMutation = useMutation(api.posts.toggleLike);
   const toggleCommentLikeMutation = useMutation(api.posts.toggleCommentLike);
@@ -149,6 +152,9 @@ function PostDetailPage() {
   const comments = post.comments ?? [];
   const linkedScripts = (allScripts ?? []).filter((s) =>
     (post.linkedScriptIds ?? []).some((id) => id === s._id)
+  );
+  const linkedDeadlines = (allDeadlines ?? []).filter((d: any) =>
+    (post.linkedDeadlineIds ?? []).some((id: string) => id === d._id)
   );
 
   const handleToggleLike = () => {
@@ -202,7 +208,7 @@ function PostDetailPage() {
     }
   };
 
-  const backTo = forum ? `/forum/${forum._id}` : "/forum";
+  const backTo = forum ? `/forum?forumId=${forum._id}` : "/forum";
 
   return (
     <PostDetailLayout
@@ -224,6 +230,7 @@ function PostDetailPage() {
       me={me}
       reportedBy={displayName}
       linkedScripts={linkedScripts}
+      linkedDeadlines={linkedDeadlines}
       isAdmin={isAdmin}
       handleDeleteComment={handleDeleteComment}
     />
@@ -251,6 +258,7 @@ function PostDetailLayout({
   me,
   reportedBy,
   linkedScripts,
+  linkedDeadlines,
   isAdmin,
   handleDeleteComment,
 }: {
@@ -272,6 +280,7 @@ function PostDetailLayout({
   me: string;
   reportedBy: string;
   linkedScripts: ScriptInfo[];
+  linkedDeadlines: any[];
   isAdmin: boolean;
   handleDeleteComment: (commentId: string) => void;
 }) {
@@ -338,6 +347,27 @@ function PostDetailLayout({
                     >
                       <FileText className="h-3.5 w-3.5" />
                       {s.title}
+                      <ExternalLink className="h-3 w-3 opacity-60" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {linkedDeadlines.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                  Verlinkte Deadlines
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {linkedDeadlines.map((d: any) => (
+                    <Link
+                      key={d._id}
+                      to="/planner"
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-warning/10 text-warning hover:bg-warning/20"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {d.title}
                       <ExternalLink className="h-3 w-3 opacity-60" />
                     </Link>
                   ))}

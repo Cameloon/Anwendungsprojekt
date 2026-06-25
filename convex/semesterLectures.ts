@@ -22,30 +22,93 @@ export function calculateCurrentSemester(entryYear: number): number {
   return Math.floor(totalMonths / 6) + 1;
 }
 
-// ─── Internal helper (used by profiles.ts and by the exported mutation) ───
+// ─── Internal helpers (used by profiles.ts and by the exported mutation) ───
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, userId: string, displayName: string) {
+async function ensureSeedData(ctx: any, kurs: string) {
+  const existing = await ctx.db
+    .query("semesterLectures")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_kurs_semester", (q: any) => q.eq("kurs", kurs))
+    .collect();
+  if (existing.length > 0) return;
+  const now = Date.now();
+  for (const item of SEED_DATA) {
+    if (item.kurs !== kurs) continue;
+    await ctx.db.insert("semesterLectures", { ...item, createdAt: now });
+  }
+}
+
+/** Explicit mapping: populate jahrgangLectures table for a jahrgang (all semesters). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function ensureJahrgangLectures(ctx: any, jahrgang: string) {
   const jg = jahrgang.toUpperCase().trim();
-  let parsed: { kurs: string; entryYear: number };
+  let parsed: { kurs: string };
   try {
     parsed = parseJahrgang(jg);
   } catch {
     return;
   }
 
-  const semester = calculateCurrentSemester(parsed.entryYear);
+  const existing = await ctx.db
+    .query("jahrgangLectures")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
+    .collect();
+  if (existing.length > 0) return;
+
+  const now = Date.now();
+  for (const item of SEED_DATA) {
+    if (item.kurs !== parsed.kurs) continue;
+    await ctx.db.insert("jahrgangLectures", {
+      jahrgang: jg,
+      lectureName: item.lectureName,
+      semesterNumber: item.semesterNumber,
+      createdAt: now,
+    });
+  }
+}
+
+/** Create or patch lecture forums for ONE jahrgang (all semesters). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, userId: string, displayName: string) {
+  const jg = jahrgang.toUpperCase().trim();
+  let parsed: { kurs: string };
+  try {
+    parsed = parseJahrgang(jg);
+  } catch {
+    return;
+  }
+
+  await ensureSeedData(ctx, parsed.kurs);
+  await ensureJahrgangLectures(ctx, jg);
 
   const lectures = await ctx.db
-    .query("semesterLectures")
+    .query("jahrgangLectures")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_kurs_semester", (q: any) =>
-      q.eq("kurs", parsed.kurs).eq("semesterNumber", semester),
-    )
+    .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
     .collect();
 
+  const allgemeinSection = await ctx.db
+    .query("sections")
+    .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
+    .first();
+
+  let allgemeinSectionId = allgemeinSection?._id;
+  if (!allgemeinSectionId) {
+    const now = Date.now();
+    allgemeinSectionId = await ctx.db.insert("sections", {
+      name: "Dein Jahrgang",
+      description: "Jahrgangsspezifische Foren (Allgemein, Vorlesungen, Gruppen)",
+      accessRule: "all",
+      displayOrder: 1,
+      createdAt: now,
+    });
+  }
+
   for (const lecture of lectures) {
-    const forumName = `${lecture.lectureName} (${jg})`;
+    const lectureName = lecture.lectureName;
+    const forumName = `${lectureName} (${jg})`;
     const existing = await ctx.db
       .query("forums")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +120,17 @@ export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, 
     if (existing) {
       if (existing.ownerId) {
         await ctx.db.patch(existing._id, { ownerId: undefined });
+      }
+      const patchFields: Record<string, unknown> = {};
+      if (!existing.isLectureForum) {
+        patchFields.isLectureForum = true;
+        patchFields.semesterNumber = lecture.semesterNumber;
+      }
+      if (!existing.sectionId) {
+        patchFields.sectionId = allgemeinSectionId;
+      }
+      if (Object.keys(patchFields).length > 0) {
+        await ctx.db.patch(existing._id, patchFields);
       }
       const isMember = await ctx.db
         .query("forumMembers")
@@ -77,11 +151,14 @@ export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, 
       const code = Math.random().toString(36).slice(2, 8).toUpperCase();
       const forumId = await ctx.db.insert("forums", {
         name: forumName,
-        description: `${lecture.lectureName} – Semester ${semester} (${jg})`,
+        description: `${lectureName} – Semester ${lecture.semesterNumber} (${jg})`,
         visibility: "public",
         jahrgang: jg,
-        vorlesung: lecture.lectureName,
+        vorlesung: lectureName,
         inviteCode: code,
+        isLectureForum: true,
+        semesterNumber: lecture.semesterNumber,
+        sectionId: allgemeinSectionId,
         createdAt: Date.now(),
       });
       await ctx.db.insert("forumMembers", {
@@ -213,6 +290,105 @@ export const ensureLectureForums = mutation({
     const displayName = profile?.displayName || identity.name || identity.email || "Unbekannt";
 
     await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+  },
+});
+
+/** Seed jahrgangLectures + lecture forums for ALL existing jahrgangs. Idempotent — safe to call on every page load. */
+export const seedAllJahrgangForums = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const profiles = await ctx.db.query("profiles").collect();
+    const jahrgaenge = [...new Set(profiles.map((p) => p.jahrgang).filter(Boolean))] as string[];
+
+    let created = 0;
+    for (const jg of jahrgaenge) {
+      await ensureJahrgangLectures(ctx, jg);
+      const lectures = await ctx.db
+        .query("jahrgangLectures")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
+        .collect();
+
+      // Ensure "Dein Jahrgang" section exists
+      const allgemeinSection = await ctx.db
+        .query("sections")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
+        .first();
+      let sectionId = allgemeinSection?._id;
+      if (!sectionId) {
+        const now = Date.now();
+        sectionId = await ctx.db.insert("sections", {
+          name: "Dein Jahrgang",
+          description: "Jahrgangsspezifische Foren (Allgemein, Vorlesungen, Gruppen)",
+          accessRule: "all",
+          displayOrder: 1,
+          createdAt: now,
+        });
+      }
+
+      // Create lecture forums for ALL semesters
+      for (const lecture of lectures) {
+        const forumName = `${lecture.lectureName} (${jg})`;
+        const existing = await ctx.db
+          .query("forums")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((q: any) => q.eq(q.field("name"), forumName))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+          .first();
+        if (existing) {
+          if (!existing.sectionId && sectionId) {
+            await ctx.db.patch(existing._id, { sectionId });
+          }
+          continue;
+        }
+        const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+        await ctx.db.insert("forums", {
+          name: forumName,
+          description: `${lecture.lectureName} – Semester ${lecture.semesterNumber} (${jg})`,
+          visibility: "public",
+          jahrgang: jg,
+          vorlesung: lecture.lectureName,
+          inviteCode: code,
+          isLectureForum: true,
+          semesterNumber: lecture.semesterNumber,
+          sectionId,
+          createdAt: Date.now(),
+        });
+        created++;
+      }
+
+      // Ensure "Allgemein" forum for this jahrgang
+      const allgName = "Allgemein";
+      const allgExisting = await ctx.db
+        .query("forums")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((q: any) => q.eq(q.field("name"), allgName))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+        .first();
+      if (!allgExisting) {
+        const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+        await ctx.db.insert("forums", {
+          name: allgName,
+          description: `Allgemeiner Austausch für Jahrgang ${jg}`,
+          visibility: "public",
+          jahrgang: jg,
+          inviteCode: code,
+          sectionId,
+          createdAt: Date.now(),
+        });
+        created++;
+      } else if (!allgExisting.sectionId && sectionId) {
+        await ctx.db.patch(allgExisting._id, { sectionId });
+      }
+    }
+
+    return { created, jahrgaenge: jahrgaenge.length };
   },
 });
 

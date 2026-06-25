@@ -108,6 +108,43 @@ export const inviteToForum = mutation({
   },
 });
 
+export const inviteJahrgangToForum = mutation({
+  args: {
+    forumId: v.id("forums"),
+    forumName: v.string(),
+    jahrgang: v.string(),
+    fromName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const jg = args.jahrgang.toUpperCase();
+    const profiles = await ctx.db
+      .query("profiles")
+      .withIndex("by_jahrgang", (q) => q.eq("jahrgang", jg))
+      .collect();
+
+    const results: string[] = [];
+    for (const p of profiles) {
+      if (p.userId === identity.subject) continue;
+      const id = await ctx.db.insert("notifications", {
+        type: "forum_invite",
+        recipientId: p.userId,
+        recipientName: p.displayName || p.userId,
+        fromId: identity.subject,
+        fromName: args.fromName,
+        title: args.forumName,
+        forumId: args.forumId,
+        message: `${args.fromName} hat dich ins Forum „${args.forumName}“ eingeladen.`,
+        status: "pending",
+        createdAt: Date.now(),
+      });
+      results.push(id);
+    }
+    return results;
+  },
+});
+
 export const inviteToDeadline = mutation({
   args: {
     deadlineId: v.id("deadlines"),

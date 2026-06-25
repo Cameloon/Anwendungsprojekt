@@ -133,6 +133,10 @@ vi.mock("../../convex/_generated/api", () => ({
     notifications: {
       inviteToDeadline: "notifications.inviteToDeadline",
     },
+    sections: {
+      list: "sections.list",
+      seedDefaultSections: "sections.seedDefaultSections",
+    },
   },
 }));
 
@@ -153,6 +157,7 @@ vi.mock("convex/react", async () => {
       if (query === "deadlines.listForUser") return snapshot.deadlines;
       if (query === "semesterLectures.getLecturesForMyJahrgang") return snapshot.lectures;
       if (query === "profiles.listSameJahrgang") return snapshot.people;
+      if (query === "sections.list") return [];
       return [];
     },
     useMutation: (mutation: string) => {

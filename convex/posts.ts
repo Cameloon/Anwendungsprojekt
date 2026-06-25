@@ -163,8 +163,10 @@ export const create = mutation({
     ),
     sketch: v.optional(v.string()),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedDeadlineIds: v.optional(v.array(v.id("deadlines"))),
     source: v.optional(v.string()),
     taskId: v.optional(v.string()),
+    deadlineId: v.optional(v.id("deadlines")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -204,8 +206,10 @@ export const create = mutation({
       visibility: args.visibility,
       sketch: args.sketch,
       linkedScriptIds: args.linkedScriptIds,
+      linkedDeadlineIds: args.linkedDeadlineIds,
       source: args.source,
       taskId: args.taskId,
+      deadlineId: args.deadlineId,
       createdAt: now,
       updatedAt: now,
     });
@@ -232,6 +236,7 @@ export const update = mutation({
     ),
     sketch: v.optional(v.string()),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
+    linkedDeadlineIds: v.optional(v.array(v.id("deadlines"))),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -255,6 +260,8 @@ export const update = mutation({
     if (args.sketch !== undefined) patch.sketch = args.sketch;
     if (args.linkedScriptIds !== undefined)
       patch.linkedScriptIds = args.linkedScriptIds;
+    if (args.linkedDeadlineIds !== undefined)
+      patch.linkedDeadlineIds = args.linkedDeadlineIds;
 
     await ctx.db.patch(args.postId, patch);
 
@@ -544,5 +551,75 @@ export const getModerationLog = query({
       .withIndex("by_post", (q) => q.eq("postId", args.postId))
       .order("desc")
       .collect();
+  },
+});
+
+// ─── Post Files ───
+
+export const generatePostUploadUrl = mutation({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const attachPostFile = mutation({
+  args: {
+    postId: v.id("posts"),
+    name: v.string(),
+    storageId: v.id("_storage"),
+    fileType: v.string(),
+    fileSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    await ctx.db.insert("postFiles", {
+      postId: args.postId,
+      name: args.name,
+      storageId: args.storageId,
+      fileType: args.fileType,
+      fileSize: args.fileSize,
+      uploadedBy: identity.subject,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const getPostFiles = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const files = await ctx.db
+      .query("postFiles")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+
+    return await Promise.all(
+      files.map(async (f) => ({
+        ...f,
+        url: await ctx.storage.getUrl(f.storageId),
+      })),
+    );
+  },
+});
+
+export const deletePostFile = mutation({
+  args: { fileId: v.id("postFiles") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const file = await ctx.db.get(args.fileId);
+    if (!file) throw new Error("File not found");
+    if (file.uploadedBy !== identity.subject)
+      throw new Error("Not authorized");
+
+    await ctx.storage.delete(file.storageId);
+    await ctx.db.delete(args.fileId);
   },
 });

@@ -15,6 +15,16 @@ async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, 
     .first();
 
   if (existing) {
+    if (!existing.sectionId) {
+      const jahrgangSection = await ctx.db
+        .query("sections")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
+        .first();
+      if (jahrgangSection) {
+        await ctx.db.patch(existing._id, { sectionId: jahrgangSection._id });
+      }
+    }
     const isMember = await ctx.db
       .query("forumMembers")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +43,12 @@ async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, 
     return;
   }
 
+  const jahrgangSection = await ctx.db
+    .query("sections")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
+    .first();
+
   const code = Math.random().toString(36).slice(2, 8).toUpperCase();
   const forumId = await ctx.db.insert("forums", {
     name: "Allgemein",
@@ -40,6 +56,7 @@ async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, 
     visibility: "public",
     inviteCode: code,
     jahrgang: jg,
+    sectionId: jahrgangSection?._id,
     createdAt: Date.now(),
   });
 
