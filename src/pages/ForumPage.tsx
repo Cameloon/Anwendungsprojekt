@@ -870,9 +870,9 @@ function ForumPageLayout({
     const visibleSec = expanded ? filteredSec : filteredSec.slice(0, 4);
 
     return (
-      <div className="glass-card p-4">
+      <>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-1">
             {icon} {title}
           </p>
         </div>
@@ -927,7 +927,7 @@ function ForumPageLayout({
             {expanded ? "Weniger anzeigen" : `${filteredSec.length - 4} weitere anzeigen`}
           </button>
         )}
-      </div>
+      </>
     );
   };
 
@@ -984,40 +984,6 @@ function ForumPageLayout({
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
             {/* Sidebar */}
             <aside className="lg:sticky lg:top-24 lg:self-start space-y-4">
-              {/* Header: actions */}
-              <div className="glass-card p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-semibold text-sm">Foren</h3>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setJoinOpen(true)} title="Privatem Forum beitreten">
-                      <LogIn className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setCreateOpen(true)} title="Neues Forum erstellen">
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                {isAdmin && (
-                  <div className="mt-3">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
-                      <Shield className="h-3 w-3" /> Admin: Jahrgang filtern
-                    </p>
-                    <Select value={adminViewJahrgang} onValueChange={setAdminViewJahrgang}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Alle Jahrgänge" />
-                      </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Alle Jahrgänge</SelectItem>
-                      {JAHRGAENGE.map((jg) => (
-                        <SelectItem key={jg} value={jg}>{jg}</SelectItem>
-                      ))}
-                    </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-
-              {/* Section cards */}
               {(() => {
                 const sectionMap = new Map<string, FForumItem[]>();
                 const noSection: FForumItem[] = [];
@@ -1037,38 +1003,65 @@ function ForumPageLayout({
                 const sziSection = sections.find((s) => s.name === "SZI");
                 const connectSection = sections.find((s) => s.name === "Campus");
 
-                const renderSectionCard = (
-                  title: string,
-                  icon: React.ReactNode,
-                  sectionId: string | undefined,
-                  extraForums?: FForumItem[]
-                ) => {
-                  const secForums = [...(sectionId ? sectionMap.get(sectionId) || [] : []), ...(extraForums || [])];
-
-                  return (
-                    <SectionCard title={title} icon={icon} forums={secForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
-                  );
-                };
-
                 // Private forums visible to user (exclude ones already in a section to avoid duplicates)
                 const userPrivateForums = privateForums.filter(
                   (f) => (f.members.some((m) => m.userId === me) || isAdmin) && !f.sectionId
                 );
 
+                const sectionsDef = [
+                  { title: myJahrgang ? `Jahrgang ${myJahrgang}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myJahrgangSection?._id, extra: userPrivateForums },
+                  { title: "SZI", icon: <Hash className="h-3.5 w-3.5" />, sectionId: sziSection?._id },
+                  { title: "Campus", icon: <Hash className="h-3.5 w-3.5" />, sectionId: connectSection?._id },
+                ];
+
                 return (
-                  <>
-                    {renderSectionCard("Dein Jahrgang", <Hash className="h-3.5 w-3.5" />, myJahrgangSection?._id, userPrivateForums)}
-                    {renderSectionCard("SZI", <Hash className="h-3.5 w-3.5" />, sziSection?._id)}
-                    {renderSectionCard("Campus", <Hash className="h-3.5 w-3.5" />, connectSection?._id)}
+                  <div className="glass-card p-4 space-y-0">
+                    {/* Header: actions */}
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-heading font-semibold text-sm">Foren</h3>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setJoinOpen(true)} title="Privatem Forum beitreten">
+                          <LogIn className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setCreateOpen(true)} title="Neues Forum erstellen">
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    {isAdmin && (
+                      <div className="mb-3">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
+                          <Shield className="h-3 w-3" /> Admin: Jahrgang filtern
+                        </p>
+                        <Select value={adminViewJahrgang} onValueChange={setAdminViewJahrgang}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Alle Jahrgänge" />
+                          </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">Alle Jahrgänge</SelectItem>
+                          {JAHRGAENGE.map((jg) => (
+                            <SelectItem key={jg} value={jg}>{jg}</SelectItem>
+                          ))}
+                        </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {sectionsDef.map((s, i) => (
+                      <div key={s.title} className={i === 0 ? "mt-10" : ""}>
+                        {i > 0 && <hr className="border-t border-border my-3" />}
+                        <SectionCard title={s.title} icon={s.icon} forums={[...(s.sectionId ? sectionMap.get(s.sectionId) || [] : []), ...(s.extra || [])]} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                      </div>
+                    ))}
                     {noSection.length > 0 && (
-                      <div className="glass-card p-4">
+                      <div>
+                        <hr className="border-t border-border my-3" />
                         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Weitere</p>
                         <div className="space-y-0.5">
                           {noSection.map((f) => (<ForumItem key={f.id} f={f} />))}
                         </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 );
               })()}
 
@@ -1078,7 +1071,9 @@ function ForumPageLayout({
                   (f) => f.archivedByMe
                 );
                 return (
-                  <SectionCard title="Archiv" icon={<Archive className="h-3.5 w-3.5" />} forums={archivedForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                  <div className="glass-card p-4">
+                    <SectionCard title="Archiv" icon={<Archive className="h-3.5 w-3.5" />} forums={archivedForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                  </div>
                 );
               })()}
 
