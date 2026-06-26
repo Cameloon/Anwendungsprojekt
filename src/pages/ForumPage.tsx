@@ -1035,7 +1035,7 @@ function ForumPageLayout({
 
                 const myJahrgangSection = sections.find((s) => s.name === "Dein Jahrgang");
                 const sziSection = sections.find((s) => s.name === "SZI");
-                const connectSection = sections.find((s) => s.name === "Connect");
+                const connectSection = sections.find((s) => s.name === "Campus");
 
                 const renderSectionCard = (
                   title: string,
@@ -1059,7 +1059,7 @@ function ForumPageLayout({
                   <>
                     {renderSectionCard("Dein Jahrgang", <Hash className="h-3.5 w-3.5" />, myJahrgangSection?._id, userPrivateForums)}
                     {renderSectionCard("SZI", <Hash className="h-3.5 w-3.5" />, sziSection?._id)}
-                    {renderSectionCard("Connect", <Hash className="h-3.5 w-3.5" />, connectSection?._id)}
+                    {renderSectionCard("Campus", <Hash className="h-3.5 w-3.5" />, connectSection?._id)}
                     {noSection.length > 0 && (
                       <div className="glass-card p-4">
                         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Weitere</p>
@@ -1494,7 +1494,7 @@ function ForumPageLayout({
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">Sektion auswählen</option>
-                {sections.filter((s) => ["Dein Jahrgang", "SZI", "Connect"].includes(s.name)).map((s) => (
+                {sections.filter((s) => ["Dein Jahrgang", "SZI", "Campus"].includes(s.name)).map((s) => (
                   <option key={s._id} value={s._id}>{s.name}</option>
                 ))}
               </select>

@@ -124,7 +124,7 @@ export const seedDefaultSections = mutation({
     const defaults = [
       { name: "Dein Jahrgang", description: "Jahrgangsspezifische Foren (Allgemein, Vorlesungen, Gruppen)", accessRule: "all", displayOrder: 1 },
       { name: "SZI", description: "Studienzentrum Informatik – für TIF und WIF Studiengänge", accessRule: "tif_wif", displayOrder: 2 },
-      { name: "Connect", description: "Austausch für alle Studierenden – unabhängig vom Kurs", accessRule: "all", displayOrder: 3 },
+      { name: "Campus", description: "Austausch für alle Studierenden – unabhängig vom Kurs", accessRule: "all", displayOrder: 3 },
       { name: "Archiv", description: "Archivierte Foren und Gruppen", accessRule: "all", displayOrder: 99 },
     ];
 

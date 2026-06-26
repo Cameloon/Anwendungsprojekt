@@ -588,7 +588,7 @@ export const ensureDefaultSZIAndConnectForums = mutation({
 
     const sections = await ctx.db.query("sections").collect();
     const sziSection = sections.find((s) => s.name === "SZI");
-    const connectSection = sections.find((s) => s.name === "Connect");
+    const connectSection = sections.find((s) => s.name === "Campus");
 
     const now = Date.now();
 
@@ -612,7 +612,7 @@ export const ensureDefaultSZIAndConnectForums = mutation({
     };
 
     await ensureForum("Allgemein", "Allgemeiner Austausch rund ums Studium am Studienzentrum", sziSection?._id);
-    await ensureForum("Allgemein", "Allgemeiner Austausch für alle Studierenden", connectSection?._id);
+    await ensureForum("Connect", "Austausch und Vernetzung für alle Studierenden", connectSection?._id);
   },
 });
 
