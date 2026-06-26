@@ -1017,7 +1017,7 @@ function ForumPageLayout({
                 );
 
                 const sectionsDef = [
-                  { title: myJahrgang ? `Jahrgang ${myJahrgang}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myJahrgangSection?._id, extra: userPrivateForums },
+                  { title: myJahrgang ? `Kurs ${myJahrgang}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myJahrgangSection?._id, extra: userPrivateForums },
                   { title: "SZI", icon: <Hash className="h-3.5 w-3.5" />, sectionId: sziSection?._id },
                   { title: "Campus", icon: <Hash className="h-3.5 w-3.5" />, sectionId: connectSection?._id },
                 ];
