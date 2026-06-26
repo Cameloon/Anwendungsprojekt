@@ -1,3 +1,6 @@
+// Render-Test für AdminDashboardPage.
+// Prüft, dass alle zentralen Admin-Bereiche (Nutzerfreischaltungen, Moderationsprotokoll,
+// Vorlesungsverwaltung, Upload-Regeln) im gerenderten HTML sichtbar sind.
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";

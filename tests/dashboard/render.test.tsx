@@ -1,3 +1,6 @@
+// Render-Tests für DashboardPage.
+// Prüft, dass aktuelle Forum-Beiträge und Skripte als Widgets angezeigt werden
+// und die Navigationslinks auf die richtigen Zielseiten verweisen.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";

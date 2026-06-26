@@ -1,4 +1,7 @@
 /// <reference types="@testing-library/jest-dom" />
+// Filter-Tests für DashboardPage.
+// Prüft, dass der Vorlesungs-Filter Forum-Beiträge und Deadlines korrekt einschränkt —
+// nur Einträge der gewählten Vorlesung werden angezeigt, alle anderen ausgeblendet.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";

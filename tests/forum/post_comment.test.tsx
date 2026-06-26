@@ -1,3 +1,7 @@
+// Integrations-Tests für den Forum-Beitrags- und Kommentar-Flow.
+// Prüft: Beitrag erstellen → erscheint mit Autor und Tag in der Liste;
+//        Kommentare werden in chronologischer Reihenfolge angezeigt
+//        und der Kommentarzähler aktualisiert sich korrekt.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -161,6 +165,12 @@ vi.mock("../../convex/_generated/api", () => ({
       list: "sections.list",
       seedDefaultSections: "sections.seedDefaultSections",
     },
+    deadlines: {
+      listForUser: "deadlines.listForUser",
+    },
+    postReports: {
+      submit: "postReports.submit",
+    },
   },
 }));
 
@@ -195,6 +205,7 @@ vi.mock("convex/react", async () => {
       if (query === "scripts.listPublic") return [];
       if (query === "profiles.getMine") return null;
       if (query === "sections.list") return [];
+      if (query === "deadlines.listForUser") return [];
 
       return undefined;
     },

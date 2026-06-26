@@ -1,3 +1,6 @@
+// CRUD-Integrationstest für PlannerPage (Terminplaner).
+// Prüft den vollständigen Flow: Termin erstellen → in der Liste sehen →
+// bearbeiten (Titel + Datum ändern) → als erledigt markieren → löschen.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -137,6 +140,12 @@ vi.mock("../../convex/_generated/api", () => ({
       list: "sections.list",
       seedDefaultSections: "sections.seedDefaultSections",
     },
+    scripts: {
+      listVisible: "scripts.listVisible",
+    },
+    groups: {
+      listForUser: "groups.listForUser",
+    },
   },
 }));
 
@@ -264,7 +273,8 @@ const getDeadlineRow = (title: string) => {
 };
 
 const selectLecture = async (lectureName: string) => {
-  const trigger = screen.getByRole("combobox");
+  // PlannerPage has multiple comboboxes (Vorlesung, Skript, Gruppe) — pick the first (Vorlesung)
+  const trigger = screen.getAllByRole("combobox")[0];
   fireEvent.click(trigger);
   fireEvent.click(await screen.findByText(lectureName));
 };

@@ -1,3 +1,7 @@
+// UI-Tests für den Upload-Dialog auf SkriptePage sowie Unit-Tests für validateFileSize.
+// Prüft: Dialog öffnet/schließt sich korrekt; Validierung verhindert leere Submissions;
+//        hochgeladenes Skript erscheint in der Liste mit korrektem Sichtbarkeits-Badge (Öffentlich/Privat);
+//        validateFileSize lehnt Dateien über 25 MB ab.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -101,6 +105,9 @@ vi.mock("../../convex/_generated/api", () => ({
     semesterLectures: {
       getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang",
     },
+    groups: {
+      listForUser: "groups.listForUser",
+    },
   },
 }));
 
@@ -123,6 +130,7 @@ vi.mock("convex/react", async () => {
       const snap = ReactModule.useSyncExternalStore(subscribeScripts, getScriptSnapshot);
       if (query === "scripts.listVisible") return snap.scripts.map((s: any) => ({ ...s, subject: resolveSubject(s.subject) }));
       if (query === "semesterLectures.getLecturesForMyJahrgang") return lectureData;
+      if (query === "groups.listForUser") return [];
       if (query === "sections.list") return [];
       return undefined;
     },
@@ -260,6 +268,102 @@ describe("SkriptePage – Upload-Dialog", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Abbrechen/i }));
     expect(screen.queryByText("Wird nicht gespeichert")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skripte-Suche und Subject-Filter
+// ---------------------------------------------------------------------------
+describe("SkriptePage – Suche und Subject-Filter", () => {
+  // Hilfsfunktion: Skript direkt in den Store laden (kein UI-Upload nötig)
+  const seed = (scripts: Array<{ title: string; subject: string; description: string; visibility?: string }>) => {
+    scriptsStore = scripts.map((s, i) => ({
+      _id: `script-seed-${i}`,
+      _creationTime: Date.now() + i,
+      title: s.title,
+      subject: s.subject,
+      description: s.description ?? "",
+      authorName: "Test Nutzer",
+      authorId: "demo-test-user",
+      pages: 0,
+      type: "Notiz",
+      visibility: s.visibility ?? "public",
+    }));
+    emitScripts();
+  };
+
+  beforeEach(() => {
+    scriptsStore = [];
+    scriptIdx = 0;
+    scriptListeners.clear();
+    scriptSnapshot = { scripts: [] };
+  });
+
+  it("zeigt alle Skripte wenn Suche leer und Filter 'alle'", async () => {
+    seed([
+      { title: "Analysis Zusammenfassung", subject: "Mathematik", description: "" },
+      { title: "OOP Grundlagen", subject: "Informatik", description: "" },
+    ]);
+    const { findByText } = render(<SkriptePage />);
+    expect(await findByText("Analysis Zusammenfassung")).toBeInTheDocument();
+    expect(await findByText("OOP Grundlagen")).toBeInTheDocument();
+  });
+
+  it("filtert nach Suchwort im Titel", async () => {
+    seed([
+      { title: "Analysis Zusammenfassung", subject: "Mathematik", description: "" },
+      { title: "OOP Grundlagen", subject: "Informatik", description: "" },
+    ]);
+    render(<SkriptePage />);
+    fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {
+      target: { value: "Analysis" },
+    });
+    expect(await screen.findByText("Analysis Zusammenfassung")).toBeInTheDocument();
+    expect(screen.queryByText("OOP Grundlagen")).not.toBeInTheDocument();
+  });
+
+  it("findet Skripte über Suchbegriff in der Beschreibung", async () => {
+    seed([
+      { title: "Skript A", subject: "Mathematik", description: "Enthält Integralrechnung" },
+      { title: "Skript B", subject: "Informatik", description: "Objektorientierung" },
+    ]);
+    render(<SkriptePage />);
+    fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {
+      target: { value: "Integralrechnung" },
+    });
+    expect(await screen.findByText("Skript A")).toBeInTheDocument();
+    expect(screen.queryByText("Skript B")).not.toBeInTheDocument();
+  });
+
+  it("Subject-Filter blendet andere Vorlesungen aus", async () => {
+    seed([
+      { title: "Analysis Zusammenfassung", subject: "Webprogrammierung", description: "" },
+      { title: "OOP Grundlagen", subject: "Software Engineering", description: "" },
+    ]);
+    render(<SkriptePage />);
+    // Subject-Filter-Buttons erscheinen sobald Skripte geladen sind
+    const filterBtn = await screen.findByRole("button", { name: /^Webprogrammierung$/i });
+    fireEvent.click(filterBtn);
+    expect(screen.getByText("Analysis Zusammenfassung")).toBeInTheDocument();
+    expect(screen.queryByText("OOP Grundlagen")).not.toBeInTheDocument();
+  });
+
+  it("Suche und Subject-Filter wirken kombiniert (AND-Logik)", async () => {
+    seed([
+      { title: "Analysis Skript", subject: "Webprogrammierung", description: "" },
+      { title: "Analysis Notiz", subject: "Software Engineering", description: "" },
+      { title: "OOP Grundlagen", subject: "Webprogrammierung", description: "" },
+    ]);
+    render(<SkriptePage />);
+    const filterBtn = await screen.findByRole("button", { name: /^Webprogrammierung$/i });
+    fireEvent.click(filterBtn);
+    fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {
+      target: { value: "Analysis" },
+    });
+    // Nur das Skript, das BEIDE Bedingungen erfüllt, ist sichtbar
+    expect(screen.getByText("Analysis Skript")).toBeInTheDocument();
+    expect(screen.queryByText("Analysis Notiz")).not.toBeInTheDocument();
+    expect(screen.queryByText("OOP Grundlagen")).not.toBeInTheDocument();
   });
 });
 

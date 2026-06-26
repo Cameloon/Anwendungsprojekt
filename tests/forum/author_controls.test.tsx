@@ -1,16 +1,6 @@
-/**
- * Forum – Autor-Kontrolle (FA: "Editieren/Löschen nur durch Autor oder Moderator möglich")
- *
- * Diese Tests prüfen, dass Edit- und Löschen-Buttons auf einem Post bzw. Kommentar
- * ausschließlich für den eigenen Autor sichtbar sind.
- *
- * Voraussetzung in PostDetailPage.tsx (noch zu implementieren):
- *   - `authorId` muss im EnrichedPost-Interface vorhanden und aus Convex zurückgegeben werden
- *   - Post: Button mit aria-label="Beitrag bearbeiten" und aria-label="Beitrag löschen"
- *     nur rendern wenn `user.id === post.authorId`
- *   - Kommentar: Button mit aria-label="Kommentar löschen"
- *     nur rendern wenn `user.id === comment.authorId`
- */
+// Autor-Kontroll-Tests für PostDetailPage (FA: Bearbeiten/Löschen nur durch Autor oder Moderator).
+// Prüft: Bearbeiten- und Löschen-Buttons sind nur für den eigenen Autor sichtbar,
+//        fremde Nutzer sehen diese Buttons nicht.
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -146,6 +136,12 @@ vi.mock("../../convex/_generated/api", () => ({
       list: "sections.list",
       seedDefaultSections: "sections.seedDefaultSections",
     },
+    deadlines: {
+      listForUser: "deadlines.listForUser",
+    },
+    postReports: {
+      submit: "postReports.submit",
+    },
   },
 }));
 
@@ -171,6 +167,7 @@ vi.mock("convex/react", async () => {
       if (query === "scripts.listPublic") return [];
       if (query === "profiles.getMine") return null;
       if (query === "sections.list") return [];
+      if (query === "deadlines.listForUser") return [];
 
       return undefined;
     },
@@ -304,7 +301,7 @@ describe("Forum – Autor-Kontrolle: Edit/Delete-Buttons", () => {
     ).not.toBeInTheDocument();
   });
 
-  it.todo("Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht", async () => {
+  it("Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht", async () => {
     const ownComment: PostComment = {
       _id: "comment-own",
       _creationTime: TIME_BASE + 1000,

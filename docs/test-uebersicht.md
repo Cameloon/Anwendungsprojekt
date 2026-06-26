@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-06-23 13:31 UTC -->
+<!-- Letzte Aktualisierung: 2026-06-26 09:20 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 45 | 0 | 6 | 0 |
+| 72 | 0 | 5 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -37,19 +37,13 @@
 - ✅ shows current forum and scripts widgets and links navigate
 - ✅ shows empty-state text when no lectures, posts and scripts exist
 
-## tests/planner/crud.test.tsx
-
-### Planner CRUD + toggle flow
-
-- ✅ creates, edits, toggles and deletes an appointment
-
 ## tests/forum/author_controls.test.tsx
 
 ### Forum – Autor-Kontrolle: Edit/Delete-Buttons
 
 - 🔜 Autor sieht Bearbeiten- und Löschen-Buttons am eigenen Beitrag
 - ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
-- 🔜 Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
+- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
 - 🔜 Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
 
 ## tests/forum/post_comment.test.tsx
@@ -58,6 +52,12 @@
 
 - ✅ creates a post and shows it with author and tag in the forum list
 - ✅ shows post detail with author, tag and content; adds comments in chronological order
+
+## tests/planner/crud.test.tsx
+
+### Planner CRUD + toggle flow
+
+- ✅ creates, edits, toggles and deletes an appointment
 
 ## tests/skripte/upload_ui.test.tsx
 
@@ -73,12 +73,44 @@
 - ✅ privates Skript zeigt Privat-Badge in der Liste
 - ✅ Abbrechen schließt das Formular ohne Eintrag hinzuzufügen
 
+### SkriptePage – Suche und Subject-Filter
+
+- ✅ zeigt alle Skripte wenn Suche leer und Filter 'alle'
+- ✅ filtert nach Suchwort im Titel
+- ✅ findet Skripte über Suchbegriff in der Beschreibung
+- ✅ Subject-Filter blendet andere Vorlesungen aus
+- ✅ Suche und Subject-Filter wirken kombiniert (AND-Logik)
+
 ### validateFileSize
 
 - ✅ validateFileSize(0 Bytes) → ""
-- ✅ validateFileSize(26214400 Bytes) → ""
-- ✅ validateFileSize(26214401 Bytes) → "Datei darf maximal 25 MB groß sein."
+- ✅ validateFileSize(29360128 Bytes) → ""
+- ✅ validateFileSize(29360129 Bytes) → "Datei darf maximal 25 MB groß sein."
 - ✅ validateFileSize(52428800 Bytes) → "Datei darf maximal 25 MB groß sein."
+
+## tests/unit/demoStore.test.ts
+
+### demoStore.signIn
+
+- ✅ legt einen User in localStorage an
+- ✅ leitet den displayName aus der E-Mail-Adresse ab wenn keiner übergeben wird
+- ✅ verwendet den übergebenen displayName statt der E-Mail
+- ✅ überschreibt ein bestehendes Profil nicht
+
+### demoStore.signOut
+
+- ✅ entfernt den User nach dem Abmelden
+- ✅ lässt das Profil nach dem Abmelden bestehen
+
+### demoStore.updateProfile
+
+- ✅ merged einen Patch auf das bestehende Profil
+- ✅ erstellt ein Basisprofil wenn noch keines existiert
+
+### demoStore Fehlertoleranz
+
+- ✅ getUser() gibt null zurück wenn der localStorage-Eintrag kein gültiges JSON ist
+- ✅ getProfile() gibt null zurück wenn der localStorage-Eintrag kein gültiges JSON ist
 
 ## tests/unit/validation.test.ts
 
@@ -107,6 +139,23 @@
 - ✅ validateMessage("abcde") → ""
 - ✅ validateMessage("  hi  ") → "Mindestens 5 Zeichen."
 - ✅ validateMessage("hello world") → ""
+
+### validateSubject
+
+- ✅ validateSubject("") → "Mindestens 2 Zeichen."
+- ✅ validateSubject("A") → "Mindestens 2 Zeichen."
+- ✅ validateSubject("  ") → "Mindestens 2 Zeichen."
+- ✅ validateSubject("IT") → ""
+- ✅ validateSubject("Informatik") → ""
+
+### validateScriptDescription
+
+- ✅ validateScriptDescription("") → ""
+- ✅ validateScriptDescription("   ") → ""
+- ✅ validateScriptDescription("Kurz") → "Mindestens 10 Zeichen oder leer lassen."
+- ✅ validateScriptDescription("123456789") → "Mindestens 10 Zeichen oder leer lassen."
+- ✅ validateScriptDescription("1234567890") → ""
+- ✅ validateScriptDescription("Eine vollständige Beschreibung des Skripts.") → ""
 
 ### isDeadlineFormValid
 

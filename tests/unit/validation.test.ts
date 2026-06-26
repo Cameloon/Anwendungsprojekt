@@ -1,9 +1,18 @@
+// Unit-Tests für die Validierungsfunktionen in src/lib/validation.ts.
+// Geprüft: validateTitle (Mindest-/Maximallänge, Whitespace-Trimming),
+//          validateDate (Vergangenheitsschutz, Pflichtfeld),
+//          validateMessage (Mindestlänge), isDeadlineFormValid (kombinierte Prüfung),
+//          validateSubject (Pflichtfeld für Skript-Thema),
+//          validateScriptDescription (optionales Feld, Mindestlänge wenn befüllt),
+//          validateFileSize (25-MB-Grenzwert).
 import { describe, it, expect } from "vitest";
 import {
   validateTitle,
   validateDate,
   validateMessage,
   isDeadlineFormValid,
+  validateSubject,
+  validateScriptDescription,
   TITLE_MAX,
 } from "../../src/lib/validation";
 
@@ -53,6 +62,47 @@ describe("validateMessage", () => {
     ["hello world", ""],
   ])("validateMessage(%j) → %j", (input, expected) => {
     expect(validateMessage(input)).toBe(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateSubject
+// ---------------------------------------------------------------------------
+describe("validateSubject", () => {
+  it.each([
+    // Pflichtfeld — Fehler auch bei leerem String (wird on-open validiert)
+    ["", "Mindestens 2 Zeichen."],
+    // 1 Zeichen → zu kurz
+    ["A", "Mindestens 2 Zeichen."],
+    // Nur Whitespace → trim ergibt < 2
+    ["  ", "Mindestens 2 Zeichen."],
+    // Grenzwert 2 Zeichen → gültig
+    ["IT", ""],
+    // Normaler Wert
+    ["Informatik", ""],
+  ])("validateSubject(%j) → %j", (input, expected) => {
+    expect(validateSubject(input)).toBe(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateScriptDescription
+// ---------------------------------------------------------------------------
+describe("validateScriptDescription", () => {
+  it.each([
+    // Leer → ok (Feld ist optional)
+    ["", ""],
+    // Nur Whitespace → trim ergibt 0 → ok
+    ["   ", ""],
+    // 1–9 Zeichen → zu kurz
+    ["Kurz", "Mindestens 10 Zeichen oder leer lassen."],
+    ["123456789", "Mindestens 10 Zeichen oder leer lassen."],
+    // Genau 10 Zeichen → Grenzwert bestanden
+    ["1234567890", ""],
+    // Ausführliche Beschreibung → gültig
+    ["Eine vollständige Beschreibung des Skripts.", ""],
+  ])("validateScriptDescription(%j) → %j", (input, expected) => {
+    expect(validateScriptDescription(input)).toBe(expected);
   });
 });
 
