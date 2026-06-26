@@ -517,7 +517,7 @@ function PlannerLayout({
   selectInvitee,
   highlightIndex,
   setHighlightIndex,
-   openDeadline,
+  openDeadline,
   displayName,
   me,
   scripts,
@@ -665,9 +665,8 @@ function PlannerLayout({
                       <button
                         key={c}
                         onClick={() => setCategory(c)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                          category === c ? categoryColors[c] : "text-muted-foreground bg-secondary border-transparent"
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${category === c ? categoryColors[c] : "text-muted-foreground bg-secondary border-transparent"
+                          }`}
                       >
                         {categoryLabels[c]}
                       </button>
@@ -675,7 +674,7 @@ function PlannerLayout({
                   </div>
                   <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Vorlesung (optional)</p>
+                    <p className="text-xs text-muted-foreground mb-2">Vorlesung </p>
                     <Select value={vorlesung} onValueChange={setVorlesung}>
                       <SelectTrigger>
                         <SelectValue placeholder="Vorlesung wählen" />
@@ -752,17 +751,15 @@ function PlannerLayout({
                     <div className="flex gap-2">
                       <button
                         onClick={() => setVisibility("public")}
-                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                          visibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
-                        }`}
+                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${visibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                          }`}
                       >
                         <Globe className="h-4 w-4" /> Öffentlich
                       </button>
                       <button
                         onClick={() => setVisibility("private")}
-                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                          visibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
-                        }`}
+                        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${visibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                          }`}
                       >
                         <Lock className="h-4 w-4" /> Privat
                       </button>
@@ -774,65 +771,65 @@ function PlannerLayout({
                       <p className="text-xs text-muted-foreground italic">Alle Personen deines Jahrgangs werden automatisch eingeladen.</p>
                     ) : (
                       <div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {selectedInvitees.map((s) => (
-                          <Badge key={s.userId} variant="secondary" className="gap-1 pr-1">
-                            {s.displayName}
-                            <button
-                              onClick={() => setSelectedInvitees((prev) => prev.filter((x) => x.userId !== s.userId))}
-                              className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {selectedInvitees.map((s) => (
+                            <Badge key={s.userId} variant="secondary" className="gap-1 pr-1">
+                              {s.displayName}
+                              <button
+                                onClick={() => setSelectedInvitees((prev) => prev.filter((x) => x.userId !== s.userId))}
+                                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="relative">
+                          <Input
+                            placeholder="Namen suchen…"
+                            value={inviteeSearch}
+                            onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
+                            onFocus={() => setInviteeSearch((v) => v)}
+                            onBlur={() => setTimeout(() => setInviteeSearch(""), 200)}
+                            onKeyDown={handleInviteeKeyDown}
+                            autoComplete="off"
+                          />
+                          {inviteeSearch && (() => {
+                            const filtered = (jahrgangPeople).filter(
+                              (p: { userId: string; displayName: string }) =>
+                                p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
+                                !selectedInvitees.some((s) => s.userId === p.userId),
+                            );
+                            const shown = filtered.slice(0, 8);
+                            const safeIndex = Math.min(highlightIndex, shown.length - 1);
+                            return (
+                              <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-36 overflow-y-auto">
+                                {shown.length === 0 ? (
+                                  <p className="px-3 py-2 text-xs text-muted-foreground">Keine Personen gefunden</p>
+                                ) : (
+                                  shown.map((p, i) => (
+                                    <button
+                                      key={p.userId}
+                                      type="button"
+                                      className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${i === safeIndex ? "bg-accent" : "hover:bg-accent"}`}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        selectInvitee(p);
+                                      }}
+                                      ref={i === safeIndex ? (el) => { if (el) el.scrollIntoView({ block: "nearest" }); } : undefined}
+                                    >
+                                      {p.displayName}
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
-                      <div className="relative">
-                        <Input
-                          placeholder="Namen suchen…"
-                          value={inviteeSearch}
-                          onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
-                          onFocus={() => setInviteeSearch((v) => v)}
-                          onBlur={() => setTimeout(() => setInviteeSearch(""), 200)}
-                          onKeyDown={handleInviteeKeyDown}
-                          autoComplete="off"
-                        />
-                        {inviteeSearch && (() => {
-                          const filtered = (jahrgangPeople).filter(
-                            (p: { userId: string; displayName: string }) =>
-                              p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
-                              !selectedInvitees.some((s) => s.userId === p.userId),
-                          );
-                          const shown = filtered.slice(0, 8);
-                          const safeIndex = Math.min(highlightIndex, shown.length - 1);
-                          return (
-                            <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-36 overflow-y-auto">
-                              {shown.length === 0 ? (
-                                <p className="px-3 py-2 text-xs text-muted-foreground">Keine Personen gefunden</p>
-                              ) : (
-                                shown.map((p, i) => (
-                                  <button
-                                    key={p.userId}
-                                    type="button"
-                                    className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${i === safeIndex ? "bg-accent" : "hover:bg-accent"}`}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      selectInvitee(p);
-                                    }}
-                                    ref={i === safeIndex ? (el) => { if (el) el.scrollIntoView({ block: "nearest" }); } : undefined}
-                                  >
-                                    {p.displayName}
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          );
-                        })()}
-                    </div>
+                    )}
                   </div>
-                )}
-                </div>
-                <div className="flex gap-2 justify-end pt-2">
+                  <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={resetForm}>Abbrechen</Button>
                     <Button onClick={submitDeadline}>{editingId ? "Aktualisieren" : "Erstellen"}</Button>
                   </div>
@@ -852,9 +849,8 @@ function PlannerLayout({
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${
-                    filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                    }`}
                 >
                   {f === "dringend" ? "Dringend" : f === "offen" ? "Offen" : f === "erledigt" ? "Erledigt" : "Alle"}
                 </button>
@@ -871,321 +867,321 @@ function PlannerLayout({
               const archivedFiltered = filtered.filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo);
               return (
                 <>
-            {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
-              <div className="glass-card p-10 text-center">
-                <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">Keine Termine gefunden.</p>
-              </div>
-            ) : null}
-            {activeFiltered.map((d) => {
-              const diff = new Date(d.date).getTime() - Date.now();
-              const overdue = diff < 0 && !d.done;
-              const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
-              const messageCount = d.messages?.length ?? 0;
-              const fileCount = d.attachments?.length ?? 0;
-              const isOwn = d.ownerId === me;
-              return (
-                <motion.div
-                  key={d.id}
-                  layout
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`glass-card p-4 flex items-center gap-3 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
-                >
-                  {isOwn ? (
-                    <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                      {d.done ? (
-                        <CheckCircle2 className="h-5 w-5 text-success" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                      )}
-                    </button>
-                  ) : d.invitees?.includes(me) ? (
-                    <div className="flex gap-1 shrink-0">
-                      <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
-                        <Check className="h-3 w-3" /> Annehmen
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
-                        <X className="h-3 w-3" /> Ablehnen
-                      </Button>
+                  {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
+                    <div className="glass-card p-10 text-center">
+                      <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                      <p className="text-muted-foreground">Keine Termine gefunden.</p>
                     </div>
-                  ) : (
-                    <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                      {d.done ? (
-                        <CheckCircle2 className="h-5 w-5 text-success" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                      )}
-                    </button>
+                  ) : null}
+                  {activeFiltered.map((d) => {
+                    const diff = new Date(d.date).getTime() - Date.now();
+                    const overdue = diff < 0 && !d.done;
+                    const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
+                    const messageCount = d.messages?.length ?? 0;
+                    const fileCount = d.attachments?.length ?? 0;
+                    const isOwn = d.ownerId === me;
+                    return (
+                      <motion.div
+                        key={d.id}
+                        layout
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className={`glass-card p-4 flex items-center gap-3 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
+                      >
+                        {isOwn ? (
+                          <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                            {d.done ? (
+                              <CheckCircle2 className="h-5 w-5 text-success" />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                            )}
+                          </button>
+                        ) : d.invitees?.includes(me) ? (
+                          <div className="flex gap-1 shrink-0">
+                            <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
+                              <Check className="h-3 w-3" /> Annehmen
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
+                              <X className="h-3 w-3" /> Ablehnen
+                            </Button>
+                          </div>
+                        ) : (
+                          <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                            {d.done ? (
+                              <CheckCircle2 className="h-5 w-5 text-success" />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                            )}
+                          </button>
+                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                            {categoryLabels[d.category]}
+                          </span>
+                          {d.vorlesung && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                              <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                              {d.vorlesung}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
+                              {d.title}
+                            </p>
+                            {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
+                            {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                            </span>
+                            {d.visibility === "private" && (
+                              <span className="inline-flex items-center gap-1">
+                                <Lock className="h-3 w-3" /> Privat
+                              </span>
+                            )}
+                            {d.invitees.length > 0 && (
+                              <span>{d.invitees.length} Eingeladene</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {fileCount > 0 && (
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                              <Paperclip className="h-3 w-3" /> {fileCount}
+                            </span>
+                          )}
+                          {messageCount > 0 && (
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                              <MessageSquare className="h-3 w-3" /> {messageCount}
+                            </span>
+                          )}
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                          {isOwn || d.visibility === "public" ? (
+                            <>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {doneFiltered.length > 0 && (
+                    <>
+                      <div className="relative flex items-center pt-6 pb-1">
+                        <div className="flex-grow border-t border-border/30" />
+                        <button onClick={() => setDoneOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
+                          <CheckCircle2 className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Erledigt</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${doneOpen ? "" : "-rotate-90"}`} />
+                        </button>
+                        <div className="flex-grow border-t border-border/30" />
+                      </div>
+                      {doneOpen && doneFiltered.map((d) => {
+                        const messageCount = d.messages?.length ?? 0;
+                        const fileCount = d.attachments?.length ?? 0;
+                        const isOwn = d.ownerId === me;
+                        return (
+                          <motion.div
+                            key={d.id}
+                            layout
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="glass-card p-4 flex items-center gap-3 bg-muted/70 opacity-50"
+                          >
+                            {isOwn ? (
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                <CheckCircle2 className="h-5 w-5 text-success" />
+                              </button>
+                            ) : (
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                <CheckCircle2 className="h-5 w-5 text-success" />
+                              </button>
+                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                {categoryLabels[d.category]}
+                              </span>
+                              {d.vorlesung && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                  <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                  {d.vorlesung}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                </span>
+                                {d.visibility === "private" && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Lock className="h-3 w-3" /> Privat
+                                  </span>
+                                )}
+                                {d.invitees.length > 0 && (
+                                  <span>{d.invitees.length} Eingeladene</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {fileCount > 0 && (
+                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                  <Paperclip className="h-3 w-3" /> {fileCount}
+                                </span>
+                              )}
+                              {messageCount > 0 && (
+                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                  <MessageSquare className="h-3 w-3" /> {messageCount}
+                                </span>
+                              )}
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              {isOwn || d.visibility === "public" ? (
+                                <>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : null}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </>
                   )}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                      {categoryLabels[d.category]}
-                    </span>
-                    {d.vorlesung && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                        <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                        {d.vorlesung}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
-                        {d.title}
-                      </p>
-                      {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
-                      {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                      </span>
-                      {d.visibility === "private" && (
-                        <span className="inline-flex items-center gap-1">
-                          <Lock className="h-3 w-3" /> Privat
-                        </span>
-                      )}
-                      {d.invitees.length > 0 && (
-                        <span>{d.invitees.length} Eingeladene</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {fileCount > 0 && (
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                        <Paperclip className="h-3 w-3" /> {fileCount}
-                      </span>
-                    )}
-                    {messageCount > 0 && (
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                        <MessageSquare className="h-3 w-3" /> {messageCount}
-                      </span>
-                    )}
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    {isOwn || d.visibility === "public" ? (
-                      <>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                </motion.div>
-              );
-            })}
-            {doneFiltered.length > 0 && (
-              <>
-                <div className="relative flex items-center pt-6 pb-1">
-                  <div className="flex-grow border-t border-border/30" />
-                  <button onClick={() => setDoneOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
-                    <CheckCircle2 className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
-                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Erledigt</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${doneOpen ? "" : "-rotate-90"}`} />
-                  </button>
-                  <div className="flex-grow border-t border-border/30" />
-                </div>
-                {doneOpen && doneFiltered.map((d) => {
-                  const messageCount = d.messages?.length ?? 0;
-                  const fileCount = d.attachments?.length ?? 0;
-                  const isOwn = d.ownerId === me;
-                  return (
-                    <motion.div
-                      key={d.id}
-                      layout
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="glass-card p-4 flex items-center gap-3 bg-muted/70 opacity-50"
-                    >
-                      {isOwn ? (
-                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                          <CheckCircle2 className="h-5 w-5 text-success" />
+                  {archivedFiltered.length > 0 && (
+                    <>
+                      <div className="relative flex items-center pt-6 pb-1">
+                        <div className="flex-grow border-t border-border/30" />
+                        <button onClick={() => setArchiveOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
+                          <Archive className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Archiv (&gt; 30 Tage)</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${archiveOpen ? "" : "-rotate-90"}`} />
                         </button>
-                      ) : (
-                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        </button>
-                      )}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                          {categoryLabels[d.category]}
-                        </span>
-                        {d.vorlesung && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                            <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                            {d.vorlesung}
-                          </span>
-                        )}
+                        <div className="flex-grow border-t border-border/30" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                          </span>
-                          {d.visibility === "private" && (
-                            <span className="inline-flex items-center gap-1">
-                              <Lock className="h-3 w-3" /> Privat
-                            </span>
-                          )}
-                          {d.invitees.length > 0 && (
-                            <span>{d.invitees.length} Eingeladene</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {fileCount > 0 && (
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                            <Paperclip className="h-3 w-3" /> {fileCount}
-                          </span>
-                        )}
-                        {messageCount > 0 && (
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                            <MessageSquare className="h-3 w-3" /> {messageCount}
-                          </span>
-                        )}
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                        {isOwn || d.visibility === "public" ? (
-                          <>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </>
-            )}
-            {archivedFiltered.length > 0 && (
-              <>
-                <div className="relative flex items-center pt-6 pb-1">
-                  <div className="flex-grow border-t border-border/30" />
-                  <button onClick={() => setArchiveOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
-                    <Archive className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
-                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Archiv (&gt; 30 Tage)</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${archiveOpen ? "" : "-rotate-90"}`} />
-                  </button>
-                  <div className="flex-grow border-t border-border/30" />
-                </div>
-                {archiveOpen && archivedFiltered.map((d) => {
-                  const diff = new Date(d.date).getTime() - Date.now();
-                  const overdue = diff < 0 && !d.done;
-                  const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
-                  const messageCount = d.messages?.length ?? 0;
-                  const fileCount = d.attachments?.length ?? 0;
-                  const isOwn = d.ownerId === me;
-                  return (
-                    <motion.div
-                      key={d.id}
-                      layout
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="glass-card p-4 flex items-center gap-3 opacity-60"
-                    >
-                      {isOwn ? (
-                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                          {d.done ? (
-                            <CheckCircle2 className="h-5 w-5 text-success" />
-                          ) : (
-                            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                          )}
-                        </button>
-                      ) : d.invitees?.includes(me) ? (
-                        <div className="flex gap-1 shrink-0">
-                          <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
-                            <Check className="h-3 w-3" /> Annehmen
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
-                            <X className="h-3 w-3" /> Ablehnen
-                          </Button>
-                        </div>
-                      ) : (
-                        <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                          {d.done ? (
-                            <CheckCircle2 className="h-5 w-5 text-success" />
-                          ) : (
-                            <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                          )}
-                        </button>
-                      )}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                          {categoryLabels[d.category]}
-                        </span>
-                        {d.vorlesung && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                            <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                            {d.vorlesung}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
-                            {d.title}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                          </span>
-                          {d.visibility === "private" && (
-                            <span className="inline-flex items-center gap-1">
-                              <Lock className="h-3 w-3" /> Privat
-                            </span>
-                          )}
-                          {d.invitees.length > 0 && (
-                            <span>{d.invitees.length} Eingeladene</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {fileCount > 0 && (
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                            <Paperclip className="h-3 w-3" /> {fileCount}
-                          </span>
-                        )}
-                        {messageCount > 0 && (
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                            <MessageSquare className="h-3 w-3" /> {messageCount}
-                          </span>
-                        )}
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                        {isOwn || d.visibility === "public" ? (
-                          <>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </>
-            )}
+                      {archiveOpen && archivedFiltered.map((d) => {
+                        const diff = new Date(d.date).getTime() - Date.now();
+                        const overdue = diff < 0 && !d.done;
+                        const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
+                        const messageCount = d.messages?.length ?? 0;
+                        const fileCount = d.attachments?.length ?? 0;
+                        const isOwn = d.ownerId === me;
+                        return (
+                          <motion.div
+                            key={d.id}
+                            layout
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="glass-card p-4 flex items-center gap-3 opacity-60"
+                          >
+                            {isOwn ? (
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                {d.done ? (
+                                  <CheckCircle2 className="h-5 w-5 text-success" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                )}
+                              </button>
+                            ) : d.invitees?.includes(me) ? (
+                              <div className="flex gap-1 shrink-0">
+                                <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
+                                  <Check className="h-3 w-3" /> Annehmen
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
+                                  <X className="h-3 w-3" /> Ablehnen
+                                </Button>
+                              </div>
+                            ) : (
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                {d.done ? (
+                                  <CheckCircle2 className="h-5 w-5 text-success" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                )}
+                              </button>
+                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                {categoryLabels[d.category]}
+                              </span>
+                              {d.vorlesung && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                  <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                  {d.vorlesung}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
+                                  {d.title}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                </span>
+                                {d.visibility === "private" && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Lock className="h-3 w-3" /> Privat
+                                  </span>
+                                )}
+                                {d.invitees.length > 0 && (
+                                  <span>{d.invitees.length} Eingeladene</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {fileCount > 0 && (
+                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                  <Paperclip className="h-3 w-3" /> {fileCount}
+                                </span>
+                              )}
+                              {messageCount > 0 && (
+                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                  <MessageSquare className="h-3 w-3" /> {messageCount}
+                                </span>
+                              )}
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              {isOwn || d.visibility === "public" ? (
+                                <>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : null}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </>
+                  )}
                 </>
               );
             })()}
@@ -1248,7 +1244,7 @@ function PlannerLayout({
                 <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-dashed cursor-pointer hover:bg-secondary/40 transition-colors">
                   <Upload className="h-5 w-5 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Klicken zum Hochladen</span>
-                  <input type="file" className="hidden" multiple onChange={() => {}} />
+                  <input type="file" className="hidden" multiple onChange={() => { }} />
                 </label>
               </div>
             </TabsContent>
