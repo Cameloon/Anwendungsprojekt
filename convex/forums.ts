@@ -538,7 +538,7 @@ export const archiveOldLectureForums = mutation({
 
     const allForums = await ctx.db.query("forums").collect();
     const lectureForums = allForums.filter(
-      (f) => f.isLectureForum && f.kurs
+      (f) => f.isLectureForum && f.kurs === userKurs
     );
 
     // Get forums already archived by this user

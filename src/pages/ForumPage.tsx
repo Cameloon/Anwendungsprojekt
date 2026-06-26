@@ -177,10 +177,10 @@ function ForumPage() {
   // Seed sections, default forums, ALL kurs lecture forums, and auto-archive old ones
   useEffect(() => {
     (async () => {
-      try { await seedSectionsMutation(); } catch {}
-      try { await ensureDefaultForumsMutation(); } catch {}
-      try { await seedAllKursForumsMutation(); } catch {}
-      try { await archiveOldLectureForumsMutation(); } catch {}
+      try { await seedSectionsMutation(); } catch { }
+      try { await ensureDefaultForumsMutation(); } catch { }
+      try { await seedAllKursForumsMutation(); } catch { }
+      try { await archiveOldLectureForumsMutation(); } catch { }
     })();
   }, [seedSectionsMutation, ensureDefaultForumsMutation, seedAllKursForumsMutation, archiveOldLectureForumsMutation]);
 
@@ -676,15 +676,13 @@ const ForumItem = ({
   const active = f.id === activeForumId;
   return (
     <div
-      className={`group flex items-center rounded-lg transition-colors ${
-        active ? "bg-primary/10" : "hover:bg-secondary/60"
-      }`}
+      className={`group flex items-center rounded-lg transition-colors ${active ? "bg-primary/10" : "hover:bg-secondary/60"
+        }`}
     >
       <button
         onClick={() => setActiveForumId(f.id)}
-        className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${
-          active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-        }`}
+        className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          }`}
       >
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="text-sm font-medium truncate flex-1">{f.name}</span>
@@ -932,15 +930,13 @@ function ForumPageLayout({
             visibleSec.map((f) => (
               <div
                 key={f.id}
-                className={`group flex items-center rounded-lg transition-colors ${
-                  f.id === activeForumId ? "bg-primary/10" : "hover:bg-secondary/60"
-                }`}
+                className={`group flex items-center rounded-lg transition-colors ${f.id === activeForumId ? "bg-primary/10" : "hover:bg-secondary/60"
+                  }`}
               >
                 <button
                   onClick={() => setActiveForumId(f.id)}
-                  className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${
-                    f.id === activeForumId ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                  }`}
+                  className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${f.id === activeForumId ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    }`}
                 >
                   <Hash className="h-3.5 w-3.5 shrink-0" />
                   <span className="text-sm font-medium truncate flex-1">{f.name}</span>
@@ -1011,13 +1007,31 @@ function ForumPageLayout({
                 const sziSection = sections.find((s) => s.name === "SZI");
                 const connectSection = sections.find((s) => s.name === "Campus");
 
+                // Collect orphaned forums whose sectionId doesn't match any existing section
+                const validSectionIds = new Set(sections.map(s => s._id));
+                for (const f of forums) {
+                  if (f.archivedByMe) continue;
+                  if (f.sectionId && !validSectionIds.has(f.sectionId)) {
+                    const arr = sectionMap.get(f.sectionId) || [];
+                    if (arr.includes(f)) {
+                      sectionMap.set(f.sectionId, arr.filter(x => x !== f));
+                    }
+                    noSection.push(f);
+                  }
+                }
+
                 // Private forums visible to user (exclude ones already in a section to avoid duplicates)
                 const userPrivateForums = privateForums.filter(
                   (f) => (f.members.some((m) => m.userId === me) || isAdmin) && !f.sectionId
                 );
 
+                const sectionTitle = isAdmin && adminViewKurs && adminViewKurs !== "ALL"
+                  ? `Kurs ${adminViewKurs}`
+                  : myKurs
+                    ? `Kurs ${myKurs}`
+                    : "Dein Jahrgang";
                 const sectionsDef = [
-                  { title: myKurs ? `Kurs ${myKurs}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myKursSection?._id, extra: userPrivateForums },
+                  { title: sectionTitle, icon: <Hash className="h-3.5 w-3.5" />, sectionId: myKursSection?._id, extra: userPrivateForums },
                   { title: "SZI", icon: <Hash className="h-3.5 w-3.5" />, sectionId: sziSection?._id },
                   { title: "Campus", icon: <Hash className="h-3.5 w-3.5" />, sectionId: connectSection?._id },
                 ];
@@ -1043,14 +1057,14 @@ function ForumPageLayout({
                         </p>
                         <Select value={adminViewKurs} onValueChange={setAdminViewKurs}>
                           <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Alle Jahrgänge" />
+                            <SelectValue placeholder="Alle Kurse" />
                           </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ALL">Alle Jahrgänge</SelectItem>
-                          {KURSE.map((jg) => (
-                            <SelectItem key={jg} value={jg}>{jg}</SelectItem>
-                          ))}
-                        </SelectContent>
+                          <SelectContent>
+                            <SelectItem value="ALL">Alle Kurse</SelectItem>
+                            {KURSE.map((jg) => (
+                              <SelectItem key={jg} value={jg}>{jg}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </div>
                     )}
@@ -1209,9 +1223,8 @@ function ForumPageLayout({
                             <button
                               key={t}
                               onClick={() => setTag(t)}
-                              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                                tag === t ? tagStyles[t] : "text-muted-foreground bg-secondary border-transparent"
-                              }`}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${tag === t ? tagStyles[t] : "text-muted-foreground bg-secondary border-transparent"
+                                }`}
                             >
                               {tagLabels[t]}
                             </button>
@@ -1308,17 +1321,15 @@ function ForumPageLayout({
                 <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 w-fit">
                   <button
                     onClick={() => setSort("neu")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      sort === "neu" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sort === "neu" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                      }`}
                   >
                     <Clock className="h-3.5 w-3.5" /> Neu
                   </button>
                   <button
                     onClick={() => setSort("beliebt")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      sort === "beliebt" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sort === "beliebt" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                      }`}
                   >
                     <TrendingUp className="h-3.5 w-3.5" /> Beliebt
                   </button>
@@ -1330,11 +1341,10 @@ function ForumPageLayout({
                   <button
                     key={t.id}
                     onClick={() => setActiveTag(t.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      activeTag === t.id
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeTag === t.id
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {t.label}
                   </button>
@@ -1421,9 +1431,8 @@ function ForumPageLayout({
                           <div className="flex items-center gap-1 mt-3">
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleLike(post.id); }}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                                post.liked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
-                              }`}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${post.liked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"
+                                }`}
                             >
                               <ThumbsUp className={`h-3.5 w-3.5 ${post.liked ? "fill-primary" : ""}`} />
                               {post.likeCount}
@@ -1510,7 +1519,7 @@ function ForumPageLayout({
                   <select value={fVorlesung} onChange={(e) => setFVorlesung(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
                     <option value="">Vorlesung (optional)</option>
                     {myLectures.map((l) => (<option key={l._id} value={l.lectureName}>{l.lectureName}</option>))
-}
+                    }
                   </select>
                 ) : (
                   <Input placeholder="Vorlesung (optional)" value={fVorlesung} onChange={(e) => setFVorlesung(e.target.value)} />
@@ -1528,17 +1537,15 @@ function ForumPageLayout({
               <div className="flex gap-2 mb-3">
                 <button
                   onClick={() => setFVisibility("public")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                    fVisibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
-                  }`}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${fVisibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                    }`}
                 >
                   <Globe className="h-4 w-4" /> Öffentlich
                 </button>
                 <button
                   onClick={() => setFVisibility("private")}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${
-                    fVisibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
-                  }`}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${fVisibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
+                    }`}
                 >
                   <Lock className="h-4 w-4" /> Privat
                 </button>
@@ -1572,7 +1579,7 @@ function ForumPageLayout({
                         placeholder="Namen suchen…"
                         value={inviteeSearch}
                         onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
-                        onFocus={() => {}}
+                        onFocus={() => { }}
                         onBlur={() => setTimeout(() => setInviteeSearch(""), 200)}
                         onKeyDown={handleInviteeKeyDown}
                         autoComplete="off"
@@ -1657,9 +1664,8 @@ function ForumPageLayout({
                   <button
                     key={d._id}
                     onClick={() => setLinkedDeadlineIds((prev) => prev.includes(d._id) ? prev.filter((x) => x !== d._id) : [...prev, d._id])}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                      checked ? "bg-warning/5 border-warning/40" : "border-border hover:bg-secondary/40"
-                    } ${d.done ? "opacity-50" : ""}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${checked ? "bg-warning/5 border-warning/40" : "border-border hover:bg-secondary/40"
+                      } ${d.done ? "opacity-50" : ""}`}
                   >
                     <CalendarDays className="h-4 w-4 text-warning shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -1696,9 +1702,8 @@ function ForumPageLayout({
                   <button
                     key={sid}
                     onClick={() => setLinkedScriptIds((prev) => prev.includes(sid) ? prev.filter((x: string) => x !== sid) : [...prev, sid])}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                      checked ? "bg-primary/5 border-primary/40" : "border-border hover:bg-secondary/40"
-                    }`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${checked ? "bg-primary/5 border-primary/40" : "border-border hover:bg-secondary/40"
+                      }`}
                   >
                     <FileText className="h-4 w-4 text-primary shrink-0" />
                     <div className="flex-1 min-w-0">

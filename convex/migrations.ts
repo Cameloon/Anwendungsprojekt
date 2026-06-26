@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Migration: copy jahrgang → kurs (field rename)
@@ -165,5 +166,199 @@ export const cleanupAllgemeinForums = internalMutation({
       deleted++;
     }
     return { deleted, names: allgemein.map(f => f.name), descs: allgemein.map(f => f.description) };
+  },
+});
+
+/**
+ * Backfill missing sectionId on old lecture forums and "Allgemein" forums.
+ *
+ * Run: npx convex run migrations:backfillSectionIds
+ */
+export const backfillSectionIds = internalMutation({
+  handler: async (ctx) => {
+    const sections = await ctx.db.query("sections").collect();
+    const deinJahrgang = sections.find((s) => s.name === "Dein Jahrgang");
+    const szi = sections.find((s) => s.name === "SZI");
+    const campus = sections.find((s) => s.name === "Campus");
+    if (!deinJahrgang) return { error: "Section 'Dein Jahrgang' not found" };
+
+    const allForums = await ctx.db.query("forums").collect();
+    let patched = 0;
+
+    for (const f of allForums) {
+      if (f.sectionId) continue;
+
+      // Match lecture forums by name pattern "LectureName (KURS)" — catches both
+      // flagged (isLectureForum) and unflagged (older) lecture forums
+      const isLectureByName = f.kurs && /\([A-Z]+\d{2}[A-Z]\)$/.test(f.name);
+
+      if (isLectureByName || f.isLectureForum) {
+        await ctx.db.patch(f._id, { sectionId: deinJahrgang._id, isLectureForum: true });
+        patched++;
+      } else if (f.name === "Allgemein" && f.kurs) {
+        await ctx.db.patch(f._id, { sectionId: deinJahrgang._id });
+        patched++;
+      }
+    }
+
+    return { patched };
+  },
+});
+
+/**
+ * Merge forums from old/extra sections into the canonical sidebar sections.
+ * Run: npx convex run migrations:mergeExtraSections
+ */
+export const mergeExtraSections = internalMutation({
+  handler: async (ctx) => {
+    const sections = await ctx.db.query("sections").collect();
+    const deinJahrgang = sections.find((s) => s.name === "Dein Jahrgang");
+    const campus = sections.find((s) => s.name === "Campus");
+    if (!deinJahrgang || !campus) return { error: "Required sections not found" };
+
+    // Map old section names → target section _id
+    const sectionNameToTarget = new Map<string, Id<"sections">>([
+      ["Allgemein", deinJahrgang._id],
+      ["Archiv", deinJahrgang._id],
+      ["Connect", campus._id],
+    ]);
+
+    const allForums = await ctx.db.query("forums").collect();
+    let moved = 0;
+
+    for (const f of allForums) {
+      if (!f.sectionId) continue;
+      const section = sections.find((s) => s._id === f.sectionId);
+      if (!section) continue; // orphaned, already caught by backfillSectionIds
+      const targetId = sectionNameToTarget.get(section.name);
+      if (targetId && f.sectionId !== targetId) {
+        await ctx.db.patch(f._id, { sectionId: targetId });
+        moved++;
+      }
+    }
+
+    return { moved };
+  },
+});
+
+/**
+ * Clean up stale archive states that were created for forums NOT in the
+ * user's own kurs (before archiveOldLectureForums was fixed to filter by kurs).
+ * Run: npx convex run migrations:cleanupStaleArchives
+ */
+export const cleanupStaleArchives = internalMutation({
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("profiles").collect();
+    const forums = await ctx.db.query("forums").collect();
+    let deleted = 0;
+
+    for (const profile of profiles) {
+      if (!profile.kurs) continue;
+      const states = await ctx.db
+        .query("forumArchiveStates")
+        .withIndex("by_user", (q: any) => q.eq("userId", profile.userId))
+        .collect();
+
+      for (const state of states) {
+        const forum = forums.find((f) => f._id === state.forumId);
+        if (!forum || !forum.kurs) {
+          // Forum deleted or has no kurs — safe to remove archive state
+          await ctx.db.delete(state._id);
+          deleted++;
+        } else if (forum.kurs !== profile.kurs) {
+          // Forum belongs to a different kurs — not relevant to this user
+          await ctx.db.delete(state._id);
+          deleted++;
+        }
+      }
+    }
+
+    return { deleted };
+  },
+});
+
+/**
+ * Deduplicate "Connect" forums in the Campus section.
+ * Run: npx convex run migrations:deduplicateConnectForums
+ */
+export const deduplicateConnectForums = internalMutation({
+  handler: async (ctx) => {
+    const allForums = await ctx.db.query("forums").collect();
+    const connectForums = allForums.filter((f) => f.name === "Connect");
+    if (connectForums.length < 2) return { deleted: 0, kept: connectForums.length };
+
+    // Keep the one with more members, delete the rest
+    const withCounts = await Promise.all(
+      connectForums.map(async (f) => {
+        const members = await ctx.db
+          .query("forumMembers")
+          .withIndex("by_forum", (q: any) => q.eq("forumId", f._id))
+          .collect();
+        return { forum: f, members };
+      }),
+    );
+    withCounts.sort((a, b) => b.members.length - a.members.length);
+    const [keep, ...remove] = withCounts;
+
+    for (const r of remove) {
+      for (const m of r.members) {
+        const alreadyMember = await ctx.db
+          .query("forumMembers")
+          .withIndex("by_forum_user", (q: any) =>
+            q.eq("forumId", keep.forum._id).eq("userId", m.userId),
+          )
+          .unique();
+        if (!alreadyMember) {
+          await ctx.db.insert("forumMembers", {
+            forumId: keep.forum._id,
+            userId: m.userId,
+            displayName: m.displayName,
+            joinedAt: m.joinedAt,
+          });
+        }
+      }
+      await ctx.db.delete(r.forum._id);
+    }
+
+    return { deleted: remove.length, kept: 1 };
+  },
+});
+
+/**
+ * Debug: list forums in a section by name.
+ * Run: npx convex run migrations:debugSectionForums
+ */
+export const debugSectionForums = internalMutation({
+  handler: async (ctx) => {
+    const sections = await ctx.db.query("sections").collect();
+    const campus = sections.find((s) => s.name === "Campus");
+    const allForums = await ctx.db.query("forums").collect();
+    const campusForums = allForums.filter((f) => f.sectionId === campus?._id);
+    return campusForums.map((f) => ({ name: f.name, description: f.description, kurs: f.kurs }));
+  },
+});
+
+/**
+ * Debug: show forum+section grouping.
+ * Run: npx convex run migrations:debugSectionMapping
+ */
+export const debugSectionMapping = internalMutation({
+  handler: async (ctx) => {
+    const sections = await ctx.db.query("sections").collect();
+    const allForums = await ctx.db.query("forums").collect();
+    const sectionMap = new Map<string, number>();
+    for (const f of allForums) {
+      if (f.sectionId) {
+        sectionMap.set(f.sectionId, (sectionMap.get(f.sectionId) || 0) + 1);
+      }
+    }
+    return {
+      sectionCounts: [...sectionMap.entries()].map(([id, count]) => ({
+        sectionId: id,
+        sectionName: sections.find(s => s._id === id)?.name || "DELETED",
+        count,
+      })),
+      noSectionCount: allForums.filter(f => !f.sectionId).length,
+    };
   },
 });
