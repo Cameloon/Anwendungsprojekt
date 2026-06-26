@@ -74,13 +74,13 @@ const ForumFeed = () => {
         </Link>
       </div>
 
-      {forums.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6 text-center">
           Alle Foren sind ausgeblendet. Aktiviere unten ein Forum, um Beiträge zu sehen.
         </p>
       ) : (
         <div className="space-y-6">
-          {forums.map((forum) => (
+          {visible.map((forum) => (
             <div key={forum.id}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5 text-sm font-medium">
@@ -101,7 +101,7 @@ const ForumFeed = () => {
                 <ul className="divide-y divide-border/60">
                   {forum.posts.map((p) => (
                     <li key={p.id} className="py-2.5">
-                      <Link to="/forum" className="block group">
+                      <Link to={`/forum/${forum.id}/post/${p.id}`} className="block group">
                         <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
                           {p.title}
                         </p>

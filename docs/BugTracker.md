@@ -24,30 +24,6 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
-### BUG-001: Dashboard Forum-Feed – Foren ausblenden ohne Wirkung
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Dashboard UI
-**Priorität:** Hoch
-**Beschreibung:**
-Die Variable `visible` (gefilterte Forum-Liste ohne ausgeblendete Foren) wird in `ForumFeed.tsx` berechnet, aber nie verwendet. Die Render-Schleife und die Leer-Meldung arbeiten weiterhin mit der vollständigen `forums`-Liste. Klick auf „Ausblenden" speichert den Wunsch zwar in localStorage, hat aber keinerlei sichtbaren Effekt.
-**Fundort:** `src/components/ForumFeed.tsx`, Zeilen 77 und 83
-
----
-
-### BUG-002: Dashboard Forum-Feed – Post-Link führt zum Forum statt zum Beitrag
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Dashboard UI
-**Priorität:** Hoch
-**Beschreibung:**
-Klickt ein Nutzer im Dashboard-Forum-Feed auf den Titel eines Beitrags, landet er auf `/forum` (allgemeine Forum-Liste) statt auf der Detailseite des konkreten Beitrags. Das Link-Ziel ist hardcoded als `/forum`.
-**Fundort:** `src/components/ForumFeed.tsx`, Zeile 104
-
----
-
 ### BUG-004: PlannerPage – Datei-Upload im Termin-Dialog ist ein toter Stub
 
 **Datum erfasst:** 25-06-2026
@@ -69,30 +45,6 @@ Im Detail-Dialog eines Termins existiert ein Datei-Upload-Element, dessen `onCha
 **Beschreibung:**
 Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Löschen-Buttons für alle öffentlichen Termine, auch wenn der angemeldete Nutzer nicht der Ersteller ist. Das Backend lehnt solche Aktionen ab, die UI ist jedoch irreführend.
 **Fundort:** `src/pages/PlannerPage.tsx`, Zeile 850
-
----
-
-### BUG-006: Forum-Einladungen senden Freitext-Namen statt User-IDs
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Forum – Einladungsdialog
-**Priorität:** Mittel
-**Beschreibung:**
-Im Einladungsdialog (sowohl in ForumDetailPage als auch ForumPage) werden die eingegebenen Freitext-Namen direkt als `recipientIds` übergeben. Da das System echte User-IDs erwartet, kommen Einladungen nicht an.
-**Fundort:** `src/pages/ForumDetailPage.tsx` Zeile 278, `src/pages/ForumPage.tsx` Zeile 357
-
----
-
-### BUG-007: ForumPage – ForumItem-Komponente innerhalb der Render-Funktion definiert
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Forum – Sidebar
-**Priorität:** Niedrig
-**Beschreibung:**
-Die Komponente `ForumItem` ist innerhalb von `ForumPageLayout` definiert und wird bei jedem Re-Render neu instanziiert. React erkennt sie als neue Komponente, unmountet und remountet die Sidebar-Einträge – sichtbar als kurzes Flackern beim Liken oder Posten.
-**Fundort:** `src/pages/ForumPage.tsx`, Zeile 695
 
 ---
 
@@ -118,12 +70,68 @@ Hinweis: Bearbeiter mit Kürzel ergänzen
 
 Hinweis: "Datum erledigt" ergänzen
 
-### BUG-009: ReportDialog – Meldungen werden in localStorage statt Convex gespeichert
+### BUG-001: Dashboard Forum-Feed – Foren ausblenden ohne Wirkung
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
 **Verfasser:** CC
 **Bearbeitet durch:** DM
+**Komponente/Bereich:** Dashboard UI
+**Priorität:** Hoch
+**Beschreibung:**
+Die Variable `visible` (gefilterte Forum-Liste ohne ausgeblendete Foren) wird in `ForumFeed.tsx` berechnet, aber nie verwendet. Die Render-Schleife und die Leer-Meldung arbeiten weiterhin mit der vollständigen `forums`-Liste. Klick auf „Ausblenden" speichert den Wunsch zwar in localStorage, hat aber keinerlei sichtbaren Effekt.
+**Fundort:** `src/components/ForumFeed.tsx`, Zeilen 77 und 83
+
+---
+
+### BUG-002: Dashboard Forum-Feed – Post-Link führt zum Forum statt zum Beitrag
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 26-06-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Dashboard UI
+**Priorität:** Hoch
+**Beschreibung:**
+Klickt ein Nutzer im Dashboard-Forum-Feed auf den Titel eines Beitrags, landet er auf `/forum` (allgemeine Forum-Liste) statt auf der Detailseite des konkreten Beitrags. Das Link-Ziel ist hardcoded als `/forum`.
+**Fundort:** `src/components/ForumFeed.tsx`, Zeile 104
+
+---
+
+### BUG-006: Forum-Einladungen senden Freitext-Namen statt User-IDs
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 26-06-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Forum – Einladungsdialog
+**Priorität:** Mittel
+**Beschreibung:**
+Im Einladungsdialog (sowohl in ForumDetailPage als auch ForumPage) werden die eingegebenen Freitext-Namen direkt als `recipientIds` übergeben. Da das System echte User-IDs erwartet, kommen Einladungen nicht an.
+**Fundort:** `src/pages/ForumDetailPage.tsx` Zeile 278, `src/pages/ForumPage.tsx` Zeile 357
+
+---
+
+### BUG-007: ForumPage – ForumItem-Komponente innerhalb der Render-Funktion definiert
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 26-06-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Forum – Sidebar
+**Priorität:** Niedrig
+**Beschreibung:**
+Die Komponente `ForumItem` ist innerhalb von `ForumPageLayout` definiert und wird bei jedem Re-Render neu instanziiert. React erkennt sie als neue Komponente, unmountet und remountet die Sidebar-Einträge – sichtbar als kurzes Flackern beim Liken oder Posten.
+**Fundort:** `src/pages/ForumPage.tsx`, Zeile 695
+
+---
+
+### BUG-009: ReportDialog – Meldungen werden in localStorage statt Convex gespeichert
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 26-06-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Forum – Melden-Funktion
 **Priorität:** Mittel
 **Beschreibung:**

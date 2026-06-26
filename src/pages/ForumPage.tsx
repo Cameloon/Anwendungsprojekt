@@ -663,6 +663,44 @@ function ForumPage() {
 
 // ── Shared layout ──
 
+const ForumItem = ({
+  f,
+  activeForumId,
+  setActiveForumId,
+}: {
+  f: FForumItem;
+  activeForumId: string;
+  setActiveForumId: (id: string) => void;
+}) => {
+  const Icon = f.visibility === "public" ? Hash : Lock;
+  const active = f.id === activeForumId;
+  return (
+    <div
+      className={`group flex items-center rounded-lg transition-colors ${
+        active ? "bg-primary/10" : "hover:bg-secondary/60"
+      }`}
+    >
+      <button
+        onClick={() => setActiveForumId(f.id)}
+        className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${
+          active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+        }`}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="text-sm font-medium truncate flex-1">{f.name}</span>
+        <span className="text-[10px] text-muted-foreground/70 shrink-0">{f.members.length}</span>
+      </button>
+      <Link
+        to={`/forum/${f.id}`}
+        className="px-2 py-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
+        title="Detailansicht öffnen"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  );
+};
+
 function ForumPageLayout({
   forums,
   sections,
@@ -931,36 +969,6 @@ function ForumPageLayout({
     );
   };
 
-  const ForumItem = ({ f }: { f: FForumItem }) => {
-    const Icon = f.visibility === "public" ? Hash : Lock;
-    const active = f.id === activeForumId;
-    return (
-      <div
-        className={`group flex items-center rounded-lg transition-colors ${
-          active ? "bg-primary/10" : "hover:bg-secondary/60"
-        }`}
-      >
-        <button
-          onClick={() => setActiveForumId(f.id)}
-          className={`flex-1 text-left px-3 py-2 flex items-center gap-2 min-w-0 ${
-            active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-          }`}
-        >
-          <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-sm font-medium truncate flex-1">{f.name}</span>
-          <span className="text-[10px] text-muted-foreground/70 shrink-0">{f.members.length}</span>
-        </button>
-        <Link
-          to={`/forum/${f.id}`}
-          className="px-2 py-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity"
-          title="Detailansicht öffnen"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-    );
-  };
-
   const formatDate = (ts: number) => {
     const diff = Date.now() - ts;
     const m = Math.floor(diff / 60000);
@@ -1057,7 +1065,7 @@ function ForumPageLayout({
                         <hr className="border-t border-border my-3" />
                         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Weitere</p>
                         <div className="space-y-0.5">
-                          {noSection.map((f) => (<ForumItem key={f.id} f={f} />))}
+                          {noSection.map((f) => (<ForumItem key={f.id} f={f} activeForumId={activeForumId} setActiveForumId={setActiveForumId} />))}
                         </div>
                       </div>
                     )}

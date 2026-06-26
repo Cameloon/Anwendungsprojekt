@@ -138,6 +138,7 @@ const ForumDetailPage = () => {
   );
   const allScripts = useQuery(api.scripts.listPublic);
   const allDeadlines = useQuery(api.deadlines.listForUser);
+  const jahrgangPeople = (useQuery(api.profiles.listSameJahrgang) ?? []) as { userId: string; displayName: string }[];
 
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
@@ -161,7 +162,8 @@ const ForumDetailPage = () => {
   const [linkedDeadlineIds, setLinkedDeadlineIds] = useState<string[]>([]);
   const [deadlinePickerOpen, setDeadlinePickerOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteNames, setInviteNames] = useState("");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [selectedInvitees, setSelectedInvitees] = useState<{ userId: string; displayName: string }[]>([]);
 
   const loading = forumQuery === undefined || membersQuery === undefined || isMemberQuery === undefined || postsQuery === undefined;
 
@@ -248,7 +250,7 @@ const ForumDetailPage = () => {
 
   const titleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
   const contentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
-  const inviteError = inviteNames.trim().length === 0 ? "Mindestens eine Person angeben." : "";
+  const inviteError = selectedInvitees.length === 0 ? "Mindestens eine Person angeben." : "";
 
   const handlePost = async () => {
     const nextTitleError = title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
@@ -299,11 +301,7 @@ const ForumDetailPage = () => {
   };
 
   const handleInvite = async () => {
-    const rawNames = inviteNames
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (rawNames.length === 0) {
+    if (selectedInvitees.length === 0) {
       toast.error("Mindestens eine Person angeben");
       return;
     }
@@ -311,12 +309,13 @@ const ForumDetailPage = () => {
       await inviteMutation({
         forumId: forum.id as Id<"forums">,
         forumName: forum.name,
-        recipientIds: rawNames,
-        recipientNames: rawNames,
+        recipientIds: selectedInvitees.map((p) => p.userId),
+        recipientNames: selectedInvitees.map((p) => p.displayName),
         fromName: me,
       });
-      toast.success(`${rawNames.length} Einladung(en) gesendet`);
-      setInviteNames("");
+      toast.success(`${selectedInvitees.length} Einladung(en) gesendet`);
+      setSelectedInvitees([]);
+      setInviteSearch("");
       setInviteOpen(false);
     } catch {
       toast.error("Fehler beim Senden der Einladungen");
@@ -363,8 +362,11 @@ const ForumDetailPage = () => {
       contentError={contentError}
       inviteOpen={inviteOpen}
       setInviteOpen={setInviteOpen}
-      inviteNames={inviteNames}
-      setInviteNames={setInviteNames}
+      inviteSearch={inviteSearch}
+      setInviteSearch={setInviteSearch}
+      selectedInvitees={selectedInvitees}
+      setSelectedInvitees={setSelectedInvitees}
+      jahrgangPeople={jahrgangPeople}
       inviteError={inviteError}
       handleInvite={handleInvite}
       isAdmin={isAdmin}
@@ -412,8 +414,11 @@ function ForumDetailLayout({
   contentError,
   inviteOpen,
   setInviteOpen,
-  inviteNames,
-  setInviteNames,
+  inviteSearch,
+  setInviteSearch,
+  selectedInvitees,
+  setSelectedInvitees,
+  jahrgangPeople,
   inviteError,
   handleInvite,
   isAdmin,
@@ -453,8 +458,11 @@ function ForumDetailLayout({
   contentError: string;
   inviteOpen: boolean;
   setInviteOpen: (v: boolean) => void;
-  inviteNames: string;
-  setInviteNames: (v: string) => void;
+  inviteSearch: string;
+  setInviteSearch: (v: string) => void;
+  selectedInvitees: { userId: string; displayName: string }[];
+  setSelectedInvitees: (v: { userId: string; displayName: string }[]) => void;
+  jahrgangPeople: { userId: string; displayName: string }[];
   inviteError: string;
   handleInvite: () => void;
   isAdmin: boolean;
@@ -827,7 +835,7 @@ function ForumDetailLayout({
       </div>
 
       {/* Invite dialog */}
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+      <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) { setInviteSearch(""); setSelectedInvitees([]); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -837,16 +845,53 @@ function ForumDetailLayout({
               Eingeladene Personen erhalten eine Benachrichtigung und können annehmen oder ablehnen.
             </DialogDescription>
           </DialogHeader>
-          <Input
-            placeholder="z. B. Anna M., Tim K."
-            value={inviteNames}
-            onChange={(e) => setInviteNames(e.target.value)}
-          />
-          {inviteError && <p className="text-xs text-destructive -mt-1">{inviteError}</p>}
-          <p className="text-[11px] text-muted-foreground -mt-2">Komma-getrennt</p>
-          <div className="flex justify-end gap-2">
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                placeholder="Name suchen…"
+                value={inviteSearch}
+                onChange={(e) => setInviteSearch(e.target.value)}
+                autoComplete="off"
+              />
+              {inviteSearch.trim().length > 0 && (() => {
+                const suggestions = jahrgangPeople.filter(
+                  (p) =>
+                    p.displayName.toLowerCase().includes(inviteSearch.toLowerCase()) &&
+                    !selectedInvitees.some((s) => s.userId === p.userId)
+                ).slice(0, 6);
+                return suggestions.length > 0 ? (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-md border bg-popover shadow-md">
+                    {suggestions.map((p) => (
+                      <button
+                        key={p.userId}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        onClick={() => { setSelectedInvitees([...selectedInvitees, p]); setInviteSearch(""); }}
+                      >
+                        {p.displayName}
+                      </button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+            {selectedInvitees.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedInvitees.map((p) => (
+                  <span key={p.userId} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
+                    {p.displayName}
+                    <button type="button" onClick={() => setSelectedInvitees(selectedInvitees.filter((s) => s.userId !== p.userId))} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {inviteError && selectedInvitees.length === 0 && <p className="text-xs text-destructive">{inviteError}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleInvite}>Einladungen senden</Button>
+            <Button onClick={handleInvite} disabled={selectedInvitees.length === 0}>Einladungen senden</Button>
           </div>
         </DialogContent>
       </Dialog>
