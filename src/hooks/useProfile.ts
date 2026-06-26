@@ -8,7 +8,7 @@ export interface AppProfile {
   studienfach: string | null;
   matrikelnummer: string | null;
   hochschule: string | null;
-  jahrgang: string | null;
+  kurs: string | null;
   avatar_url: string | null;
   created_at: string | null;
   role: "admin" | "user" | null;
@@ -23,7 +23,7 @@ const useDemoProfile = (): AppProfile | null => {
     studienfach: p.studienfach ?? null,
     matrikelnummer: p.matrikelnummer ?? null,
     hochschule: p.hochschule ?? null,
-    jahrgang: p.jahrgang ?? null,
+    kurs: p.kurs ?? null,
     avatar_url: p.avatarUrl ?? null,
     created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
     role: p.role ?? null,
@@ -38,7 +38,7 @@ const useConvexProfile = (): AppProfile | null => {
     studienfach: data.studienfach ?? null,
     matrikelnummer: data.matrikelnummer ?? null,
     hochschule: data.hochschule ?? null,
-    jahrgang: data.jahrgang ?? null,
+    kurs: data.kurs ?? null,
     avatar_url: data.avatarUrl ?? null,
     created_at: data.createdAt ? new Date(data.createdAt).toISOString() : null,
     role: data.role ?? null,

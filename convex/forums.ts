@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { parseJahrgang, calculateCurrentSemester } from "./semesterLectures";
+import { parseKurs, calculateCurrentSemester } from "./semesterLectures";
 
 // ─── Queries ───
 
@@ -16,11 +16,11 @@ export const getAllAccessible = query({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    const userJahrgang = profile?.jahrgang || undefined;
+    const userKurs = profile?.kurs || undefined;
     const isAdmin = profile?.role === "admin";
-    const userKurs = userJahrgang
+    const kursPrefix = userKurs
       ? (() => {
-          const m = userJahrgang.match(/^([A-Z]+)/);
+          const m = userKurs.match(/^([A-Z]+)/);
           return m ? m[1] : null;
         })()
       : null;
@@ -28,9 +28,9 @@ export const getAllAccessible = query({
     // Calculate current academic-year base semester
     // Year 1 → semesters 1+2, Year 2 → 3+4, etc.
     let userBaseSemester: number | null = null;
-    if (userJahrgang) {
+    if (userKurs) {
       try {
-        const parsed = parseJahrgang(userJahrgang);
+        const parsed = parseKurs(userKurs);
         const s = calculateCurrentSemester(parsed.entryYear);
         userBaseSemester = Math.floor((s - 1) / 2) * 2 + 1;
       } catch { /* ignore */ }
@@ -50,16 +50,17 @@ export const getAllAccessible = query({
       if (f.sectionId) {
         const section = sectionMap.get(f.sectionId);
         if (section?.accessRule === "tif_wif" && !isAdmin) {
-          if (userKurs !== "TIF" && userKurs !== "WIF") return false;
+          if (kursPrefix !== "TIF" && kursPrefix !== "WIF") return false;
         }
       }
       if (isAdmin) return true;
-      if (memberForumIds.has(f._id)) return true;
-      if (f.jahrgang && f.jahrgang !== userJahrgang) return false;
-      // Filter lecture forums by academic year (show both semesters of the current year)
+      // Filter lecture forums by academic year BEFORE membership check
+      // so users don't see forums for semesters they haven't reached yet
       if (f.isLectureForum && f.semesterNumber && userBaseSemester !== null) {
         if (f.semesterNumber !== userBaseSemester && f.semesterNumber !== userBaseSemester + 1) return false;
       }
+      if (memberForumIds.has(f._id)) return true;
+      if (f.kurs && f.kurs !== userKurs) return false;
       if (f.visibility === "public") return true;
       return false;
     });
@@ -189,7 +190,6 @@ export const create = mutation({
     professor: v.optional(v.string()),
     standort: v.optional(v.string()),
     allowedKurse: v.optional(v.array(v.string())),
-    jahrgang: v.optional(v.string()),
     deadlineId: v.optional(v.id("deadlines")),
     sectionId: v.optional(v.id("sections")),
   },
@@ -217,7 +217,6 @@ export const create = mutation({
       standort: args.standort?.trim() || undefined,
       inviteCode: code,
       allowedKurse: args.allowedKurse?.filter(Boolean),
-      jahrgang: args.jahrgang?.trim().toUpperCase() || undefined,
       ownerId: identity.subject,
       deadlineId: args.deadlineId,
       sectionId: args.sectionId,
@@ -309,7 +308,7 @@ export const join = mutation({
 });
 
 export const ensureAllgemeinForum = mutation({
-  args: { jahrgang: v.string() },
+  args: { kurs: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
@@ -319,7 +318,7 @@ export const ensureAllgemeinForum = mutation({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
     const displayName = profile?.displayName || identity.name || identity.email || "Unbekannt";
-    const jg = args.jahrgang.toUpperCase();
+    const jg = args.kurs.toUpperCase();
 
     // Ensure the "Dein Jahrgang" section exists
     const allgemeinSection = await ctx.db
@@ -341,7 +340,7 @@ export const ensureAllgemeinForum = mutation({
     const existing = await ctx.db
       .query("forums")
       .filter((q) => q.eq(q.field("name"), "Allgemein"))
-      .filter((q) => q.eq(q.field("jahrgang"), jg))
+      .filter((q) => q.eq(q.field("kurs"), jg))
       .first();
 
     if (existing) {
@@ -374,7 +373,7 @@ export const ensureAllgemeinForum = mutation({
       description: `Allgemeiner Austausch für Jahrgang ${jg}`,
       visibility: "public",
       inviteCode: code,
-      jahrgang: jg,
+      kurs: jg,
       sectionId: allgemeinSectionId,
       createdAt: Date.now(),
     });
@@ -534,12 +533,12 @@ export const archiveOldLectureForums = mutation({
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
-    const userJahrgang = profile?.jahrgang;
-    if (!userJahrgang) return { archived: 0 };
+    const userKurs = profile?.kurs;
+    if (!userKurs) return { archived: 0 };
 
     const allForums = await ctx.db.query("forums").collect();
     const lectureForums = allForums.filter(
-      (f) => f.isLectureForum && f.jahrgang
+      (f) => f.isLectureForum && f.kurs
     );
 
     // Get forums already archived by this user
@@ -554,7 +553,7 @@ export const archiveOldLectureForums = mutation({
       try {
         if (alreadyArchivedForumIds.has(forum._id)) continue;
 
-        const m = forum.jahrgang!.match(/^([A-Z]+)(\d{2})/);
+        const m = forum.kurs!.match(/^([A-Z]+)(\d{2})/);
         if (!m) continue;
         const entryYear = 2000 + parseInt(m[2], 10);
         const now = new Date();

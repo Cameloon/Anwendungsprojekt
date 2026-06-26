@@ -17,10 +17,10 @@ export const list = query({
       .withIndex("by_order")
       .collect();
 
-    const userKurs = profile?.jahrgang
+    const userKurs = profile?.kurs
       ? (() => {
           try {
-            const m = profile.jahrgang!.match(/^([A-Z]+)/);
+            const m = profile.kurs!.match(/^([A-Z]+)/);
             return m ? m[1] : null;
           } catch {
             return null;

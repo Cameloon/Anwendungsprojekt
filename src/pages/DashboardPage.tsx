@@ -39,7 +39,7 @@ const DashboardPage = () => {
   const scriptsData = useQuery(api.scripts.listPublic);
   const deadlinesData = useQuery(api.deadlines.listForUser);
   const lecturesData = useQuery(
-    api.semesterLectures.getLecturesForMyJahrgang,
+    api.semesterLectures.getLecturesForMyKurs,
     {},
   );
   const [groupsOpen, setGroupsOpen] = useState(false);

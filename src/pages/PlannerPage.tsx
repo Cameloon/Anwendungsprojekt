@@ -120,8 +120,8 @@ function PlannerPage() {
   const displayName = profile?.display_name || "Unbekannt";
 
   const deadlinesQuery = useQuery(api.deadlines.listForUser);
-  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang, {});
-  const jahrgangPeopleQuery = useQuery(api.profiles.listSameJahrgang, {});
+  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs, {});
+  const kursPeopleQuery = useQuery(api.profiles.listSameKurs, {});
   const scriptsQuery = useQuery(api.scripts.listVisible);
   const groupsQuery = useQuery(api.groups.listForUser, {});
 
@@ -218,7 +218,7 @@ function PlannerPage() {
   };
 
   const getFilteredInvitees = () =>
-    (jahrgangPeopleQuery ?? []).filter(
+    (kursPeopleQuery ?? []).filter(
       (p: { userId: string; displayName: string }) =>
         p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
         !selectedInvitees.some((s) => s.userId === p.userId),
@@ -336,7 +336,7 @@ function PlannerPage() {
     setLinkedGroupIds(d.linkedGroupIds ?? []);
     setVorlesung(d.vorlesung ?? "");
     setVisibility(d.visibility);
-    const people = jahrgangPeopleQuery ?? [];
+    const people = kursPeopleQuery ?? [];
     setSelectedInvitees(
       (d.invitees ?? []).map((id: string) => ({
         userId: id,
@@ -474,7 +474,7 @@ function PlannerPage() {
       setInviteeSearch={setInviteeSearch}
       selectedInvitees={selectedInvitees}
       setSelectedInvitees={setSelectedInvitees}
-      jahrgangPeople={jahrgangPeopleQuery ?? []}
+      kursPeople={kursPeopleQuery ?? []}
       handleInviteeKeyDown={handleInviteeKeyDown}
       selectInvitee={selectInvitee}
       highlightIndex={highlightIndex}
@@ -561,7 +561,7 @@ function PlannerLayout({
   setInviteeSearch,
   selectedInvitees,
   setSelectedInvitees,
-  jahrgangPeople,
+  kursPeople,
   handleInviteeKeyDown,
   selectInvitee,
   highlightIndex,
@@ -625,7 +625,7 @@ function PlannerLayout({
   selectedInvitees: { userId: string; displayName: string }[];
   setSelectedInvitees: (v: { userId: string; displayName: string }[]) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  jahrgangPeople: any[];
+  kursPeople: any[];
   handleInviteeKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   selectInvitee: (p: { userId: string; displayName: string }) => void;
   highlightIndex: number;
@@ -817,7 +817,7 @@ function PlannerLayout({
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Personen einladen</p>
                     {visibility === "public" ? (
-                      <p className="text-xs text-muted-foreground italic">Alle Personen deines Jahrgangs werden automatisch eingeladen.</p>
+                      <p className="text-xs text-muted-foreground italic">Alle Personen deines Kurses werden automatisch eingeladen.</p>
                     ) : (
                       <div>
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -844,7 +844,7 @@ function PlannerLayout({
                             autoComplete="off"
                           />
                           {inviteeSearch && (() => {
-                            const filtered = (jahrgangPeople).filter(
+                            const filtered = (kursPeople).filter(
                               (p: { userId: string; displayName: string }) =>
                                 p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
                                 !selectedInvitees.some((s) => s.userId === p.userId),

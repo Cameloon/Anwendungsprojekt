@@ -66,19 +66,19 @@ vi.mock("@/hooks/useProfile", () => ({
     studienfach: "Informatik",
     matrikelnummer: "123",
     hochschule: "DHBW",
-    jahrgang: "TINF25A",
+    kurs: "TINF25A",
     avatar_url: null,
     created_at: "2026-06-09T08:00:00.000Z",
     role: "user",
   }),
-}));
+});
 
 vi.mock("../../convex/_generated/api", () => ({
   api: {
     posts: { listRecent: "posts.listRecent" },
     scripts: { listPublic: "scripts.listPublic" },
     deadlines: { listForUser: "deadlines.listForUser" },
-    semesterLectures: { getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang" },
+    semesterLectures: { getLecturesForMyKurs: "semesterLectures.getLecturesForMyKurs" },
     sections: { list: "sections.list", seedDefaultSections: "sections.seedDefaultSections" },
   },
 }));
@@ -88,7 +88,7 @@ vi.mock("convex/react", () => ({
       if (query === "posts.listRecent") return postsFixture;
       if (query === "scripts.listPublic") return scriptsFixture;
       if (query === "deadlines.listForUser") return deadlinesFixture;
-      if (query === "semesterLectures.getLecturesForMyJahrgang") return lecturesFixture;
+      if (query === "semesterLectures.getLecturesForMyKurs") return lecturesFixture;
       if (query === "sections.list") return [];
       return [];
     },
@@ -108,7 +108,7 @@ const seedDemoAuth = () => {
       studienfach: "Informatik",
       matrikelnummer: "123",
       hochschule: "DHBW",
-      jahrgang: "TINF25A",
+      kurs: "TINF25A",
       avatar_url: null,
       created_at: "2026-06-09T08:00:00.000Z",
     }),

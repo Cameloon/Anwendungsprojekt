@@ -511,7 +511,7 @@ export const listRecent = query({
       .query("profiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .unique();
-    const userJahrgang = profile?.jahrgang;
+    const userKurs = profile?.kurs;
     const isAdmin = profile?.role === "admin";
 
     const forums = await ctx.db.query("forums").collect();
@@ -523,7 +523,7 @@ export const listRecent = query({
         continue;
       }
       if (forum.visibility === "public") {
-        if (forum.jahrgang && forum.jahrgang !== userJahrgang) continue;
+        if (forum.kurs && forum.kurs !== userKurs) continue;
         accessibleIds.push(forum._id);
         continue;
       }

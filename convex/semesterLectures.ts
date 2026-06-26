@@ -3,10 +3,10 @@ import { mutation, query } from "./_generated/server";
 
 // ─── Pure helpers ───
 
-export function parseJahrgang(jahrgang: string): { kurs: string; entryYear: number; classLetter: string } {
-  const jg = jahrgang.toUpperCase().trim();
+export function parseKurs(kurs: string): { kurs: string; entryYear: number; classLetter: string } {
+  const jg = kurs.toUpperCase().trim();
   const match = jg.match(/^([A-Z]+)(\d{2})([A-Z])$/);
-  if (!match) throw new Error(`Invalid jahrgang format: ${jahrgang}`);
+  if (!match) throw new Error(`Invalid kurs format: ${kurs}`);
   return {
     kurs: match[1],
     entryYear: 2000 + parseInt(match[2], 10),
@@ -39,13 +39,13 @@ async function ensureSeedData(ctx: any, kurs: string) {
   }
 }
 
-/** Explicit mapping: populate jahrgangLectures table for a jahrgang (all semesters). */
+/** Explicit mapping: populate jahrgangLectures table for a kurs (all semesters). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function ensureJahrgangLectures(ctx: any, jahrgang: string) {
-  const jg = jahrgang.toUpperCase().trim();
+export async function ensureKursLectures(ctx: any, kurs: string) {
+  const jg = kurs.toUpperCase().trim();
   let parsed: { kurs: string };
   try {
-    parsed = parseJahrgang(jg);
+    parsed = parseKurs(jg);
   } catch {
     return;
   }
@@ -53,7 +53,7 @@ export async function ensureJahrgangLectures(ctx: any, jahrgang: string) {
   const existing = await ctx.db
     .query("jahrgangLectures")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
+    .withIndex("by_kurs", (q: any) => q.eq("kurs", jg))
     .collect();
   if (existing.length > 0) return;
 
@@ -61,7 +61,7 @@ export async function ensureJahrgangLectures(ctx: any, jahrgang: string) {
   for (const item of SEED_DATA) {
     if (item.kurs !== parsed.kurs) continue;
     await ctx.db.insert("jahrgangLectures", {
-      jahrgang: jg,
+      kurs: jg,
       lectureName: item.lectureName,
       semesterNumber: item.semesterNumber,
       createdAt: now,
@@ -69,24 +69,24 @@ export async function ensureJahrgangLectures(ctx: any, jahrgang: string) {
   }
 }
 
-/** Create or patch lecture forums for ONE jahrgang (all semesters). */
+/** Create or patch lecture forums for ONE kurs (all semesters). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, userId: string, displayName: string) {
-  const jg = jahrgang.toUpperCase().trim();
+export async function ensureLectureForumsForProfile(ctx: any, kurs: string, userId: string, displayName: string) {
+  const jg = kurs.toUpperCase().trim();
   let parsed: { kurs: string };
   try {
-    parsed = parseJahrgang(jg);
+    parsed = parseKurs(jg);
   } catch {
     return;
   }
 
   await ensureSeedData(ctx, parsed.kurs);
-  await ensureJahrgangLectures(ctx, jg);
+  await ensureKursLectures(ctx, jg);
 
   const lectures = await ctx.db
     .query("jahrgangLectures")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
+    .withIndex("by_kurs", (q: any) => q.eq("kurs", jg))
     .collect();
 
   const allgemeinSection = await ctx.db
@@ -114,7 +114,7 @@ export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((q: any) => q.eq(q.field("name"), forumName))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+      .filter((q: any) => q.eq(q.field("kurs"), jg))
       .first();
 
     if (existing) {
@@ -153,7 +153,7 @@ export async function ensureLectureForumsForProfile(ctx: any, jahrgang: string, 
         name: forumName,
         description: `${lectureName} – Semester ${lecture.semesterNumber} (${jg})`,
         visibility: "public",
-        jahrgang: jg,
+        kurs: jg,
         vorlesung: lectureName,
         inviteCode: code,
         isLectureForum: true,
@@ -189,7 +189,7 @@ export const list = query({
   },
 });
 
-export const getLecturesForMyJahrgang = query({
+export const getLecturesForMyKurs = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -200,11 +200,11 @@ export const getLecturesForMyJahrgang = query({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    if (!profile?.jahrgang) return [];
+    if (!profile?.kurs) return [];
 
     let parsed: { kurs: string; entryYear: number };
     try {
-      parsed = parseJahrgang(profile.jahrgang);
+      parsed = parseKurs(profile.kurs);
     } catch {
       return [];
     }
@@ -278,7 +278,7 @@ export const deleteLecture = mutation({
 });
 
 export const ensureLectureForums = mutation({
-  args: { jahrgang: v.string() },
+  args: { kurs: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
@@ -289,27 +289,27 @@ export const ensureLectureForums = mutation({
       .unique();
     const displayName = profile?.displayName || identity.name || identity.email || "Unbekannt";
 
-    await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+    await ensureLectureForumsForProfile(ctx, args.kurs, identity.subject, displayName);
   },
 });
 
-/** Seed jahrgangLectures + lecture forums for ALL existing jahrgangs. Idempotent — safe to call on every page load. */
-export const seedAllJahrgangForums = mutation({
+/** Seed jahrgangLectures + lecture forums for ALL existing kurse. Idempotent — safe to call on every page load. */
+export const seedAllKursForums = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
     const profiles = await ctx.db.query("profiles").collect();
-    const jahrgaenge = [...new Set(profiles.map((p) => p.jahrgang).filter(Boolean))] as string[];
+    const kurse = [...new Set(profiles.map((p) => p.kurs).filter(Boolean))] as string[];
 
     let created = 0;
-    for (const jg of jahrgaenge) {
-      await ensureJahrgangLectures(ctx, jg);
+    for (const jg of kurse) {
+      await ensureKursLectures(ctx, jg);
       const lectures = await ctx.db
         .query("jahrgangLectures")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .withIndex("by_jahrgang", (q: any) => q.eq("jahrgang", jg))
+        .withIndex("by_kurs", (q: any) => q.eq("kurs", jg))
         .collect();
 
       // Ensure "Dein Jahrgang" section exists
@@ -338,7 +338,7 @@ export const seedAllJahrgangForums = mutation({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .filter((q: any) => q.eq(q.field("name"), forumName))
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+      .filter((q: any) => q.eq(q.field("kurs"), jg))
           .first();
         if (existing) {
           if (!existing.sectionId && sectionId) {
@@ -351,7 +351,7 @@ export const seedAllJahrgangForums = mutation({
           name: forumName,
           description: `${lecture.lectureName} – Semester ${lecture.semesterNumber} (${jg})`,
           visibility: "public",
-          jahrgang: jg,
+          kurs: jg,
           vorlesung: lecture.lectureName,
           inviteCode: code,
           isLectureForum: true,
@@ -362,22 +362,22 @@ export const seedAllJahrgangForums = mutation({
         created++;
       }
 
-      // Ensure "Allgemein" forum for this jahrgang
+      // Ensure "Allgemein" forum for this kurs
       const allgName = "Allgemein";
       const allgExisting = await ctx.db
         .query("forums")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((q: any) => q.eq(q.field("name"), allgName))
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+        .filter((q: any) => q.eq(q.field("kurs"), jg))
         .first();
       if (!allgExisting) {
         const code = Math.random().toString(36).slice(2, 8).toUpperCase();
         await ctx.db.insert("forums", {
           name: allgName,
-          description: `Allgemeiner Austausch für Jahrgang ${jg}`,
+          description: `Allgemeiner Austausch für Kurs ${jg}`,
           visibility: "public",
-          jahrgang: jg,
+          kurs: jg,
           inviteCode: code,
           sectionId,
           createdAt: Date.now(),
@@ -388,7 +388,7 @@ export const seedAllJahrgangForums = mutation({
       }
     }
 
-    return { created, jahrgaenge: jahrgaenge.length };
+    return { created, kurse: kurse.length };
   },
 });
 

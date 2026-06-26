@@ -49,7 +49,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { DHBW_STANDORTE } from "@/lib/dhbw";
-import { JAHRGAENGE } from "@/lib/jahrgang";
+import { KURSE } from "@/lib/kurs";
 import { ReportDialog } from "@/components/ReportDialog";
 import {
   Select,
@@ -117,7 +117,7 @@ interface FForumItem {
   vorlesung?: string;
   professor?: string;
   standort?: string;
-  jahrgang?: string;
+  kurs?: string;
   sectionId?: string;
   archivedByMe?: boolean;
   deadlineId?: string;
@@ -144,7 +144,7 @@ function ForumPage() {
   const profile = useProfile();
   const me = user?.id || "";
   const displayName = profile?.display_name || "Unbekannt";
-  const myJahrgang = profile?.jahrgang || undefined;
+  const myKurs = profile?.kurs || undefined;
   const isAdmin = profile?.role === "admin";
   const navigate = useNavigate();
 
@@ -160,29 +160,29 @@ function ForumPage() {
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
   const inviteMutation = useMutation(api.notifications.inviteToForum);
-  const inviteJahrgangMutation = useMutation(api.notifications.inviteJahrgangToForum);
+  const inviteKursMutation = useMutation(api.notifications.inviteKursToForum);
   const deletePostMutation = useMutation(api.posts.deletePost);
   const archiveForumMutation = useMutation(api.forums.archive);
   const unarchiveForumMutation = useMutation(api.forums.unarchive);
   const deleteForumMutation = useMutation(api.forums.deleteForum);
   const seedSectionsMutation = useMutation(api.sections.seedDefaultSections);
   const ensureDefaultForumsMutation = useMutation(api.forums.ensureDefaultSZIAndConnectForums);
-  const seedAllJahrgangForumsMutation = useMutation(api.semesterLectures.seedAllJahrgangForums);
+  const seedAllKursForumsMutation = useMutation(api.semesterLectures.seedAllKursForums);
   const archiveOldLectureForumsMutation = useMutation(api.forums.archiveOldLectureForums);
-  const myLecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang);
-  const jahrgangPeopleQuery = useQuery(api.profiles.listSameJahrgang);
+  const myLecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs);
+  const kursPeopleQuery = useQuery(api.profiles.listSameKurs);
 
-  const [adminViewJahrgang, setAdminViewJahrgang] = useState<string>("");
+  const [adminViewKurs, setAdminViewKurs] = useState<string>("");
 
-  // Seed sections, default forums, ALL jahrgang lecture forums, and auto-archive old ones
+  // Seed sections, default forums, ALL kurs lecture forums, and auto-archive old ones
   useEffect(() => {
     (async () => {
       try { await seedSectionsMutation(); } catch {}
       try { await ensureDefaultForumsMutation(); } catch {}
-      try { await seedAllJahrgangForumsMutation(); } catch {}
+      try { await seedAllKursForumsMutation(); } catch {}
       try { await archiveOldLectureForumsMutation(); } catch {}
     })();
-  }, [seedSectionsMutation, ensureDefaultForumsMutation, seedAllJahrgangForumsMutation, archiveOldLectureForumsMutation]);
+  }, [seedSectionsMutation, ensureDefaultForumsMutation, seedAllKursForumsMutation, archiveOldLectureForumsMutation]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlForumId = searchParams.get("forumId") || "";
@@ -237,13 +237,13 @@ function ForumPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawForums: any[] = useMemo(() => {
     let arr: any[] = (forumsQuery ?? []) as any[];
-    if (isAdmin && adminViewJahrgang && adminViewJahrgang !== "ALL") {
+    if (isAdmin && adminViewKurs && adminViewKurs !== "ALL") {
       arr = arr.filter(
-        (f: any) => f.jahrgang && f.jahrgang === adminViewJahrgang.toUpperCase()
+        (f: any) => f.kurs && f.kurs === adminViewKurs.toUpperCase()
       );
     }
     return arr;
-  }, [forumsQuery, isAdmin, adminViewJahrgang]);
+  }, [forumsQuery, isAdmin, adminViewKurs]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pubScripts: FScriptItem[] = useMemo(
@@ -357,7 +357,7 @@ function ForumPage() {
     const q = search.toLowerCase();
     return allPosts
       .filter((p) => {
-        if (!myJahrgang) return true;
+        if (!myKurs) return true;
         return true;
       })
       .filter(
@@ -369,7 +369,7 @@ function ForumPage() {
       )
       .filter((p) => activeTag === "alle" || p.tag === activeTag)
       .sort((a, b) => (sort === "beliebt" ? b.likeCount - a.likeCount : b._creationTime - a._creationTime));
-  }, [allPosts, search, activeTag, sort, myJahrgang]);
+  }, [allPosts, search, activeTag, sort, myKurs]);
 
   const isMember = activeForum?.members?.some((m) => m.userId === me) ?? false;
   const isOwner = !!activeForum?.ownerId && activeForum.ownerId === me;
@@ -422,7 +422,7 @@ function ForumPage() {
       return;
     }
     const selectedSection = sections.find((s) => s._id === fSectionId);
-    const isDeinJahrgang = selectedSection?.name === "Dein Jahrgang";
+    const isDeinKurs = selectedSection?.name === "Dein Jahrgang";
     try {
       const result = await createForumMutation({
         name: fName,
@@ -431,14 +431,14 @@ function ForumPage() {
         vorlesung: fVorlesung || undefined,
         professor: fProfessor || undefined,
         standort: fStandort || profile?.hochschule || undefined,
-        jahrgang: isDeinJahrgang ? myJahrgang : undefined,
+        kurs: isDeinKurs ? myKurs : undefined,
         sectionId: fSectionId as any,
       });
-      if (fVisibility === "public" && isDeinJahrgang && myJahrgang) {
-        await inviteJahrgangMutation({
+      if (fVisibility === "public" && isDeinKurs && myKurs) {
+        await inviteKursMutation({
           forumId: result.forumId as Id<"forums">,
           forumName: fName,
-          jahrgang: myJahrgang,
+          kurs: myKurs,
           fromName: displayName,
         });
       } else if (fVisibility === "private" && selectedInvitees.length > 0) {
@@ -450,8 +450,8 @@ function ForumPage() {
           fromName: displayName,
         });
       }
-      const inviteCount = fVisibility === "public" && isDeinJahrgang
-        ? "alle Mitglieder deines Jahrgangs"
+      const inviteCount = fVisibility === "public" && isDeinKurs
+        ? "alle Mitglieder deines Kurses"
         : `${selectedInvitees.length} Einladung(en)`;
       toast.success(`Forum „${fName}" erstellt · ${inviteCount} versendet`);
       resetForumForm();
@@ -527,7 +527,7 @@ function ForumPage() {
   };
 
   const getFilteredInvitees = () =>
-    ((jahrgangPeopleQuery as { userId: string; displayName: string }[]) ?? []).filter(
+    ((kursPeopleQuery as { userId: string; displayName: string }[]) ?? []).filter(
       (p) =>
         p.displayName.toLowerCase().includes(inviteeSearch.toLowerCase()) &&
         !selectedInvitees.some((s) => s.userId === p.userId),
@@ -645,13 +645,13 @@ function ForumPage() {
       setActiveTag={setActiveTag}
       tags={tags}
       toggleLike={toggleLike}
-      myJahrgang={myJahrgang}
+      myKurs={myKurs}
       reportTarget={reportTarget}
       setReportTarget={setReportTarget}
       reportedBy={displayName}
       isAdmin={isAdmin}
-      adminViewJahrgang={adminViewJahrgang}
-      setAdminViewJahrgang={setAdminViewJahrgang}
+      adminViewKurs={adminViewKurs}
+      setAdminViewKurs={setAdminViewKurs}
       handleDeletePost={handleDeletePost}
       archiveForum={async (forumId: string) => { try { await archiveForumMutation({ forumId: forumId as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler beim Archivieren"); } }}
       unarchiveForum={async (forumId: string) => { try { await unarchiveForumMutation({ forumId: forumId as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler beim Wiederherstellen"); } }}
@@ -783,13 +783,13 @@ function ForumPageLayout({
   setActiveTag,
   tags,
   toggleLike,
-  myJahrgang,
+  myKurs,
   reportTarget,
   setReportTarget,
   reportedBy,
   isAdmin,
-  adminViewJahrgang,
-  setAdminViewJahrgang,
+  adminViewKurs,
+  setAdminViewKurs,
   handleDeletePost,
   archiveForum,
   unarchiveForum,
@@ -878,13 +878,13 @@ function ForumPageLayout({
   setActiveTag: (v: any) => void;
   tags: { id: string; label: string }[];
   toggleLike: (id: string) => void;
-  myJahrgang?: string;
+  myKurs?: string;
   reportTarget: { postId: string; postTitle: string } | null;
   setReportTarget: (v: { postId: string; postTitle: string } | null) => void;
   reportedBy: string;
   isAdmin: boolean;
-  adminViewJahrgang: string;
-  setAdminViewJahrgang: (v: string) => void;
+  adminViewKurs: string;
+  setAdminViewKurs: (v: string) => void;
   handleDeletePost: (postId: string) => void;
   archiveForum: (forumId: string) => Promise<void>;
   unarchiveForum: (forumId: string) => Promise<void>;
@@ -1007,7 +1007,7 @@ function ForumPageLayout({
                   }
                 }
 
-                const myJahrgangSection = sections.find((s) => s.name === "Dein Jahrgang");
+                const myKursSection = sections.find((s) => s.name === "Dein Jahrgang");
                 const sziSection = sections.find((s) => s.name === "SZI");
                 const connectSection = sections.find((s) => s.name === "Campus");
 
@@ -1017,7 +1017,7 @@ function ForumPageLayout({
                 );
 
                 const sectionsDef = [
-                  { title: myJahrgang ? `Kurs ${myJahrgang}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myJahrgangSection?._id, extra: userPrivateForums },
+                  { title: myKurs ? `Kurs ${myKurs}` : "Dein Jahrgang", icon: <Hash className="h-3.5 w-3.5" />, sectionId: myKursSection?._id, extra: userPrivateForums },
                   { title: "SZI", icon: <Hash className="h-3.5 w-3.5" />, sectionId: sziSection?._id },
                   { title: "Campus", icon: <Hash className="h-3.5 w-3.5" />, sectionId: connectSection?._id },
                 ];
@@ -1039,15 +1039,15 @@ function ForumPageLayout({
                     {isAdmin && (
                       <div className="mb-3">
                         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
-                          <Shield className="h-3 w-3" /> Admin: Jahrgang filtern
+                          <Shield className="h-3 w-3" /> Admin: Kurs filtern
                         </p>
-                        <Select value={adminViewJahrgang} onValueChange={setAdminViewJahrgang}>
+                        <Select value={adminViewKurs} onValueChange={setAdminViewKurs}>
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder="Alle Jahrgänge" />
                           </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ALL">Alle Jahrgänge</SelectItem>
-                          {JAHRGAENGE.map((jg) => (
+                          {KURSE.map((jg) => (
                             <SelectItem key={jg} value={jg}>{jg}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1481,7 +1481,7 @@ function ForumPageLayout({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary" /> Neues Forum erstellen</DialogTitle>
             <DialogDescription>
-              Wähle eine Sektion und ob alle Jahrgangsmitglieder eingeladen werden (öffentlich) oder du Personen gezielt einlädst (privat).
+              Wähle eine Sektion und ob alle Kursmitglieder eingeladen werden (öffentlich) oder du Personen gezielt einlädst (privat).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1545,12 +1545,12 @@ function ForumPageLayout({
               </div>
               {(() => {
                 const sec = sections.find((s) => s._id === fSectionId);
-                const isDeinJahrgang = sec?.name === "Dein Jahrgang";
+                const isDeinKurs = sec?.name === "Dein Jahrgang";
                 if (fVisibility === "public") {
                   return (
                     <p className="text-xs text-muted-foreground italic">
-                      {isDeinJahrgang
-                        ? "Alle Mitglieder deines Jahrgangs werden automatisch eingeladen."
+                      {isDeinKurs
+                        ? "Alle Mitglieder deines Kurses werden automatisch eingeladen."
                         : "Das Forum ist öffentlich sichtbar und kann über den Einladungscode geteilt werden."}
                     </p>
                   );

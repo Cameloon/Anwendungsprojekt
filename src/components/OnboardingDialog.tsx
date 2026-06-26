@@ -22,7 +22,7 @@ import {
 import Combobox from "@/components/ui/combobox";
 import { DHBW_STANDORTE } from "@/lib/dhbw";
 import { STUDIENFAECHER } from "@/lib/studienfach";
-import { JAHRGAENGE } from "@/lib/jahrgang";
+import { KURSE } from "@/lib/kurs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
@@ -38,14 +38,14 @@ const OnboardingDialog = ({ open }: Props) => {
   const [studienfach, setStudienfach] = useState("");
   const [matrikelnummer, setMatrikelnummer] = useState("");
   const [hochschule, setHochschule] = useState("");
-  const [jahrgang, setJahrgang] = useState("");
+  const [kurs, setKurs] = useState("");
   const [saving, setSaving] = useState(false);
 
   const displayNameError = !displayName.trim() ? "Erforderlich." : displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
   const studienfachError = !studienfach ? "Erforderlich." : "";
   const matrikelnummerError = !matrikelnummer ? "Erforderlich." : !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
   const hochschuleError = !hochschule ? "Bitte einen DHBW-Standort wählen." : "";
-  const jahrgangError = !jahrgang ? "Erforderlich." : "";
+  const kursError = !kurs ? "Erforderlich." : "";
 
   const save = async () => {
     if (!user) return;
@@ -54,7 +54,7 @@ const OnboardingDialog = ({ open }: Props) => {
     else if (displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
     if (!studienfach) nextErrors.studienfach = "Erforderlich.";
     if (!hochschule) nextErrors.hochschule = "Bitte einen DHBW-Standort wählen.";
-    if (!jahrgang) nextErrors.jahrgang = "Erforderlich.";
+    if (!kurs) nextErrors.kurs = "Erforderlich.";
     if (!matrikelnummer) nextErrors.matrikelnummer = "Erforderlich.";
     else if (!/^\d{5,10}$/.test(matrikelnummer)) nextErrors.matrikelnummer = "5–10 Ziffern.";
     if (Object.keys(nextErrors).length > 0) {
@@ -68,7 +68,7 @@ const OnboardingDialog = ({ open }: Props) => {
         studienfach,
         matrikelnummer: matrikelnummer.trim(),
         hochschule: hochschule.trim(),
-        jahrgang,
+        kurs,
       });
       toast({ title: "Profil vollständig", description: "Dein Profil wurde eingerichtet." });
     } catch (err: any) {
@@ -132,14 +132,14 @@ const OnboardingDialog = ({ open }: Props) => {
             {studienfachError && <p className="text-xs text-destructive">{studienfachError}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Studienjahrgang *</Label>
+            <Label>Kurs *</Label>
             <Combobox
-              value={jahrgang}
-              onChange={setJahrgang}
-              options={JAHRGAENGE}
-              placeholder="Jahrgang wählen"
+              value={kurs}
+              onChange={setKurs}
+              options={KURSE}
+              placeholder="Kurs wählen"
             />
-            {jahrgangError && <p className="text-xs text-destructive">{jahrgangError}</p>}
+            {kursError && <p className="text-xs text-destructive">{kursError}</p>}
           </div>
           <Button onClick={save} disabled={saving} className="w-full gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

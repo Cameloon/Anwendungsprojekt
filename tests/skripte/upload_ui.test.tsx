@@ -83,7 +83,7 @@ vi.mock("@/hooks/useProfile", () => ({
     studienfach: "Informatik",
     matrikelnummer: "123456",
     hochschule: "DHBW Mannheim",
-    jahrgang: "TINF25A",
+    kurs: "TINF25A",
     avatar_url: null,
     created_at: null,
     role: "user",
@@ -103,7 +103,7 @@ vi.mock("../../convex/_generated/api", () => ({
       seedDefaultSections: "sections.seedDefaultSections",
     },
     semesterLectures: {
-      getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang",
+      getLecturesForMyKurs: "semesterLectures.getLecturesForMyKurs",
     },
     groups: {
       listForUser: "groups.listForUser",
@@ -129,7 +129,7 @@ vi.mock("convex/react", async () => {
     useQuery: (query: string) => {
       const snap = ReactModule.useSyncExternalStore(subscribeScripts, getScriptSnapshot);
       if (query === "scripts.listVisible") return snap.scripts.map((s: any) => ({ ...s, subject: resolveSubject(s.subject) }));
-      if (query === "semesterLectures.getLecturesForMyJahrgang") return lectureData;
+      if (query === "semesterLectures.getLecturesForMyKurs") return lectureData;
       if (query === "groups.listForUser") return [];
       if (query === "sections.list") return [];
       return undefined;

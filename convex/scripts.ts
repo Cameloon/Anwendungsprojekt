@@ -38,7 +38,7 @@ async function canAccess(ctx: any, script: any, viewerId: string): Promise<boole
       .query("profiles")
       .withIndex("by_user", (q: any) => q.eq("userId", viewerId))
       .unique();
-    return !!viewerProfile?.jahrgang && viewerProfile.jahrgang === script.authorJahrgang;
+    return !!viewerProfile?.kurs && viewerProfile.kurs === script.authorKurs;
   }
 
   if (script.visibility === "group") {
@@ -229,7 +229,7 @@ export const create = mutation({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
-    const authorJahrgang = profile?.jahrgang ?? undefined;
+    const authorKurs = profile?.kurs ?? undefined;
 
     const now = Date.now();
     return await ctx.db.insert("scripts", {
@@ -238,7 +238,7 @@ export const create = mutation({
       description: args.description.trim(),
       authorId: identity.subject,
       authorName,
-      authorJahrgang,
+      authorKurs,
       pages: args.pages,
       type: args.type,
       visibility: args.visibility,

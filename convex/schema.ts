@@ -19,14 +19,15 @@ export default defineSchema({
     studienfach: v.optional(v.string()),
     matrikelnummer: v.optional(v.string()),
     hochschule: v.optional(v.string()),
-    jahrgang: v.optional(v.string()),
+    jahrgang: v.optional(v.string()), // @deprecated use kurs
+    kurs: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
     status: v.optional(
       v.union(v.literal("pending"), v.literal("active"), v.literal("rejected"))
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_user", ["userId"]).index("by_jahrgang", ["jahrgang"]),
+  }).index("by_user", ["userId"]).index("by_kurs", ["kurs"]),
 
   forums: defineTable({
     name: v.string(),
@@ -38,7 +39,7 @@ export default defineSchema({
     standort: v.optional(v.string()),
     inviteCode: v.string(),
     allowedKurse: v.optional(v.array(v.string())),
-    jahrgang: v.optional(v.string()),
+    jahrgang: v.optional(v.string()), // @deprecated use kurs
     ownerId: v.optional(v.string()),
     deadlineId: v.optional(v.id("deadlines")),
     sectionId: v.optional(v.id("sections")),
@@ -223,7 +224,8 @@ export default defineSchema({
     fileType: v.optional(v.string()),
     fileSize: v.optional(v.number()),
     groupId: v.optional(v.id("groups")),
-    authorJahrgang: v.optional(v.string()),
+    authorJahrgang: v.optional(v.string()), // @deprecated use authorKurs
+    authorKurs: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     lectureId: v.optional(v.id("semesterLectures")),
@@ -296,11 +298,12 @@ export default defineSchema({
   }).index("by_kurs_semester", ["kurs", "semesterNumber"]),
 
   jahrgangLectures: defineTable({
-    jahrgang: v.string(),
+    jahrgang: v.optional(v.string()), // @deprecated use kurs
+    kurs: v.optional(v.string()), // TODO: make required after migration
     lectureName: v.string(),
     semesterNumber: v.number(),
     createdAt: v.number(),
-  }).index("by_jahrgang", ["jahrgang"]),
+  }).index("by_kurs", ["kurs"]),
 
   feedback: defineTable({
     userId: v.string(),

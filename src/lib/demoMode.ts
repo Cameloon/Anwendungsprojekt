@@ -20,7 +20,7 @@ export interface DemoProfile {
   studienfach: string | null;
   matrikelnummer: string | null;
   hochschule: string | null;
-  jahrgang: string | null;
+  kurs: string | null;
   avatar_url: string | null;
   created_at: string | null;
   role?: "admin" | "user";
@@ -58,7 +58,7 @@ export const demoStore = {
         studienfach: null,
         matrikelnummer: null,
         hochschule: null,
-        jahrgang: null,
+        kurs: null,
         avatar_url: null,
         created_at: user.created_at,
       };
@@ -84,7 +84,7 @@ export const demoStore = {
       studienfach: null,
       matrikelnummer: null,
       hochschule: null,
-      jahrgang: null,
+      kurs: null,
       avatar_url: null,
       created_at: new Date().toISOString(),
     };

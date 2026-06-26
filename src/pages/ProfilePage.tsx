@@ -68,7 +68,7 @@ const ProfilePage = () => {
                 <InfoRow icon={BookOpen} label="Studiengang" value={profile?.studienfach || "—"} />
                 <InfoRow icon={MapPin} label="DHBW-Standort" value={profile?.hochschule || "—"} />
                 <InfoRow icon={Hash} label="Matrikelnummer" value={profile?.matrikelnummer || "—"} />
-                <InfoRow icon={Users} label="Studienjahrgang" value={profile?.jahrgang || "—"} />
+                <InfoRow icon={Users} label="Kurs" value={profile?.kurs || "—"} />
               </div>
             </CardContent>
           </Card>
@@ -102,7 +102,7 @@ const ProfilePage = () => {
             <div className="mt-6 flex flex-wrap gap-2">
               <Badge variant="secondary">{profile.studienfach}</Badge>
               {profile?.hochschule && <Badge variant="outline">{profile.hochschule}</Badge>}
-              {profile?.jahrgang && <Badge>{profile.jahrgang}</Badge>}
+              {profile?.kurs && <Badge>{profile.kurs}</Badge>}
             </div>
           )}
         </motion.div>

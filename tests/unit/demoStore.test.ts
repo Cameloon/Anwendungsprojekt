@@ -67,10 +67,10 @@ describe("demoStore.signOut", () => {
 describe("demoStore.updateProfile", () => {
   it("merged einen Patch auf das bestehende Profil", () => {
     demoStore.signIn("test@dhbw.de");
-    demoStore.updateProfile({ studienfach: "Informatik", jahrgang: "TINF23A" });
+    demoStore.updateProfile({ studienfach: "Informatik", kurs: "TINF23A" });
     const profile = demoStore.getProfile();
     expect(profile?.studienfach).toBe("Informatik");
-    expect(profile?.jahrgang).toBe("TINF23A");
+    expect(profile?.kurs).toBe("TINF23A");
     // Unverändertes Feld bleibt erhalten
     expect(profile?.display_name).toBe("test");
   });

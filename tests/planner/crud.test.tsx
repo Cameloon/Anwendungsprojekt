@@ -105,12 +105,12 @@ vi.mock("@/hooks/useProfile", () => ({
     studienfach: "Wirtschaftsinformatik",
     matrikelnummer: "1234567",
     hochschule: "DHBW",
-    jahrgang: "WWI23A",
+    kurs: "WWI23A",
     avatar_url: null,
     created_at: "2026-06-09T08:00:00.000Z",
     role: "user",
   }),
-}));
+});
 
 vi.mock("../../convex/_generated/api", () => ({
   api: {
@@ -128,10 +128,10 @@ vi.mock("../../convex/_generated/api", () => ({
       deleteAttachment: "deadlines.deleteAttachment",
     },
     semesterLectures: {
-      getLecturesForMyJahrgang: "semesterLectures.getLecturesForMyJahrgang",
+      getLecturesForMyKurs: "semesterLectures.getLecturesForMyKurs",
     },
     profiles: {
-      listSameJahrgang: "profiles.listSameJahrgang",
+      listSameKurs: "profiles.listSameKurs",
     },
     notifications: {
       inviteToDeadline: "notifications.inviteToDeadline",
@@ -164,8 +164,8 @@ vi.mock("convex/react", async () => {
       const snapshot = ReactModule.useSyncExternalStore(subscribe, getSnapshot);
 
       if (query === "deadlines.listForUser") return snapshot.deadlines;
-      if (query === "semesterLectures.getLecturesForMyJahrgang") return snapshot.lectures;
-      if (query === "profiles.listSameJahrgang") return snapshot.people;
+      if (query === "semesterLectures.getLecturesForMyKurs") return snapshot.lectures;
+      if (query === "profiles.listSameKurs") return snapshot.people;
       if (query === "sections.list") return [];
       return [];
     },
@@ -246,7 +246,7 @@ const seedDemoAuth = () => {
       studienfach: "Wirtschaftsinformatik",
       matrikelnummer: "1234567",
       hochschule: "DHBW",
-      jahrgang: "WWI23A",
+      kurs: "WWI23A",
       avatar_url: null,
       created_at: "2026-06-09T08:00:00.000Z",
       role: "user",

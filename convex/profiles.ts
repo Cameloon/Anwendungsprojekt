@@ -3,26 +3,26 @@ import { mutation, query } from "./_generated/server";
 import { ensureLectureForumsForProfile } from "./semesterLectures";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, displayName: string) {
-  const jg = jahrgang.toUpperCase();
+async function ensureAllgemeinForum(ctx: any, kurs: string, userId: string, displayName: string) {
+  const jg = kurs.toUpperCase();
 
   const existing = await ctx.db
     .query("forums")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .filter((q: any) => q.eq(q.field("name"), "Allgemein"))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((q: any) => q.eq(q.field("jahrgang"), jg))
+    .filter((q: any) => q.eq(q.field("kurs"), jg))
     .first();
 
   if (existing) {
     if (!existing.sectionId) {
-      const jahrgangSection = await ctx.db
+      const kursSection = await ctx.db
         .query("sections")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
         .first();
-      if (jahrgangSection) {
-        await ctx.db.patch(existing._id, { sectionId: jahrgangSection._id });
+      if (kursSection) {
+        await ctx.db.patch(existing._id, { sectionId: kursSection._id });
       }
     }
     const isMember = await ctx.db
@@ -43,7 +43,7 @@ async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, 
     return;
   }
 
-  const jahrgangSection = await ctx.db
+  const kursSection = await ctx.db
     .query("sections")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .filter((q: any) => q.eq(q.field("name"), "Dein Jahrgang"))
@@ -52,11 +52,11 @@ async function ensureAllgemeinForum(ctx: any, jahrgang: string, userId: string, 
   const code = Math.random().toString(36).slice(2, 8).toUpperCase();
   const forumId = await ctx.db.insert("forums", {
     name: "Allgemein",
-    description: `Allgemeiner Austausch für Jahrgang ${jg}`,
+    description: `Allgemeiner Austausch für Kurs ${jg}`,
     visibility: "public",
     inviteCode: code,
-    jahrgang: jg,
-    sectionId: jahrgangSection?._id,
+    kurs: jg,
+    sectionId: kursSection?._id,
     createdAt: Date.now(),
   });
 
@@ -96,7 +96,7 @@ export const isComplete = query({
       profile.studienfach &&
       profile.matrikelnummer &&
       profile.hochschule &&
-      profile.jahrgang
+      profile.kurs
     );
   },
 });
@@ -117,7 +117,7 @@ export const getAccessStatus = query({
       profile.studienfach &&
       profile.matrikelnummer &&
       profile.hochschule &&
-      profile.jahrgang
+      profile.kurs
     );
     if (!hasFields) return "incomplete";
     if (profile.status === "active") return "active";
@@ -127,7 +127,7 @@ export const getAccessStatus = query({
   },
 });
 
-export const listSameJahrgang = query({
+export const listSameKurs = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -138,13 +138,13 @@ export const listSameJahrgang = query({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    if (!myProfile?.jahrgang) return [];
+    if (!myProfile?.kurs) return [];
 
     const all = await ctx.db.query("profiles").collect();
     return all
       .filter(
         (p) =>
-          p.jahrgang === myProfile.jahrgang &&
+          p.kurs === myProfile.kurs &&
           p.userId !== identity.subject &&
           p.displayName,
       )
@@ -162,7 +162,7 @@ export const upsertMine = mutation({
     studienfach: v.optional(v.string()),
     matrikelnummer: v.optional(v.string()),
     hochschule: v.optional(v.string()),
-    jahrgang: v.optional(v.string()),
+    kurs: v.optional(v.string()),
     email: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
   },
@@ -178,21 +178,21 @@ export const upsertMine = mutation({
     const now = Date.now();
     const patch = {
       ...args,
-      jahrgang: args.jahrgang ? args.jahrgang.toUpperCase() : args.jahrgang,
+      kurs: args.kurs ? args.kurs.toUpperCase() : args.kurs,
       updatedAt: now,
     };
 
     if (existing) {
       await ctx.db.patch(existing._id, patch);
-      if (args.jahrgang) {
+      if (args.kurs) {
         const displayName =
           args.displayName ||
           existing.displayName ||
           identity.name ||
           identity.email ||
           "Unbekannt";
-        await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
-        await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+        await ensureAllgemeinForum(ctx, args.kurs, identity.subject, displayName);
+        await ensureLectureForumsForProfile(ctx, args.kurs, identity.subject, displayName);
       }
       return existing._id;
     }
@@ -205,19 +205,19 @@ export const upsertMine = mutation({
       studienfach: args.studienfach,
       matrikelnummer: args.matrikelnummer,
       hochschule: args.hochschule,
-      jahrgang: args.jahrgang?.toUpperCase(),
+      kurs: args.kurs?.toUpperCase(),
       createdAt: now,
       updatedAt: now,
     });
 
-    if (args.jahrgang) {
+    if (args.kurs) {
       const displayName =
         args.displayName ||
         identity.name ||
         identity.email ||
         "Unbekannt";
-      await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
-      await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+      await ensureAllgemeinForum(ctx, args.kurs, identity.subject, displayName);
+      await ensureLectureForumsForProfile(ctx, args.kurs, identity.subject, displayName);
     }
 
     return newId;
@@ -230,7 +230,7 @@ export const complete = mutation({
     studienfach: v.string(),
     matrikelnummer: v.string(),
     hochschule: v.string(),
-    jahrgang: v.string(),
+    kurs: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -247,7 +247,7 @@ export const complete = mutation({
       studienfach: args.studienfach.trim(),
       matrikelnummer: args.matrikelnummer.trim(),
       hochschule: args.hochschule.trim(),
-      jahrgang: args.jahrgang.trim().toUpperCase(),
+      kurs: args.kurs.trim().toUpperCase(),
       role: "user" as const,
       status: "pending" as const,
       updatedAt: now,
@@ -257,8 +257,8 @@ export const complete = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, patch);
-      await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
-      await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+      await ensureAllgemeinForum(ctx, args.kurs, identity.subject, displayName);
+      await ensureLectureForumsForProfile(ctx, args.kurs, identity.subject, displayName);
       return existing._id;
     }
     const newId = await ctx.db.insert("profiles", {
@@ -267,8 +267,8 @@ export const complete = mutation({
       ...patch,
       createdAt: now,
     });
-    await ensureAllgemeinForum(ctx, args.jahrgang, identity.subject, displayName);
-    await ensureLectureForumsForProfile(ctx, args.jahrgang, identity.subject, displayName);
+    await ensureAllgemeinForum(ctx, args.kurs, identity.subject, displayName);
+    await ensureLectureForumsForProfile(ctx, args.kurs, identity.subject, displayName);
     return newId;
   },
 });

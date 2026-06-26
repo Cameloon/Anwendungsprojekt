@@ -73,10 +73,10 @@ const AccountMenu = () => {
               <span className="truncate">{profile.studienfach}</span>
             </div>
           )}
-          {profile?.jahrgang && (
+          {profile?.kurs && (
             <div className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5" />
-              <span className="truncate">Jahrgang {profile.jahrgang}</span>
+              <span className="truncate">Kurs {profile.kurs}</span>
             </div>
           )}
           {joined && (

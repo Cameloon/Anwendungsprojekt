@@ -4,17 +4,17 @@ import { mutation, query } from "./_generated/server";
 // ─── Helpers ───
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getJahrgangUserIds(ctx: any, userId: string): Promise<string[]> {
+async function getKursUserIds(ctx: any, userId: string): Promise<string[]> {
   const profile = await ctx.db
     .query("profiles")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .unique();
-  if (!profile?.jahrgang) return [];
+  if (!profile?.kurs) return [];
   const all = await ctx.db.query("profiles").collect();
   return all
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((p: any) => p.jahrgang === profile.jahrgang && p.userId !== userId)
+    .filter((p: any) => p.kurs === profile.kurs && p.userId !== userId)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((p: any) => p.userId);
 }
@@ -113,7 +113,7 @@ export const create = mutation({
     if (!identity) throw new Error("Not authenticated");
     const now = Date.now();
     const invitees = args.visibility === "public"
-      ? await getJahrgangUserIds(ctx, identity.subject)
+      ? await getKursUserIds(ctx, identity.subject)
       : args.invitees?.filter(Boolean);
 
     return await ctx.db.insert("deadlines", {
@@ -209,7 +209,7 @@ export const update = mutation({
     if (args.linkedGroupIds !== undefined) patch.linkedGroupIds = args.linkedGroupIds;
     if (args.done !== undefined) patch.done = args.done;
     if (args.visibility === "public" && !args.invitees) {
-      patch.invitees = await getJahrgangUserIds(ctx, identity.subject);
+      patch.invitees = await getKursUserIds(ctx, identity.subject);
     }
 
     await ctx.db.patch(args.deadlineId, patch);

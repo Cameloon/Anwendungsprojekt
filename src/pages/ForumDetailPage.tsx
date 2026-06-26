@@ -138,7 +138,7 @@ const ForumDetailPage = () => {
   );
   const allScripts = useQuery(api.scripts.listPublic);
   const allDeadlines = useQuery(api.deadlines.listForUser);
-  const jahrgangPeople = (useQuery(api.profiles.listSameJahrgang) ?? []) as { userId: string; displayName: string }[];
+  const kursPeople = (useQuery(api.profiles.listSameKurs) ?? []) as { userId: string; displayName: string }[];
 
   const joinMutation = useMutation(api.forums.join);
   const leaveMutation = useMutation(api.forums.leave);
@@ -366,7 +366,7 @@ const ForumDetailPage = () => {
       setInviteSearch={setInviteSearch}
       selectedInvitees={selectedInvitees}
       setSelectedInvitees={setSelectedInvitees}
-      jahrgangPeople={jahrgangPeople}
+      kursPeople={kursPeople}
       inviteError={inviteError}
       handleInvite={handleInvite}
       isAdmin={isAdmin}
@@ -418,7 +418,7 @@ function ForumDetailLayout({
   setInviteSearch,
   selectedInvitees,
   setSelectedInvitees,
-  jahrgangPeople,
+  kursPeople,
   inviteError,
   handleInvite,
   isAdmin,
@@ -462,7 +462,7 @@ function ForumDetailLayout({
   setInviteSearch: (v: string) => void;
   selectedInvitees: { userId: string; displayName: string }[];
   setSelectedInvitees: (v: { userId: string; displayName: string }[]) => void;
-  jahrgangPeople: { userId: string; displayName: string }[];
+  kursPeople: { userId: string; displayName: string }[];
   inviteError: string;
   handleInvite: () => void;
   isAdmin: boolean;
@@ -854,7 +854,7 @@ function ForumDetailLayout({
                 autoComplete="off"
               />
               {inviteSearch.trim().length > 0 && (() => {
-                const suggestions = jahrgangPeople.filter(
+                const suggestions = kursPeople.filter(
                   (p) =>
                     p.displayName.toLowerCase().includes(inviteSearch.toLowerCase()) &&
                     !selectedInvitees.some((s) => s.userId === p.userId)

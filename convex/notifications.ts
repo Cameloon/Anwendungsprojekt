@@ -108,20 +108,20 @@ export const inviteToForum = mutation({
   },
 });
 
-export const inviteJahrgangToForum = mutation({
+export const inviteKursToForum = mutation({
   args: {
     forumId: v.id("forums"),
     forumName: v.string(),
-    jahrgang: v.string(),
+    kurs: v.string(),
     fromName: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const jg = args.jahrgang.toUpperCase();
+    const jg = args.kurs.toUpperCase();
     const profiles = await ctx.db
       .query("profiles")
-      .withIndex("by_jahrgang", (q) => q.eq("jahrgang", jg))
+      .withIndex("by_kurs", (q) => q.eq("kurs", jg))
       .collect();
 
     const results: string[] = [];

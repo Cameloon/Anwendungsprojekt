@@ -94,7 +94,7 @@ const SkriptePage = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
-  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang);
+  const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs);
   const groupsQuery = useQuery(api.groups.listForUser, {});
   const lectures = lecturesQuery ?? [];
   const myGroups = groupsQuery ?? [];
@@ -459,7 +459,7 @@ const SkriptePage = () => {
                       [
                         { value: "public", label: "Öffentlich", icon: Globe },
                         { value: "private", label: "Privat", icon: Lock },
-                        { value: "jahrgang", label: "Jahrgang", icon: GraduationCap },
+                        { value: "jahrgang", label: "Kurs", icon: GraduationCap },
                         { value: "group", label: "Gruppe", icon: Users },
                       ] as const
                     ).map(({ value, label, icon: Icon }) => (
@@ -568,7 +568,7 @@ const SkriptePage = () => {
                     )}
                     {script.visibility === "jahrgang" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <GraduationCap className="h-3 w-3" /> Jahrgang
+                        <GraduationCap className="h-3 w-3" /> Kurs
                       </span>
                     )}
                     {script.visibility === "group" && (

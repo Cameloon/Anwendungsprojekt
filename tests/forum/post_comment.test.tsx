@@ -120,7 +120,7 @@ vi.mock("@/hooks/useProfile", () => ({
     studienfach: "Informatik",
     matrikelnummer: "123456",
     hochschule: "DHBW Mannheim",
-    jahrgang: "TINF25A",
+    kurs: "TINF25A",
     avatar_url: null,
     created_at: null,
     role: "user",

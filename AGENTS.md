@@ -62,7 +62,7 @@ src/
   components/       # React components (shadcn/ui primitives in ui/)
   hooks/            # useAuth, useTheme, useLanguage, useProfile, useToast, useMobile
   pages/            # Route pages (React Router v6)
-  lib/              # Utilities, data lists (dhbw, studienfach, jahrgang), validation, demo mode
+  lib/              # Utilities, data lists (dhbw, studienfach, kurs), validation, demo mode
   integrations/     # Supabase client (auto-generated boilerplate)
 tests/              # Vitest test files
 docs/               # Architecture docs, test overview, PRD, etc.
@@ -76,7 +76,7 @@ docs/               # Architecture docs, test overview, PRD, etc.
 
 ### Auth & Access Flow
 1. Clerk sign-up → `EnsureProfile` creates Convex profile with `role: "user"`
-2. Onboarding → `OnboardingDialog` forces `displayName`, `studienfach`, `matrikelnummer`, `hochschule`, `jahrgang`
+2. Onboarding → `OnboardingDialog` forces `displayName`, `studienfach`, `matrikelnummer`, `hochschule`, `kurs`
 3. After onboarding → profile `status: "pending"`, user sees "Freischaltung ausstehend"
 4. Admin approves/rejects via `admin.ts` mutations → `status: "active"` / `"rejected"`
 5. Admin users (`role: "admin"`) bypass approval → always `"active"`
@@ -88,7 +88,8 @@ docs/               # Architecture docs, test overview, PRD, etc.
 - Available skills: load via `skill` tool or run `npx convex ai-files install`
 - Run `npx convex dev` to sync schema and generate API bindings
 - `ctx.auth.getUserIdentity()` for server-side auth; NEVER accept userId as function arg
-- Profile fields: `jahrgang` is uppercased on save; `role` defaults to `"user"`
+- Profile fields: `kurs` is uppercased on save; `role` defaults to `"user"`
+- **Migration needed:** After renaming `jahrgang` → `kurs` across the codebase, run `npx convex run migrations:renameJahrgangToKurs` to copy existing data to the new field names
 
 ### Testing
 - Tests in `tests/` (not `src/test/`) — `tests/**/*.{test,spec}.{ts,tsx}`
