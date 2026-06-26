@@ -370,7 +370,7 @@ export const ensureAllgemeinForum = mutation({
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const forumId = await ctx.db.insert("forums", {
       name: "Allgemein",
-      description: `Allgemeiner Austausch für Jahrgang ${jg}`,
+      description: `Allgemeiner Austausch für Kurs ${jg}`,
       visibility: "public",
       inviteCode: code,
       kurs: jg,
