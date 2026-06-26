@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -52,6 +52,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -151,6 +161,8 @@ function PlannerPage() {
   const [inviteeSearch, setInviteeSearch] = useState("");
   const [selectedInvitees, setSelectedInvitees] = useState<{ userId: string; displayName: string }[]>([]);
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const [showPastWarning, setShowPastWarning] = useState(false);
+  const pastDateConfirmed = useRef(false);
 
   const deadlines: DeadlineItem[] = rawDeadlines.map((d: any) => ({
     id: d._id,
@@ -195,6 +207,8 @@ function PlannerPage() {
     setSelectedInvitees([]);
     setEditingId(null);
     setShowForm(false);
+    pastDateConfirmed.current = false;
+    setShowPastWarning(false);
   };
 
   const selectInvitee = (p: { userId: string; displayName: string }) => {
@@ -245,6 +259,14 @@ function PlannerPage() {
       if (existing) {
         inviteeIds = [...new Set([...(existing.invitees ?? []), ...inviteeIds])];
       }
+    }
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const selectedDate = new Date(date + "T23:59:59");
+    if (selectedDate < today && !pastDateConfirmed.current) {
+      setShowPastWarning(true);
+      return;
     }
 
     try {
@@ -407,6 +429,7 @@ function PlannerPage() {
   const openDeadline = openId ? deadlines.find((d) => d.id === openId) : null;
 
   return (
+    <>
     <PlannerLayout
       deadlines={deadlines}
       filtered={filtered}
@@ -414,7 +437,7 @@ function PlannerPage() {
       title={title}
       setTitle={setTitle}
       date={date}
-      setDate={setDate}
+      setDate={(v) => { setDate(v); pastDateConfirmed.current = false; setShowPastWarning(false); }}
       category={category}
       setCategory={setCategory}
       note={note}
@@ -470,6 +493,25 @@ function PlannerPage() {
       archiveOpen={archiveOpen}
       setArchiveOpen={setArchiveOpen}
     />
+      <AlertDialog open={showPastWarning} onOpenChange={setShowPastWarning}>
+        <AlertDialogContent className="max-w-sm border-destructive/20 bg-destructive/5">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" /> Datum liegt in der Vergangenheit
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Das gewählte Datum liegt in der Vergangenheit. Möchtest du den Termin trotzdem erstellen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowPastWarning(false)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { pastDateConfirmed.current = true; setShowPastWarning(false); submitDeadline(); }}>
+              Trotzdem erstellen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
