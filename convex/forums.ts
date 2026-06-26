@@ -93,6 +93,37 @@ export const getAllAccessible = query({
   },
 });
 
+export const getPrivateForumsForUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const memberships = await ctx.db
+      .query("forumMembers")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect();
+
+    const forumIds = memberships.map((m) => m.forumId);
+
+    const forums = await Promise.all(
+      forumIds.map(async (id) => {
+        const forum = await ctx.db.get(id);
+        if (!forum) return null;
+        if (forum.visibility !== "private") return null;
+        if (forum.archived) return null;
+        const members = await ctx.db
+          .query("forumMembers")
+          .withIndex("by_forum", (q) => q.eq("forumId", id))
+          .collect();
+        return { ...forum, members };
+      }),
+    );
+
+    return forums.filter((f): f is NonNullable<typeof f> => f !== null);
+  },
+});
+
 export const getById = query({
   args: { forumId: v.id("forums") },
   handler: async (ctx, args) => {

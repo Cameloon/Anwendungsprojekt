@@ -106,7 +106,7 @@ export const create = mutation({
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
-    linkedGroupIds: v.optional(v.array(v.id("groups"))),
+    linkedGroupIds: v.optional(v.array(v.id("forums"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -181,7 +181,7 @@ export const update = mutation({
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
-    linkedGroupIds: v.optional(v.array(v.id("groups"))),
+    linkedGroupIds: v.optional(v.array(v.id("forums"))),
     done: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {

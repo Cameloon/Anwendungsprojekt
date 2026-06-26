@@ -25,6 +25,7 @@ import {
   Archive,
   ChevronDown,
   MoreVertical,
+  Users,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -123,7 +124,7 @@ function PlannerPage() {
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs, {});
   const kursPeopleQuery = useQuery(api.profiles.listSameKurs, {});
   const scriptsQuery = useQuery(api.scripts.listVisible);
-  const groupsQuery = useQuery(api.groups.listForUser, {});
+  const groupsQuery = useQuery(api.forums.getPrivateForumsForUser, {});
 
   const createMutation = useMutation(api.deadlines.create);
   const updateMutation = useMutation(api.deadlines.update);
@@ -281,7 +282,7 @@ function PlannerPage() {
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
           linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
-          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"groups">[]) : undefined,
+          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"forums">[]) : undefined,
         });
         if (inviteeIds.length) {
           const existingInvitees = (deadlines.find((d) => d.id === editingId)?.invitees ?? []);
@@ -308,7 +309,7 @@ function PlannerPage() {
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
           linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
-          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"groups">[]) : undefined,
+          linkedGroupIds: linkedGroupIds.length ? (linkedGroupIds as Id<"forums">[]) : undefined,
         });
         if (inviteeIds.length) {
           await inviteMutation({

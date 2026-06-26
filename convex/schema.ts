@@ -165,7 +165,7 @@ export default defineSchema({
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
-    linkedGroupIds: v.optional(v.array(v.id("groups"))),
+    linkedGroupIds: v.optional(v.array(v.id("forums"))),
     ownerId: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
