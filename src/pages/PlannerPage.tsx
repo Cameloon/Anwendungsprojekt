@@ -24,6 +24,7 @@ import {
   GraduationCap,
   Archive,
   ChevronDown,
+  MoreVertical,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -888,7 +895,7 @@ function PlannerLayout({
                         animate={{ opacity: 1, x: 0 }}
                         className={`glass-card p-4 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                        <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
                           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                             {isOwn ? (
                               <button onClick={() => toggleDone(d.id)} className="shrink-0">
@@ -916,7 +923,7 @@ function PlannerLayout({
                                 )}
                               </button>
                             )}
-                            <div className="flex flex-col items-start gap-0.5 shrink-0">
+                            <div className="hidden sm:flex flex-col items-start gap-0.5 shrink-0">
                               {d.vorlesung && (
                                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
                                   <GraduationCap className="h-3 w-3 inline mr-0.5" />
@@ -927,13 +934,24 @@ function PlannerLayout({
                                 {categoryLabels[d.category]}
                               </span>
                             </div>
-                            <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
                                   {d.title}
                                 </p>
                                 {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
                                 {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
+                              </div>
+                              <div className="flex sm:hidden flex-row flex-wrap items-center gap-1.5 mt-1">
+                                {d.vorlesung && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                    <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                    {d.vorlesung}
+                                  </span>
+                                )}
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                  {categoryLabels[d.category]}
+                                </span>
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                                 <span className="inline-flex items-center gap-1">
@@ -951,7 +969,7 @@ function PlannerLayout({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 justify-center sm:justify-start">
+                          <div className="hidden sm:flex flex-col sm:flex-row items-center gap-1">
                             {fileCount > 0 && (
                               <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
                                 <Paperclip className="h-3 w-3" /> {fileCount}
@@ -976,6 +994,38 @@ function PlannerLayout({
                               </>
                             ) : null}
                           </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 p-0 flex sm:hidden">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-36">
+                              {fileCount > 0 && (
+                                <DropdownMenuItem disabled className="gap-2 text-xs">
+                                  <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                </DropdownMenuItem>
+                              )}
+                              {messageCount > 0 && (
+                                <DropdownMenuItem disabled className="gap-2 text-xs">
+                                  <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
+                                <MessageSquare className="h-3.5 w-3.5" /> Details
+                              </DropdownMenuItem>
+                              {(isOwn || d.visibility === "public") && (
+                                <>
+                                  <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                    <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                    <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </motion.div>
                     );
@@ -1003,7 +1053,7 @@ function PlannerLayout({
                             animate={{ opacity: 1, x: 0 }}
                             className="glass-card p-4 bg-muted/70 opacity-50"
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                            <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
                               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                                 {isOwn ? (
                                   <button onClick={() => toggleDone(d.id)} className="shrink-0">
@@ -1014,7 +1064,7 @@ function PlannerLayout({
                                     <CheckCircle2 className="h-5 w-5 text-success" />
                                   </button>
                                 )}
-                                <div className="flex flex-col items-start gap-0.5 shrink-0">
+                                <div className="hidden sm:flex flex-col items-start gap-0.5 shrink-0">
                                   {d.vorlesung && (
                                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
                                       <GraduationCap className="h-3 w-3 inline mr-0.5" />
@@ -1028,6 +1078,17 @@ function PlannerLayout({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
+                                  </div>
+                                  <div className="flex sm:hidden flex-row flex-wrap items-center gap-1.5 mt-1">
+                                    {d.vorlesung && (
+                                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                        <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                        {d.vorlesung}
+                                      </span>
+                                    )}
+                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                      {categoryLabels[d.category]}
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
                                     <span className="inline-flex items-center gap-1">
@@ -1045,7 +1106,7 @@ function PlannerLayout({
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 justify-center sm:justify-start">
+                              <div className="hidden sm:flex flex-col sm:flex-row items-center gap-1">
                                 {fileCount > 0 && (
                                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
                                     <Paperclip className="h-3 w-3" /> {fileCount}
@@ -1070,6 +1131,38 @@ function PlannerLayout({
                                   </>
                                 ) : null}
                               </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 p-0 flex sm:hidden">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="min-w-36">
+                                  {fileCount > 0 && (
+                                    <DropdownMenuItem disabled className="gap-2 text-xs">
+                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                    </DropdownMenuItem>
+                                  )}
+                                  {messageCount > 0 && (
+                                    <DropdownMenuItem disabled className="gap-2 text-xs">
+                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
+                                    <MessageSquare className="h-3.5 w-3.5" /> Details
+                                  </DropdownMenuItem>
+                                  {(isOwn || d.visibility === "public") && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                        <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                        <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </motion.div>
                         );
@@ -1102,7 +1195,7 @@ function PlannerLayout({
                             animate={{ opacity: 1, x: 0 }}
                             className={`glass-card p-4 ${d.done ? "bg-muted/70 opacity-50" : "opacity-60"}`}
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                            <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
                               <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                                 {isOwn ? (
                                   <button onClick={() => toggleDone(d.id)} className="shrink-0">
@@ -1129,25 +1222,36 @@ function PlannerLayout({
                                       <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
                                     )}
                                   </button>
-                                )}
-                                <div className="flex flex-col items-start gap-0.5 shrink-0">
-                                  {d.vorlesung && (
-                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                                      <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                                      {d.vorlesung}
-                                    </span>
                                   )}
-                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                    {categoryLabels[d.category]}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className={`font-medium truncate ${d.done ? "line-through text-muted-foreground/70" : ""}`}>
-                                      {d.title}
-                                    </p>
+                                  <div className="hidden sm:flex flex-col items-start gap-0.5 shrink-0">
+                                    {d.vorlesung && (
+                                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                        <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                        {d.vorlesung}
+                                      </span>
+                                    )}
+                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                      {categoryLabels[d.category]}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className={`font-medium truncate ${d.done ? "line-through text-muted-foreground/70" : ""}`}>
+                                        {d.title}
+                                      </p>
+                                    </div>
+                                    <div className="flex sm:hidden flex-row flex-wrap items-center gap-1.5 mt-1">
+                                      {d.vorlesung && (
+                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                          <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                          {d.vorlesung}
+                                        </span>
+                                      )}
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                        {categoryLabels[d.category]}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                                     <span className="inline-flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
                                       {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
@@ -1163,7 +1267,7 @@ function PlannerLayout({
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 justify-center sm:justify-start">
+                              <div className="hidden sm:flex flex-col sm:flex-row items-center gap-1">
                                 {fileCount > 0 && (
                                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
                                     <Paperclip className="h-3 w-3" /> {fileCount}
@@ -1188,6 +1292,38 @@ function PlannerLayout({
                                   </>
                                 ) : null}
                               </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 p-0 flex sm:hidden">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="min-w-36">
+                                  {fileCount > 0 && (
+                                    <DropdownMenuItem disabled className="gap-2 text-xs">
+                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                    </DropdownMenuItem>
+                                  )}
+                                  {messageCount > 0 && (
+                                    <DropdownMenuItem disabled className="gap-2 text-xs">
+                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
+                                    <MessageSquare className="h-3.5 w-3.5" /> Details
+                                  </DropdownMenuItem>
+                                  {(isOwn || d.visibility === "public") && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                        <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                        <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </motion.div>
                         );
