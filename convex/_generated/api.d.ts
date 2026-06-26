@@ -14,6 +14,7 @@ import type * as feedback from "../feedback.js";
 import type * as forums from "../forums.js";
 import type * as groups from "../groups.js";
 import type * as notifications from "../notifications.js";
+import type * as postReports from "../postReports.js";
 import type * as posts from "../posts.js";
 import type * as profiles from "../profiles.js";
 import type * as scripts from "../scripts.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   forums: typeof forums;
   groups: typeof groups;
   notifications: typeof notifications;
+  postReports: typeof postReports;
   posts: typeof posts;
   profiles: typeof profiles;
   scripts: typeof scripts;

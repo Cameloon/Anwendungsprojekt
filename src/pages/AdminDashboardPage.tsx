@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import {
-  loadReports,
-  dismissReport,
-  subscribeReports,
-  type PostReport,
-} from "@/lib/reportsStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -101,17 +95,18 @@ const AdminDashboardPage = () => {
   const feedbackStats = useQuery(api.feedback.getAdminStats, {});
   const userReports = useQuery(api.userReports.getAdminReports, {});
   const markReportDone = useMutation(api.userReports.markDone);
+  const postReports = useQuery(api.postReports.getAdminReports, {});
+  const dismissPostReport = useMutation(api.postReports.markDone);
   const [expandedReportType, setExpandedReportType] = useState<
     "bug" | "feature" | null
   >(null);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
+  const [dismissingReport, setDismissingReport] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [reports, setReports] = useState<PostReport[]>(() => loadReports());
   const [newKurs, setNewKurs] = useState("");
   const [newSemester, setNewSemester] = useState("1");
   const [newLectureName, setNewLectureName] = useState("");
 
-  useEffect(() => subscribeReports(() => setReports(loadReports())), []);
 
   // Auto-seed base lecture data once on admin page load
   useEffect(() => {
@@ -245,7 +240,7 @@ const AdminDashboardPage = () => {
                 <MetricCard
                   label="Meldungen"
                   value={String(
-                    reports.filter((r) => r.status === "offen").length,
+                    postReports?.filter((r) => r.status === "offen").length ?? "—",
                   )}
                   hint="Forum-Queue"
                 />
@@ -362,47 +357,64 @@ const AdminDashboardPage = () => {
               description="Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden."
             >
               <div className="space-y-3">
-                {reports.length === 0 && (
+                {postReports === undefined ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                  </div>
+                ) : postReports.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">
                     Keine offenen Meldungen.
                   </p>
-                )}
-                {reports.map((report) => (
-                  <div
-                    key={report.id}
-                    className="rounded-2xl border border-border/60 bg-background/80 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{report.postTitle}</p>
-                          <Badge
-                            variant="secondary"
-                            className={statusTone(report.status)}
-                          >
-                            {report.status}
-                          </Badge>
+                ) : (
+                  postReports.map((report) => (
+                    <div
+                      key={report._id}
+                      className="rounded-2xl border border-border/60 bg-background/80 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{report.postTitle}</p>
+                            <Badge
+                              variant="secondary"
+                              className={statusTone(report.status)}
+                            >
+                              {report.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {report.forumName} · gemeldet von {report.reportedBy}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {report.reason}
+                          </p>
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {report.forumName} · gemeldet von {report.reportedBy}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {report.reason}
-                        </p>
+                        {report.status === "offen" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                            disabled={dismissingReport === report._id}
+                            onClick={async () => {
+                              setDismissingReport(report._id);
+                              try {
+                                await dismissPostReport({ id: report._id });
+                              } finally {
+                                setDismissingReport(null);
+                              }
+                            }}
+                          >
+                            {dismissingReport === report._id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Erledigt"
+                            )}
+                          </Button>
+                        )}
                       </div>
-                      {report.status === "offen" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0"
-                          onClick={() => dismissReport(report.id)}
-                        >
-                          Erledigt
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Panel>
           </section>

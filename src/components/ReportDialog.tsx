@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { addReport } from "@/lib/reportsStore";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 const REASONS = [
   "Spam oder Werbung",
@@ -35,8 +36,9 @@ export function ReportDialog({
   const [selectedReason, setSelectedReason] = useState("");
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submitReport = useMutation(api.postReports.submit);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedReason) return;
     setSubmitting(true);
 
@@ -44,25 +46,23 @@ export function ReportDialog({
       ? `${selectedReason}: ${details.trim()}`
       : selectedReason;
 
-    addReport({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      postId,
-      postTitle,
-      forumName,
-      reason,
-      reportedBy,
-      createdAt: Date.now(),
-      status: "offen",
-    });
+    try {
+      await submitReport({ postId, postTitle, forumName, reason, reportedBy });
 
-    toast.success("Beitrag gemeldet", {
-      description: "Der Beitrag wurde dem Admin zur Prüfung gemeldet.",
-    });
+      toast.success("Beitrag gemeldet", {
+        description: "Der Beitrag wurde dem Admin zur Prüfung gemeldet.",
+      });
 
-    setSelectedReason("");
-    setDetails("");
-    setSubmitting(false);
-    onOpenChange(false);
+      setSelectedReason("");
+      setDetails("");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error("Fehler beim Melden", {
+        description: err instanceof Error ? err.message : "Meldung fehlgeschlagen.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

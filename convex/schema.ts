@@ -310,6 +310,17 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  postReports: defineTable({
+    postId: v.string(),
+    postTitle: v.string(),
+    forumName: v.string(),
+    reason: v.string(),
+    reportedBy: v.string(),
+    reporterUserId: v.string(),
+    status: v.union(v.literal("offen"), v.literal("erledigt")),
+    createdAt: v.number(),
+  }).index("by_status", ["status"]),
+
   notifications: defineTable({
     type: v.union(
       v.literal("forum_invite"),
