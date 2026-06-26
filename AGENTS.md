@@ -3,7 +3,7 @@
 ## Stack
 
 - **Frontend:** Vite + React 18 + TypeScript (loose — `strict: false`, `noImplicitAny: false`)
-- **Backend:** Convex (serverless BaaS, 14 tables in schema)
+- **Backend:** Convex (serverless BaaS, 26 tables in schema)
 - **UI:** Tailwind CSS + shadcn/ui + Radix UI primitives
 - **Auth:** Clerk (JWT, `convex/auth.config.ts`) with automatic demo mode fallback
 - **File storage:** Supabase (integrated but not yet wired into main flows)
@@ -35,20 +35,24 @@ Dev requires **two parallel terminals**: `bun dev` (port 8080) + `npx convex dev
 
 ```
 convex/              # Convex backend (file-based routing for functions)
-  schema.ts         # 14 tables: profiles, forums, forumMembers, forumFiles,
-                    #   posts, postComments, commentLikes, postLikes,
+  schema.ts         # 26 tables: profiles, forums, forumArchiveStates,
+                    #   forumMembers, forumFiles, posts, postFiles,
+                    #   postComments, commentLikes, postLikes,
                     #   deadlines, deadlineAttachments, deadlineMessages,
                     #   deadlineSubscribers, scripts, moderationLog,
-                    #   groups, groupMembers, semesterLectures, feedback,
-                    #   userReports, notifications
+                    #   groups, groupFiles, groupMembers, sections,
+                    #   semesterLectures, jahrgangLectures, feedback,
+                    #   userReports, postReports, notifications
   admin.ts          # Admin-only queries/mutations (approve/reject users)
   profiles.ts       # Profile CRUD, access status, onboarding completion
   auth.config.ts    # Clerk JWT issuer config
   forums.ts         # Forum queries/mutations
   posts.ts          # Post queries/mutations
+  postReports.ts    # Gemeldete Beiträge (Moderation)
   deadlines.ts      # Deadline queries/mutations
   groups.ts         # Study group queries/mutations
   scripts.ts        # Script/material queries/mutations
+  sections.ts       # Forum-Kategorien/Abschnitte
   semesterLectures.ts # Auto-create lecture-specific forums
   notifications.ts  # Notification queries/mutations
   feedback.ts       # Feedback queries/mutations

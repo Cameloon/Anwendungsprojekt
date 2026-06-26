@@ -108,19 +108,6 @@ Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), u
 
 ---
 
-### BUG-009: ReportDialog – Meldungen werden in localStorage statt Convex gespeichert
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Forum – Melden-Funktion
-**Priorität:** Mittel
-**Beschreibung:**
-Der „Melden"-Button in `PostDetailPage` und `ForumPage` öffnet einen `ReportDialog`, der Meldungen über `addReport` aus `src/lib/reportsStore.ts` in localStorage speichert. Dadurch sind Meldungen nur im Browser des meldenden Nutzers sichtbar – der Admin sieht im Dashboard nur Meldungen aus dem eigenen Browser, nicht die anderer Nutzer. Eine persistente, geräteübergreifende Auswertung ist nicht möglich.
-Behebung erfordert Schema-Erweiterung (neues Feld in `userReports` oder separate `postReports`-Tabelle) sowie Anpassung von `ReportDialog` auf eine Convex-Mutation.
-**Fundort:** `src/components/ReportDialog.tsx`, `src/lib/reportsStore.ts`
-
----
-
 ## Bugs in Bearbeitung
 
 Hinweis: Bearbeiter mit Kürzel ergänzen
@@ -130,6 +117,20 @@ Hinweis: Bearbeiter mit Kürzel ergänzen
 ## Erledigte Bugs
 
 Hinweis: "Datum erledigt" ergänzen
+
+### BUG-009: ReportDialog – Meldungen werden in localStorage statt Convex gespeichert
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 26-06-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Forum – Melden-Funktion
+**Priorität:** Mittel
+**Beschreibung:**
+Der „Melden"-Button in `PostDetailPage` und `ForumPage` öffnet einen `ReportDialog`, der Meldungen über `addReport` aus `src/lib/reportsStore.ts` in localStorage speichert. Dadurch sind Meldungen nur im Browser des meldenden Nutzers sichtbar – der Admin sieht im Dashboard nur Meldungen aus dem eigenen Browser, nicht die anderer Nutzer. Eine persistente, geräteübergreifende Auswertung ist nicht möglich.
+**Fundort:** `src/components/ReportDialog.tsx`, `src/lib/reportsStore.ts`
+
+---
 
 ### BUG-003: PostDetailPage – Kommentar löschen nur für Admins sichtbar
 

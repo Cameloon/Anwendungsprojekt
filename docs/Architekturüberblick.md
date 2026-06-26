@@ -59,11 +59,11 @@
 │                        │     └───────────────────────────┘
 │  ┌──────────────────┐  │
 │  │  Convex-Datenbank│  │     ┌───────────────────────────┐
-│  │  (19 Tabellen:   │◄────►  │   Clerk (Auth Provider)   │
+│  │  (26 Tabellen:   │◄────►  │   Clerk (Auth Provider)   │
 │  │  profiles, forums│  │     │   JWT-Ausstellung +        │
 │  │  posts, deadlines│  │     │   Benutzerverwaltung       │
 │  │  scripts, groups │  │     └───────────────────────────┘
-│  │  u.v.m.)         │  │
+│  │  sections u.v.m.)│  │
 │  └──────────────────┘  │
 │  ┌──────────────────┐  │
 │  │  Server Functions│  │
@@ -85,6 +85,56 @@
 | **Backend (BaaS)** | Convex | Serverless-Funktionen, Echtzeit-Daten, Datenbank |
 | **Datei-Storage** | Supabase | Upload und Speicherung von Skripten/Dateien |
 | **Lokaler State** | localStorage Stores | Demo-Modus, Forum- & Skripte-Daten (offline-fähig) |
+
+### 3.1 Convex-Datenbanktabellen (26)
+
+| Tabelle | Beschreibung |
+|---|---|
+| `profiles` | Nutzerprofil, Rolle, Status, Onboarding-Felder |
+| `forums` | Foren (kursübergreifend, Vorlesungs- oder Gruppen-gebunden) |
+| `forumArchiveStates` | Archivierungsstatus eines Forums je Nutzer |
+| `forumMembers` | Mitgliedschaft in Foren |
+| `forumFiles` | Dateianhänge in Foren |
+| `posts` | Beiträge in Foren |
+| `postFiles` | Dateianhänge an Posts |
+| `postComments` | Kommentare zu Posts (inkl. Verschachtelung via `parentId`) |
+| `commentLikes` | Likes auf Kommentare |
+| `postLikes` | Likes auf Posts |
+| `postReports` | Gemeldete Beiträge (Moderationswarteschlange) |
+| `deadlines` | Abgaben / Prüfungen / sonstige Termine |
+| `deadlineAttachments` | Dateianhänge an Deadlines |
+| `deadlineMessages` | Chat-Nachrichten zu einer Deadline |
+| `deadlineSubscribers` | Nutzer, die eine Deadline abonniert haben |
+| `scripts` | Vorlesungsmaterial / Skripte |
+| `moderationLog` | Protokoll von Admin-Aktionen an Posts |
+| `groups` | Lerngruppen |
+| `groupFiles` | Dateianhänge in Lerngruppen |
+| `groupMembers` | Mitgliedschaft in Lerngruppen |
+| `sections` | Forum-Kategorien / Abschnitte (für die Forumübersicht) |
+| `semesterLectures` | Vorlesungen je Kurs und Semester |
+| `jahrgangLectures` | Vorlesungen je Jahrgang und Semester |
+| `feedback` | Nutzerbewertungen der Plattform |
+| `userReports` | Bug- und Feature-Meldungen der Nutzer |
+| `notifications` | Einladungsbenachrichtigungen (Forum / Deadline) |
+
+### 3.2 Convex-Module
+
+| Datei | Aufgabe |
+|---|---|
+| `admin.ts` | Nutzer freischalten / ablehnen |
+| `profiles.ts` | Profil-CRUD, Zugriffsstatus, Onboarding |
+| `forums.ts` | Forum-Queries/Mutations |
+| `posts.ts` | Post-Queries/Mutations |
+| `postReports.ts` | Gemeldete Beiträge (Moderationswarteschlange) |
+| `deadlines.ts` | Deadline-Queries/Mutations |
+| `groups.ts` | Lerngruppen-Queries/Mutations |
+| `scripts.ts` | Skripte/Material-Queries/Mutations |
+| `sections.ts` | Forum-Abschnitte |
+| `semesterLectures.ts` | Vorlesungsbezogene Foren automatisch anlegen |
+| `notifications.ts` | Benachrichtigungen |
+| `feedback.ts` | Plattform-Feedback |
+| `userReports.ts` | Bug-/Feature-Meldungen |
+| `auth.config.ts` | Clerk JWT-Konfiguration |
 
 ---
 
