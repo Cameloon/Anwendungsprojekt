@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-export type Mode = "light" | "dark";
+export type Mode = "light" | "dark" | "auto";
 export type ColorTheme =
   | "default"
   | "violet"
@@ -12,6 +12,7 @@ export type ColorTheme =
 
 interface ThemeCtx {
   mode: Mode;
+  effectiveMode: "light" | "dark";
   color: ColorTheme;
   toggleMode: () => void;
   setMode: (m: Mode) => void;
@@ -248,25 +249,37 @@ const applyThemeVariables = (root: HTMLElement, vars: ThemeVars) => {
   });
 };
 
+const getSystemMode = (): "light" | "dark" =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<Mode>(() => {
-    if (typeof window === "undefined") return "light";
-    const saved = localStorage.getItem("theme-mode") as Mode | null;
-    if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    if (typeof window === "undefined") return "auto";
+    return (localStorage.getItem("theme-mode") as Mode) || "auto";
   });
+  const [systemMode, setSystemMode] = useState<"light" | "dark">(() =>
+    typeof window === "undefined" ? "light" : getSystemMode()
+  );
   const [color, setColorState] = useState<ColorTheme>(() => {
     if (typeof window === "undefined") return "default";
     return (localStorage.getItem("theme-color") as ColorTheme) || "default";
   });
 
+  const effectiveMode: "light" | "dark" = mode === "auto" ? systemMode : mode;
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) =>
+      setSystemMode(e.matches ? "dark" : "light");
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("dark", mode === "dark");
+    root.classList.toggle("dark", effectiveMode === "dark");
     localStorage.setItem("theme-mode", mode);
-  }, [mode]);
+  }, [mode, effectiveMode]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -275,18 +288,24 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     root.setAttribute("data-theme-color", color);
 
     const palette =
-      mode === "dark" ? DARK_THEME_VARS[color] : LIGHT_THEME_VARS[color];
+      effectiveMode === "dark" ? DARK_THEME_VARS[color] : LIGHT_THEME_VARS[color];
     applyThemeVariables(root, palette);
 
     localStorage.setItem("theme-color", color);
-  }, [color, mode]);
+  }, [color, effectiveMode]);
 
   return (
     <ThemeContext.Provider
       value={{
         mode,
+        effectiveMode,
         color,
-        toggleMode: () => setModeState((current) => (current === "dark" ? "light" : "dark")),
+        toggleMode: () =>
+          setModeState((current) => {
+            if (current === "auto") return "light";
+            if (current === "light") return "dark";
+            return "auto";
+          }),
         setMode: setModeState,
         setColor: setColorState,
       }}

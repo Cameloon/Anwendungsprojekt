@@ -1,4 +1,4 @@
-import { Moon, Sun, Palette, Check } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -18,8 +18,15 @@ const COLORS: { id: ColorTheme; label: string; swatch: string }[] = [
   { id: "berry", label: "Beere", swatch: "bg-[hsl(328,68%,45%)]" },
 ];
 
+const MODE_CYCLE = {
+  auto: { next: "light", icon: Monitor, label: "Automatisch (System)" },
+  light: { next: "dark", icon: Sun, label: "Hell" },
+  dark: { next: "auto", icon: Moon, label: "Dunkel" },
+} as const;
+
 export const ThemeToggle = () => {
   const { mode, toggleMode, color, setColor } = useTheme();
+  const { icon: ModeIcon, label: modeLabel } = MODE_CYCLE[mode];
 
   return (
     <div className="flex items-center gap-1">
@@ -34,7 +41,6 @@ export const ThemeToggle = () => {
             <p className="text-xs font-medium text-muted-foreground">
               Farbthema
             </p>
-
           </div>
           <div className="space-y-1">
             {COLORS.map((item) => (
@@ -65,13 +71,10 @@ export const ThemeToggle = () => {
         variant="ghost"
         size="icon"
         onClick={toggleMode}
-        aria-label={mode === "dark" ? "Light Mode" : "Dark Mode"}
+        aria-label={modeLabel}
+        title={modeLabel}
       >
-        {mode === "dark" ? (
-          <Sun className="h-4 w-4" />
-        ) : (
-          <Moon className="h-4 w-4" />
-        )}
+        <ModeIcon className="h-4 w-4" />
       </Button>
     </div>
   );
