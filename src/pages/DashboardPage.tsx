@@ -115,6 +115,26 @@ const DashboardPage = () => {
   const overviewBlocks = selectedSubject
     ? [
         {
+          title: "Termine",
+          icon: <CalendarDays className="h-4 w-4" />,
+          linkTo: "/planner",
+          linkLabel: "Planer",
+          items: selectedDeadlines.map((deadline) => ({
+            title: deadline.title,
+            meta: new Date(deadline.date).toLocaleDateString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }),
+            extra: deadline.note || "",
+            badgeClass: deadline.done
+              ? "bg-success/15 text-success"
+              : "bg-primary/10 text-primary",
+            badgeText: deadline.done ? "Erledigt" : "Offen",
+          })),
+          emptyText: "Keine Termine.",
+        },
+        {
           title: "Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
@@ -138,18 +158,20 @@ const DashboardPage = () => {
           })),
           emptyText: "Keine Skripte.",
         },
+      ]
+    : [
         {
-          title: "Termine",
+          title: "Alle Termine",
           icon: <CalendarDays className="h-4 w-4" />,
           linkTo: "/planner",
           linkLabel: "Planer",
-          items: selectedDeadlines.map((deadline) => ({
+          items: latestDeadlines.map((deadline) => ({
             title: deadline.title,
-            meta: new Date(deadline.date).toLocaleDateString("de-DE", {
+            meta: `${deadline.vorlesung || "Planer"} · ${new Date(deadline.date).toLocaleDateString("de-DE", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
-            }),
+            })}`,
             extra: deadline.note || "",
             badgeClass: deadline.done
               ? "bg-success/15 text-success"
@@ -158,8 +180,6 @@ const DashboardPage = () => {
           })),
           emptyText: "Keine Termine.",
         },
-      ]
-    : [
         {
           title: "Alle Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
@@ -183,26 +203,6 @@ const DashboardPage = () => {
             extra: script.description || "",
           })),
           emptyText: "Keine Skripte.",
-        },
-        {
-          title: "Alle Termine",
-          icon: <CalendarDays className="h-4 w-4" />,
-          linkTo: "/planner",
-          linkLabel: "Planer",
-          items: latestDeadlines.map((deadline) => ({
-            title: deadline.title,
-            meta: `${deadline.vorlesung || "Planer"} · ${new Date(deadline.date).toLocaleDateString("de-DE", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })}`,
-            extra: deadline.note || "",
-            badgeClass: deadline.done
-              ? "bg-success/15 text-success"
-              : "bg-primary/10 text-primary",
-            badgeText: deadline.done ? "Erledigt" : "Offen",
-          })),
-          emptyText: "Keine Termine.",
         },
       ];
 
@@ -360,6 +360,12 @@ const DashboardPage = () => {
                       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
                         <div className="rounded-2xl bg-background/80 py-2">
                           <p className="font-semibold text-foreground">
+                            {subjectDeadlines.length}
+                          </p>
+                          <p>Termine</p>
+                        </div>
+                        <div className="rounded-2xl bg-background/80 py-2">
+                          <p className="font-semibold text-foreground">
                             {subjectPosts.length}
                           </p>
                           <p>Forum</p>
@@ -369,12 +375,6 @@ const DashboardPage = () => {
                             {subjectScripts.length}
                           </p>
                           <p>Skripte</p>
-                        </div>
-                        <div className="rounded-2xl bg-background/80 py-2">
-                          <p className="font-semibold text-foreground">
-                            {subjectDeadlines.length}
-                          </p>
-                          <p>Termine</p>
                         </div>
                       </div>
                     </button>
