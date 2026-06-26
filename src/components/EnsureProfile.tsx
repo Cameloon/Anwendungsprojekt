@@ -6,7 +6,7 @@ import { IS_DEMO } from "@/lib/demoMode";
 
 const EnsureProfile = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated } = IS_DEMO ? { isAuthenticated: true } : useConvexAuth();
   const profile = IS_DEMO ? null : useQuery(api.profiles.getMine, {});
   const upsertProfile = IS_DEMO ? null : useMutation(api.profiles.upsertMine);
   const created = useRef(false);

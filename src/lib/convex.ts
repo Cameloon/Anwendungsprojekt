@@ -9,4 +9,4 @@ if (!url) {
   );
 }
 
-export const convex = new ConvexReactClient(url ?? "https://placeholder.convex.cloud");
+export const convex = new ConvexReactClient(url || "https://placeholder.convex.cloud");
