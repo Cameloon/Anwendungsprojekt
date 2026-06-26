@@ -221,33 +221,65 @@ export const toggleDone = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
 
-    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject)
-      throw new Error("Not your copy");
-
-    const newDone = !deadline.done;
-
-    if (deadline.visibility === "public") {
-      // Shared done state — update all copies with same title+date+category
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const all = await ctx.db
-        .query("deadlines")
-        .filter((q: any) => q.eq(q.field("title"), deadline.title))
-        .filter((q: any) => q.eq(q.field("date"), deadline.date))
-        .filter((q: any) => q.eq(q.field("category"), deadline.category))
-        .filter((q: any) => q.eq(q.field("visibility"), "public"))
-        .collect();
-      for (const d of all) {
-        await ctx.db.patch(d._id, { done: newDone, updatedAt: Date.now() });
-      }
-    } else {
+    if (deadline.ownerId === identity.subject) {
       await ctx.db.patch(args.deadlineId, {
-        done: newDone,
+        done: !deadline.done,
         updatedAt: Date.now(),
       });
+      return;
     }
+
+    const isPublic = deadline.visibility === "public";
+    const isInvited = deadline.invitees?.includes(identity.subject);
+    if (!isPublic && !isInvited) throw new Error("Not authorized");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existing = await ctx.db
+      .query("deadlines")
+      .filter((q: any) => q.eq(q.field("ownerId"), identity.subject))
+      .filter((q: any) => q.eq(q.field("title"), deadline.title))
+      .filter((q: any) => q.eq(q.field("date"), deadline.date))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        done: !existing.done,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+
+    const updatedInvitees = (deadline.invitees ?? []).filter(
+      (id) => id !== identity.subject,
+    );
+    const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
+    if (deadline.visibility === "public") {
+      const declined = [...(deadline.declinedBy ?? []), identity.subject];
+      patchFields.declinedBy = declined;
+    }
+    await ctx.db.patch(args.deadlineId, patchFields);
+
+    const now = Date.now();
+    await ctx.db.insert("deadlines", {
+      title: deadline.title,
+      date: deadline.date,
+      category: deadline.category,
+      done: !deadline.done,
+      note: deadline.note,
+      vorlesung: deadline.vorlesung,
+      visibility: deadline.visibility,
+      invitees: [],
+      allowedKurse: deadline.allowedKurse,
+      linkedScriptIds: deadline.linkedScriptIds,
+      linkedGroupIds: deadline.linkedGroupIds,
+      ownerId: identity.subject,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 

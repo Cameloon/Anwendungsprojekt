@@ -628,7 +628,7 @@ function PlannerLayout({
           </motion.div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             {[
               { label: "Offen", count: stats.offen, icon: ListTodo, color: "text-info" },
               { label: "Dringend", count: stats.dringend, icon: Flame, color: "text-destructive" },
@@ -886,92 +886,96 @@ function PlannerLayout({
                         layout
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={`glass-card p-4 flex items-center gap-3 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
+                        className={`glass-card p-4 ${d.done ? "bg-muted/40 opacity-60" : ""}`}
                       >
-                        {isOwn ? (
-                          <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                            {d.done ? (
-                              <CheckCircle2 className="h-5 w-5 text-success" />
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                            {isOwn ? (
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                {d.done ? (
+                                  <CheckCircle2 className="h-5 w-5 text-success" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                )}
+                              </button>
+                            ) : d.invitees?.includes(me) ? (
+                              <div className="flex gap-1 shrink-0">
+                                <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title="Annehmen">
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                                <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title="Ablehnen">
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
                             ) : (
-                              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                {d.done ? (
+                                  <CheckCircle2 className="h-5 w-5 text-success" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                )}
+                              </button>
                             )}
-                          </button>
-                        ) : d.invitees?.includes(me) ? (
-                          <div className="flex gap-1 shrink-0">
-                            <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
-                              <Check className="h-3 w-3" /> Annehmen
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
-                              <X className="h-3 w-3" /> Ablehnen
-                            </Button>
+                            <div className="flex flex-col items-start gap-0.5 shrink-0">
+                              {d.vorlesung && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                  <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                  {d.vorlesung}
+                                </span>
+                              )}
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                {categoryLabels[d.category]}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
+                                  {d.title}
+                                </p>
+                                {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
+                                {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                </span>
+                                {d.visibility === "private" && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Lock className="h-3 w-3" /> Privat
+                                  </span>
+                                )}
+                                {d.invitees.length > 0 && (
+                                  <span>{d.invitees.length} Eingeladene</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        ) : (
-                          <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                            {d.done ? (
-                              <CheckCircle2 className="h-5 w-5 text-success" />
-                            ) : (
-                              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                            )}
-                          </button>
-                        )}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                            {categoryLabels[d.category]}
-                          </span>
-                          {d.vorlesung && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                              <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                              {d.vorlesung}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
-                              {d.title}
-                            </p>
-                            {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
-                            {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                            </span>
-                            {d.visibility === "private" && (
-                              <span className="inline-flex items-center gap-1">
-                                <Lock className="h-3 w-3" /> Privat
+                          <div className="flex items-center gap-1 justify-center sm:justify-start">
+                            {fileCount > 0 && (
+                              <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                <Paperclip className="h-3 w-3" /> {fileCount}
                               </span>
                             )}
-                            {d.invitees.length > 0 && (
-                              <span>{d.invitees.length} Eingeladene</span>
+                            {messageCount > 0 && (
+                              <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                <MessageSquare className="h-3 w-3" /> {messageCount}
+                              </span>
                             )}
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                            {isOwn || d.visibility === "public" ? (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : null}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {fileCount > 0 && (
-                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                              <Paperclip className="h-3 w-3" /> {fileCount}
-                            </span>
-                          )}
-                          {messageCount > 0 && (
-                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                              <MessageSquare className="h-3 w-3" /> {messageCount}
-                            </span>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                          {isOwn || d.visibility === "public" ? (
-                            <>
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : null}
                         </div>
                       </motion.div>
                     );
@@ -997,71 +1001,75 @@ function PlannerLayout({
                             layout
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="glass-card p-4 flex items-center gap-3 bg-muted/70 opacity-50"
+                            className="glass-card p-4 bg-muted/70 opacity-50"
                           >
-                            {isOwn ? (
-                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                                <CheckCircle2 className="h-5 w-5 text-success" />
-                              </button>
-                            ) : (
-                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                                <CheckCircle2 className="h-5 w-5 text-success" />
-                              </button>
-                            )}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                {categoryLabels[d.category]}
-                              </span>
-                              {d.vorlesung && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                                  <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                                  {d.vorlesung}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                {isOwn ? (
+                                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                    <CheckCircle2 className="h-5 w-5 text-success" />
+                                  </button>
+                                ) : (
+                                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                    <CheckCircle2 className="h-5 w-5 text-success" />
+                                  </button>
+                                )}
+                                <div className="flex flex-col items-start gap-0.5 shrink-0">
+                                  {d.vorlesung && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                      <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                      {d.vorlesung}
+                                    </span>
+                                  )}
+                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                    {categoryLabels[d.category]}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium truncate line-through text-muted-foreground/70">{d.title}</p>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                    </span>
+                                    {d.visibility === "private" && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <Lock className="h-3 w-3" /> Privat
+                                      </span>
+                                    )}
+                                    {d.invitees.length > 0 && (
+                                      <span>{d.invitees.length} Eingeladene</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
-                                <span className="inline-flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                                </span>
-                                {d.visibility === "private" && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Lock className="h-3 w-3" /> Privat
+                              <div className="flex items-center gap-1 justify-center sm:justify-start">
+                                {fileCount > 0 && (
+                                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                    <Paperclip className="h-3 w-3" /> {fileCount}
                                   </span>
                                 )}
-                                {d.invitees.length > 0 && (
-                                  <span>{d.invitees.length} Eingeladene</span>
+                                {messageCount > 0 && (
+                                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                    <MessageSquare className="h-3 w-3" /> {messageCount}
+                                  </span>
                                 )}
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                {isOwn || d.visibility === "public" ? (
+                                  <>
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : null}
                               </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {fileCount > 0 && (
-                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                                  <Paperclip className="h-3 w-3" /> {fileCount}
-                                </span>
-                              )}
-                              {messageCount > 0 && (
-                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                                  <MessageSquare className="h-3 w-3" /> {messageCount}
-                                </span>
-                              )}
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                              {isOwn || d.visibility === "public" ? (
-                                <>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : null}
                             </div>
                           </motion.div>
                         );
@@ -1092,90 +1100,94 @@ function PlannerLayout({
                             layout
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="glass-card p-4 flex items-center gap-3 opacity-60"
+                            className={`glass-card p-4 ${d.done ? "bg-muted/70 opacity-50" : "opacity-60"}`}
                           >
-                            {isOwn ? (
-                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                                {d.done ? (
-                                  <CheckCircle2 className="h-5 w-5 text-success" />
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                {isOwn ? (
+                                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                    {d.done ? (
+                                      <CheckCircle2 className="h-5 w-5 text-success" />
+                                    ) : (
+                                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                    )}
+                                  </button>
+                                ) : d.invitees?.includes(me) ? (
+                                  <div className="flex gap-1 shrink-0">
+                                    <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title="Annehmen">
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title="Ablehnen">
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 ) : (
-                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                  <button onClick={() => toggleDone(d.id)} className="shrink-0">
+                                    {d.done ? (
+                                      <CheckCircle2 className="h-5 w-5 text-success" />
+                                    ) : (
+                                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
+                                    )}
+                                  </button>
                                 )}
-                              </button>
-                            ) : d.invitees?.includes(me) ? (
-                              <div className="flex gap-1 shrink-0">
-                                <Button size="sm" className="h-7 text-xs gap-1" onClick={() => acceptInvite(d.id)}>
-                                  <Check className="h-3 w-3" /> Annehmen
-                                </Button>
-                                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => declineInvite(d.id)}>
-                                  <X className="h-3 w-3" /> Ablehnen
-                                </Button>
+                                <div className="flex flex-col items-start gap-0.5 shrink-0">
+                                  {d.vorlesung && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
+                                      <GraduationCap className="h-3 w-3 inline mr-0.5" />
+                                      {d.vorlesung}
+                                    </span>
+                                  )}
+                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
+                                    {categoryLabels[d.category]}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className={`font-medium truncate ${d.done ? "line-through text-muted-foreground/70" : ""}`}>
+                                      {d.title}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                    </span>
+                                    {d.visibility === "private" && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <Lock className="h-3 w-3" /> Privat
+                                      </span>
+                                    )}
+                                    {d.invitees.length > 0 && (
+                                      <span>{d.invitees.length} Eingeladene</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            ) : (
-                              <button onClick={() => toggleDone(d.id)} className="shrink-0">
-                                {d.done ? (
-                                  <CheckCircle2 className="h-5 w-5 text-success" />
-                                ) : (
-                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors" />
-                                )}
-                              </button>
-                            )}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                {categoryLabels[d.category]}
-                              </span>
-                              {d.vorlesung && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
-                                  <GraduationCap className="h-3 w-3 inline mr-0.5" />
-                                  {d.vorlesung}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
-                                  {d.title}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                                <span className="inline-flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
-                                </span>
-                                {d.visibility === "private" && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Lock className="h-3 w-3" /> Privat
+                              <div className="flex items-center gap-1 justify-center sm:justify-start">
+                                {fileCount > 0 && (
+                                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                    <Paperclip className="h-3 w-3" /> {fileCount}
                                   </span>
                                 )}
-                                {d.invitees.length > 0 && (
-                                  <span>{d.invitees.length} Eingeladene</span>
+                                {messageCount > 0 && (
+                                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                                    <MessageSquare className="h-3 w-3" /> {messageCount}
+                                  </span>
                                 )}
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                {isOwn || d.visibility === "public" ? (
+                                  <>
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : null}
                               </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {fileCount > 0 && (
-                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                                  <Paperclip className="h-3 w-3" /> {fileCount}
-                                </span>
-                              )}
-                              {messageCount > 0 && (
-                                <span className="text-xs text-muted-foreground inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
-                                  <MessageSquare className="h-3 w-3" /> {messageCount}
-                                </span>
-                              )}
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                              {isOwn || d.visibility === "public" ? (
-                                <>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : null}
                             </div>
                           </motion.div>
                         );
