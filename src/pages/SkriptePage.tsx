@@ -10,6 +10,8 @@ import {
   Filter,
   Globe,
   Lock,
+  Users,
+  GraduationCap,
   Trash2,
   Loader2,
   X,
@@ -23,11 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   validateScriptDescription,
   validateFileSize,
-  FILE_MAX_BYTES,
 } from "@/lib/validation";
 import Combobox from "@/components/ui/combobox";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -70,6 +70,8 @@ const typeColors: Record<string, string> = {
   Notiz: "bg-success/10 text-success",
 };
 
+type Visibility = "public" | "private" | "jahrgang" | "group";
+
 interface ScriptItem {
   id: string;
   title: string;
@@ -80,22 +82,24 @@ interface ScriptItem {
   date: string;
   pages: number;
   type: "PDF" | "DOCX" | "Notiz";
-  visibility: "public" | "private";
+  visibility: Visibility;
   url?: string;
   fileName?: string;
+  groupId?: string;
 }
 
 const SkriptePage = () => {
   const { user } = useAuth();
-  const profile = useProfile();
   const me = user?.id || "";
-  const displayName = profile?.display_name || "Unbekannt";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyJahrgang);
+  const groupsQuery = useQuery(api.groups.listForUser, {});
   const lectures = lecturesQuery ?? [];
+  const myGroups = groupsQuery ?? [];
   const lectureOptions = lectures.map((l) => ({ value: l._id, label: l.lectureName }));
+  const groupOptions = myGroups.map((g) => ({ value: g._id, label: g.name }));
 
   const createMutation = useMutation(api.scripts.create);
   const deleteMutation = useMutation(api.scripts.deleteScript);
@@ -107,7 +111,8 @@ const SkriptePage = () => {
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [visibility, setVisibility] = useState<Visibility>("public");
+  const [groupId, setGroupId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -129,6 +134,7 @@ const SkriptePage = () => {
     visibility: s.visibility,
     url: s.url,
     fileName: s.fileName,
+    groupId: s.groupId,
   }));
 
   const subjects = useMemo(() => {
@@ -183,6 +189,13 @@ const SkriptePage = () => {
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextDescriptionError) return;
 
+    if (visibility === "group" && !groupId) {
+      toast.error("Bitte eine Gruppe auswählen.");
+      return;
+    }
+
+    const groupArg = visibility === "group" ? (groupId as Id<"groups">) : undefined;
+
     if (!selectedFile) {
       try {
         await createMutation({
@@ -192,10 +205,11 @@ const SkriptePage = () => {
           pages: 0,
           type: "Notiz",
           visibility,
+          groupId: groupArg,
         });
         toast.success("Skript erstellt");
-      } catch {
-        toast.error("Fehler beim Erstellen");
+      } catch (e: any) {
+        toast.error(e?.message ?? "Fehler beim Erstellen");
       }
       resetForm();
       return;
@@ -223,10 +237,11 @@ const SkriptePage = () => {
         fileName: selectedFile.name,
         fileType: selectedFile.type,
         fileSize: selectedFile.size,
+        groupId: groupArg,
       });
       toast.success("Skript hochgeladen");
-    } catch {
-      toast.error("Fehler beim Hochladen");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Fehler beim Hochladen");
     }
     setUploading(false);
     resetForm();
@@ -237,6 +252,7 @@ const SkriptePage = () => {
     setLectureId("");
     setDescription("");
     setVisibility("public");
+    setGroupId("");
     setShowUpload(false);
     setSelectedFile(null);
     setFileError("");
@@ -254,7 +270,6 @@ const SkriptePage = () => {
 
   const filtered = useMemo(() => {
     return scripts
-      .filter((s) => s.visibility !== "private" || s.authorId === me)
       .filter(
         (s) =>
           s.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -439,28 +454,36 @@ const SkriptePage = () => {
                     )}
                   </div>
                   {fileError && <p className="text-xs text-destructive">{fileError}</p>}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setVisibility("public")}
-                      className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                        visibility === "public"
-                          ? "bg-primary/10 text-primary border-primary/30"
-                          : "text-muted-foreground bg-secondary border-transparent"
-                      }`}
-                    >
-                      <Globe className="h-4 w-4" /> Öffentlich
-                    </button>
-                    <button
-                      onClick={() => setVisibility("private")}
-                      className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                        visibility === "private"
-                          ? "bg-primary/10 text-primary border-primary/30"
-                          : "text-muted-foreground bg-secondary border-transparent"
-                      }`}
-                    >
-                      <Lock className="h-4 w-4" /> Privat
-                    </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { value: "public", label: "Öffentlich", icon: Globe },
+                        { value: "private", label: "Privat", icon: Lock },
+                        { value: "jahrgang", label: "Jahrgang", icon: GraduationCap },
+                        { value: "group", label: "Gruppe", icon: Users },
+                      ] as const
+                    ).map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setVisibility(value)}
+                        className={`inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          visibility === value
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "text-muted-foreground bg-secondary border-transparent"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" /> {label}
+                      </button>
+                    ))}
                   </div>
+                  {visibility === "group" && (
+                    <Combobox
+                      value={groupId}
+                      onChange={setGroupId}
+                      options={groupOptions}
+                      placeholder="Gruppe auswählen"
+                    />
+                  )}
                   <div className="flex gap-2 justify-end">
                     <Button variant="outline" onClick={resetForm} disabled={uploading}>
                       Abbrechen
@@ -541,6 +564,16 @@ const SkriptePage = () => {
                     {script.visibility === "private" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                         <Lock className="h-3 w-3" /> Privat
+                      </span>
+                    )}
+                    {script.visibility === "jahrgang" && (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                        <GraduationCap className="h-3 w-3" /> Jahrgang
+                      </span>
+                    )}
+                    {script.visibility === "group" && (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                        <Users className="h-3 w-3" /> Gruppe
                       </span>
                     )}
                     <span

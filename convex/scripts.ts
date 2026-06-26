@@ -2,6 +2,19 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getType } from "./schema";
 
+// ─── Constants ───
+
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
+
+const FILE_MAX_BYTES = 28 * 1024 * 1024; // 25 MB display, 28 MB actual limit
+const MAX_SCRIPTS_PER_USER = 50;
+
 // ─── Helpers ───
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,6 +27,34 @@ async function resolveSubject(ctx: any, subject: any): Promise<string> {
   return lecture?.lectureName ?? "Unbekannt";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function canAccess(ctx: any, script: any, viewerId: string): Promise<boolean> {
+  if (script.visibility === "public") return true;
+  if (script.authorId === viewerId) return true;
+  if (script.visibility === "private") return false;
+
+  if (script.visibility === "jahrgang") {
+    const viewerProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q: any) => q.eq("userId", viewerId))
+      .unique();
+    return !!viewerProfile?.jahrgang && viewerProfile.jahrgang === script.authorJahrgang;
+  }
+
+  if (script.visibility === "group") {
+    if (!script.groupId) return false;
+    const member = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_group_user", (q: any) =>
+        q.eq("groupId", script.groupId).eq("userId", viewerId)
+      )
+      .unique();
+    return !!member;
+  }
+
+  return false;
+}
+
 // ─── Queries ───
 
 export const listVisible = query({
@@ -21,11 +62,14 @@ export const listVisible = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const viewerId = identity.subject;
     const all = await ctx.db.query("scripts").collect();
 
-    const visible = all.filter(
-      (s) => s.visibility !== "private" || s.authorId === identity.subject
-    );
+    const visible: typeof all = [];
+    for (const s of all) {
+      if (await canAccess(ctx, s, viewerId)) visible.push(s);
+    }
 
     return await Promise.all(
       visible.map(async (s) => ({
@@ -44,8 +88,7 @@ export const listPublic = query({
     if (!identity) throw new Error("Not authenticated");
 
     const all = await ctx.db.query("scripts").collect();
-
-    const publicScripts = all.filter((s) => s.visibility !== "private");
+    const publicScripts = all.filter((s) => s.visibility === "public");
 
     return await Promise.all(
       publicScripts.map(async (s) => ({
@@ -65,6 +108,9 @@ export const getById = query({
 
     const script = await ctx.db.get(args.scriptId);
     if (!script) return null;
+
+    if (!(await canAccess(ctx, script, identity.subject))) return null;
+
     return {
       ...script,
       url: script.storageId ? await ctx.storage.getUrl(script.storageId) : undefined,
@@ -78,11 +124,13 @@ export const listBySubject = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const viewerId = identity.subject;
     const all = await ctx.db.query("scripts").collect();
 
     const filtered = [];
     for (const s of all) {
-      if (s.visibility === "private" && s.authorId !== identity.subject) continue;
+      if (!(await canAccess(ctx, s, viewerId))) continue;
       const resolved = await resolveSubject(ctx, s.subject);
       if (resolved === args.subject) {
         filtered.push(s);
@@ -103,11 +151,13 @@ export const getDistinctSubjects = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const viewerId = identity.subject;
     const all = await ctx.db.query("scripts").collect();
     const subjects = new Set<string>();
 
     for (const s of all) {
-      if (s.visibility === "private" && s.authorId !== identity.subject) continue;
+      if (!(await canAccess(ctx, s, viewerId))) continue;
       const resolved = await resolveSubject(ctx, s.subject);
       subjects.add(resolved);
     }
@@ -122,7 +172,6 @@ export const generateUploadUrl = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -137,28 +186,59 @@ export const create = mutation({
     description: v.string(),
     pages: v.number(),
     type: v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("Notiz")),
-    visibility: v.union(v.literal("public"), v.literal("private")),
+    visibility: v.union(
+      v.literal("public"),
+      v.literal("private"),
+      v.literal("jahrgang"),
+      v.literal("group"),
+    ),
     storageId: v.optional(v.id("_storage")),
     fileName: v.optional(v.string()),
     fileType: v.optional(v.string()),
     fileSize: v.optional(v.number()),
+    groupId: v.optional(v.id("groups")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    // Server-side file validation
+    if (args.fileType !== undefined && !ALLOWED_MIME_TYPES.has(args.fileType)) {
+      throw new Error(`Unzulässiger Dateityp: ${args.fileType}`);
+    }
+    if (args.fileSize !== undefined && args.fileSize > FILE_MAX_BYTES) {
+      throw new Error("Datei darf maximal 25 MB groß sein.");
+    }
+
+    // Group visibility requires a groupId
+    if (args.visibility === "group" && !args.groupId) {
+      throw new Error("Für Gruppen-Sichtbarkeit muss eine Gruppe ausgewählt werden.");
+    }
+
+    // Per-user quota
+    const existing = await ctx.db
+      .query("scripts")
+      .withIndex("by_author", (q) => q.eq("authorId", identity.subject))
+      .collect();
+    if (existing.length >= MAX_SCRIPTS_PER_USER) {
+      throw new Error(`Maximale Anzahl von ${MAX_SCRIPTS_PER_USER} Skripten pro Nutzer erreicht.`);
+    }
+
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
+    const authorJahrgang = profile?.jahrgang ?? undefined;
 
     const now = Date.now();
-    const scriptId = await ctx.db.insert("scripts", {
+    return await ctx.db.insert("scripts", {
       title: args.title.trim(),
       subject: args.subject,
       description: args.description.trim(),
       authorId: identity.subject,
       authorName,
+      authorJahrgang,
       pages: args.pages,
       type: args.type,
       visibility: args.visibility,
@@ -166,11 +246,10 @@ export const create = mutation({
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
+      groupId: args.groupId,
       createdAt: now,
       updatedAt: now,
     });
-
-    return scriptId;
   },
 });
 
@@ -190,8 +269,14 @@ export const update = mutation({
       v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("Notiz"))
     ),
     visibility: v.optional(
-      v.union(v.literal("public"), v.literal("private"))
+      v.union(
+        v.literal("public"),
+        v.literal("private"),
+        v.literal("jahrgang"),
+        v.literal("group"),
+      )
     ),
+    groupId: v.optional(v.id("groups")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -208,7 +293,13 @@ export const update = mutation({
     if (args.description !== undefined) patch.description = args.description.trim();
     if (args.pages !== undefined) patch.pages = args.pages;
     if (args.type !== undefined) patch.type = args.type;
-    if (args.visibility !== undefined) patch.visibility = args.visibility;
+    if (args.visibility !== undefined) {
+      if (args.visibility === "group" && !args.groupId && !script.groupId) {
+        throw new Error("Für Gruppen-Sichtbarkeit muss eine Gruppe ausgewählt werden.");
+      }
+      patch.visibility = args.visibility;
+    }
+    if (args.groupId !== undefined) patch.groupId = args.groupId;
 
     await ctx.db.patch(args.scriptId, patch);
   },
