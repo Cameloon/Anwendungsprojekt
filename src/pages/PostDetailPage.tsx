@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,6 +68,7 @@ interface PostComment {
   parentId?: string;
   liked: boolean;
   likeCount: number;
+  updatedAt?: number;
 }
 
 interface EnrichedPost {
@@ -83,6 +85,7 @@ interface EnrichedPost {
   sketch?: string;
   linkedScriptIds?: string[];
   linkedDeadlineIds?: string[];
+  updatedAt?: number;
 }
 
 interface ForumInfo {
@@ -120,12 +123,41 @@ function PostDetailPage() {
   const addCommentMutation = useMutation(api.posts.addComment);
   const deleteCommentMutation = useMutation(api.posts.deleteComment);
   const updateCommentMutation = useMutation(api.posts.updateComment);
+  const updatePostMutation = useMutation(api.posts.update);
 
   const [comment, setComment] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [editingPost, setEditingPost] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+
+  const handleStartEditPost = () => {
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditingPost(true);
+  };
+
+  const handleCancelEditPost = () => {
+    setEditingPost(false);
+  };
+
+  const handleSaveEditPost = async () => {
+    if (!editTitle.trim() || !editContent.trim()) return;
+    try {
+      await updatePostMutation({
+        postId: post._id,
+        title: editTitle.trim(),
+        content: editContent.trim(),
+      });
+      setEditingPost(false);
+      toast.success("Beitrag bearbeitet");
+    } catch {
+      toast.error("Fehler beim Bearbeiten");
+    }
+  };
 
   if (post === undefined) {
     return (
@@ -267,6 +299,14 @@ function PostDetailPage() {
       handleStartEdit={handleStartEdit}
       handleSaveEdit={handleSaveEdit}
       handleCancelEdit={handleCancelEdit}
+      editingPost={editingPost}
+      editTitle={editTitle}
+      setEditTitle={setEditTitle}
+      editContent={editContent}
+      setEditContent={setEditContent}
+      handleStartEditPost={handleStartEditPost}
+      handleCancelEditPost={handleCancelEditPost}
+      handleSaveEditPost={handleSaveEditPost}
     />
   );
 }
@@ -301,6 +341,14 @@ function PostDetailLayout({
   handleStartEdit,
   handleSaveEdit,
   handleCancelEdit,
+  editingPost,
+  editTitle,
+  setEditTitle,
+  editContent,
+  setEditContent,
+  handleStartEditPost,
+  handleCancelEditPost,
+  handleSaveEditPost,
 }: {
   post: EnrichedPost;
   forumName: string | null;
@@ -329,6 +377,14 @@ function PostDetailLayout({
   handleStartEdit: (c: PostComment) => void;
   handleSaveEdit: () => void;
   handleCancelEdit: () => void;
+  editingPost: boolean;
+  editTitle: string;
+  setEditTitle: (v: string) => void;
+  editContent: string;
+  setEditContent: (v: string) => void;
+  handleStartEditPost: () => void;
+  handleCancelEditPost: () => void;
+  handleSaveEditPost: () => void;
 }) {
   return (
     <div className="min-h-screen bg-background">
@@ -360,16 +416,55 @@ function PostDetailLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold">{post.authorName}</p>
-                <p className="text-xs text-muted-foreground">{formatDate(post._creationTime)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDate(post._creationTime)}
+                  {post.updatedAt && post.updatedAt > post._creationTime + 1000 && (
+                    <> · <span className="italic">bearbeitet</span></>
+                  )}
+                </p>
               </div>
-              <Badge variant="outline" className={`${tagStyles[post.tag] || ""} text-[10px] py-0 h-5`}>
-                {tagLabels[post.tag as keyof typeof tagLabels] || post.tag}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {post.authorId === me && !editingPost && (
+                  <button onClick={handleStartEditPost} className="text-muted-foreground hover:text-foreground transition-colors" title="Beitrag bearbeiten">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <Badge variant="outline" className={`${tagStyles[post.tag] || ""} text-[10px] py-0 h-5`}>
+                  {tagLabels[post.tag as keyof typeof tagLabels] || post.tag}
+                </Badge>
+              </div>
             </div>
-            <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight mb-2">
-              {post.title}
-            </h1>
-            <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+            {editingPost ? (
+              <div className="space-y-3">
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Titel"
+                  className="font-heading text-lg font-bold"
+                />
+                <Textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={6}
+                  className="resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={handleSaveEditPost} disabled={!editTitle.trim() || !editContent.trim()} className="gap-1.5">
+                    <Check className="h-3.5 w-3.5" /> Speichern
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleCancelEditPost} className="gap-1.5">
+                    <X className="h-3.5 w-3.5" /> Abbrechen
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight mb-2">
+                  {post.title}
+                </h1>
+                <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+              </>
+            )}
 
             {post.sketch && (
               <img
@@ -515,7 +610,12 @@ function PostDetailLayout({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-sm font-semibold">{comment.authorName}</span>
-                          <span className="text-[10px] text-muted-foreground">{formatDate(comment._creationTime)}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDate(comment._creationTime)}
+                            {comment.updatedAt && comment.updatedAt > comment._creationTime + 1000 && (
+                              <> · <span className="italic">bearbeitet</span></>
+                            )}
+                          </span>
                         </div>
                         {editingCommentId === comment._id ? (
                           <div className="mt-1">

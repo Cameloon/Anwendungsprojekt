@@ -96,6 +96,7 @@ interface FPostItem {
   sketch?: string;
   linkedScriptIds?: string[];
   linkedDeadlineIds?: string[];
+  updatedAt?: number;
   standort?: string;
   studiengang?: string;
   kurs?: string;
@@ -339,6 +340,7 @@ function ForumPage() {
         sketch: p.sketch,
         linkedScriptIds: p.linkedScriptIds,
         linkedDeadlineIds: p.linkedDeadlineIds,
+        updatedAt: p.updatedAt,
         standort: p.standort,
         studiengang: p.studiengang,
         kurs: p.kurs,
@@ -1393,7 +1395,12 @@ function ForumPageLayout({
                           <div className="flex items-center gap-2 flex-wrap mb-1.5">
                             <span className="text-sm font-semibold">{post.authorName}</span>
                             <span className="text-xs text-muted-foreground">·</span>
-                            <span className="text-xs text-muted-foreground">{formatDate(post._creationTime)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(post._creationTime)}
+                              {post.updatedAt && post.updatedAt > post._creationTime + 1000 && (
+                                <> · <span className="italic">bearbeitet</span></>
+                              )}
+                            </span>
                             <Badge variant="outline" className={`${tagStyles[post.tag]} text-[10px] py-0 h-5 ml-auto`}>
                               {tagLabels[post.tag]}
                             </Badge>

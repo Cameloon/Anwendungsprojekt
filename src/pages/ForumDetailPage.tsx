@@ -62,6 +62,7 @@ interface PostItem {
   commentCount: number;
   linkedScriptIds?: string[];
   linkedDeadlineIds?: string[];
+  updatedAt?: number;
 }
 
 interface MemberItem {
@@ -230,6 +231,7 @@ const ForumDetailPage = () => {
     commentCount: (p.comments ?? []).length,
     linkedScriptIds: p.linkedScriptIds,
     linkedDeadlineIds: p.linkedDeadlineIds,
+    updatedAt: p.updatedAt,
   }));
 
   const scripts: ScriptItem[] = (allScripts ?? []).map((s: any) => ({
@@ -702,7 +704,12 @@ function ForumDetailLayout({
                     <div className="flex items-center gap-2 mb-1.5 text-xs text-muted-foreground">
                       <span className="font-semibold text-foreground">{p.authorName}</span>
                       <span>·</span>
-                      <span>{formatDate(p._creationTime)}</span>
+                      <span>
+                        {formatDate(p._creationTime)}
+                        {p.updatedAt && p.updatedAt > p._creationTime + 1000 && (
+                          <> · <span className="italic">bearbeitet</span></>
+                        )}
+                      </span>
                       <Badge variant="outline" className={`${tagStyles[p.tag]} text-[10px] py-0 h-5 ml-auto`}>
                         {tagLabels[p.tag]}
                       </Badge>

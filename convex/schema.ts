@@ -129,6 +129,7 @@ export default defineSchema({
     content: v.string(),
     parentId: v.optional(v.id("postComments")),
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_post", ["postId"])
     .index("by_parent", ["parentId"]),

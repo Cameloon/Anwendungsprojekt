@@ -435,6 +435,7 @@ export const updateComment = mutation({
 
     await ctx.db.patch(args.commentId, {
       content: args.content.trim(),
+      updatedAt: Date.now(),
     });
   },
 });
