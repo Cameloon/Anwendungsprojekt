@@ -593,7 +593,7 @@ export const archiveOldLectureForums = mutation({
         const currentSemester =
           totalMonths < 0 ? 1 : Math.floor(totalMonths / 6) + 1;
 
-        if (forum.semesterNumber != null && forum.semesterNumber + 2 < currentSemester) {
+        if (forum.semesterNumber != null && forum.semesterNumber < currentSemester) {
           await ctx.db.insert("forumArchiveStates", {
             forumId: forum._id,
             userId: identity.subject,

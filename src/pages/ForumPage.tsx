@@ -654,7 +654,7 @@ function ForumPage() {
       setAdminViewKurs={setAdminViewKurs}
       handleDeletePost={handleDeletePost}
       archiveForum={async (forumId: string) => { try { await archiveForumMutation({ forumId: forumId as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler beim Archivieren"); } }}
-      unarchiveForum={async (forumId: string) => { try { await unarchiveForumMutation({ forumId: forumId as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler beim Wiederherstellen"); } }}
+      unarchiveForum={async (forumId: string) => { try { await unarchiveForumMutation({ forumId: forumId as any }); toast.success("Forum rückgängig"); } catch { toast.error("Fehler beim Rückgängig"); } }}
       postsQuery={postsQuery}
       deleteForumMutation={deleteForumMutation}
     />
@@ -890,6 +890,7 @@ function ForumPageLayout({
   myLectures: { _id: string; lectureName: string }[];
   deleteForumMutation: (args: any) => any;
 }) {
+  const [archiveOpen, setArchiveOpen] = useState(true);
   const SectionCard = ({ title, icon, forums: secForums, activeForumId, setActiveForumId, me }: {
     title: string;
     icon: React.ReactNode;
@@ -907,11 +908,13 @@ function ForumPageLayout({
 
     return (
       <>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-foreground flex items-center gap-1">
-            {icon} {title}
-          </p>
-        </div>
+        {title && (
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+              {icon} {title}
+            </p>
+          </div>
+        )}
         {secForums.length > 4 && (
           <div className="relative mb-2">
             <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1092,9 +1095,20 @@ function ForumPageLayout({
                 const archivedForums = forums.filter(
                   (f) => f.archivedByMe
                 );
+                if (archivedForums.length === 0) return null;
                 return (
                   <div className="glass-card p-4">
-                    <SectionCard title="Archiv" icon={<Archive className="h-3.5 w-3.5" />} forums={archivedForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                    <div className="flex items-center justify-between mb-2">
+                      <button onClick={() => setArchiveOpen(!archiveOpen)} className="flex items-center gap-1 text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                        <Archive className="h-3.5 w-3.5" /> Archiv
+                      </button>
+                      <button onClick={() => setArchiveOpen(!archiveOpen)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        {archiveOpen ? "Ausblenden" : "Einblenden"}
+                      </button>
+                    </div>
+                    {archiveOpen && (
+                      <SectionCard title="" icon={null} forums={archivedForums} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
+                    )}
                   </div>
                 );
               })()}
@@ -1136,13 +1150,13 @@ function ForumPageLayout({
                     </Button>
                   </Link>
                   <div className="flex gap-2">
-                    {!isAdmin && !isOwner && isMember && (
+                    {isMember && (activeForum.visibility === "private" || (!isAdmin && !isOwner)) && (
                       <Button size="sm" variant="outline" className="w-full" onClick={() => handleLeave(activeForum.id)}>Verlassen</Button>
                     )}
                     {isMember && (
                       activeForum.archivedByMe ? (
                         <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => unarchiveForum(activeForum.id)}>
-                          <Archive className="h-3.5 w-3.5" /> Wiederherstellen
+                          <Archive className="h-3.5 w-3.5" /> Rückgängig
                         </Button>
                       ) : (
                         <Button size="sm" variant="outline" className="w-full gap-1.5 text-destructive" onClick={() => archiveForum(activeForum.id)}>

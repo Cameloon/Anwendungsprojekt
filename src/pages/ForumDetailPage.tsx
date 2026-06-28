@@ -537,7 +537,7 @@ function ForumDetailLayout({
                 {isMember && (
                   forum.archivedByMe ? (
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => { try { await unarchiveForumMutation({ forumId: forum.id as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler"); } }}>
-                      <Archive className="h-4 w-4" /> Wiederherstellen
+                      <Archive className="h-4 w-4" /> Rückgängig
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => { try { await archiveForumMutation({ forumId: forum.id as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler"); } }}>

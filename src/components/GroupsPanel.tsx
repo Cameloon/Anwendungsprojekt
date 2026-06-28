@@ -353,7 +353,7 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
                       {user && active.ownerId === user.id && (
                         active.archived ? (
                           <Button variant="outline" onClick={async () => { try { await unarchiveGroupMut({ groupId: active._id }); toast.success("Gruppe wiederhergestellt"); } catch { toast.error("Fehler"); } }} className="gap-2">
-                            <Archive className="h-4 w-4" /> Wiederherstellen
+                            <Archive className="h-4 w-4" /> Rückgängig
                           </Button>
                         ) : (
                           <Button variant="outline" onClick={async () => { try { await archiveGroupMut({ groupId: active._id }); setView("list"); toast.success("Gruppe archiviert"); } catch { toast.error("Fehler"); } }} className="gap-2">

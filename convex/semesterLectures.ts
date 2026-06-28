@@ -124,6 +124,8 @@ export async function ensureLectureForumsForProfile(ctx: any, kurs: string, user
       const patchFields: Record<string, unknown> = {};
       if (!existing.isLectureForum) {
         patchFields.isLectureForum = true;
+      }
+      if (!existing.semesterNumber) {
         patchFields.semesterNumber = lecture.semesterNumber;
       }
       if (!existing.sectionId) {
@@ -341,8 +343,18 @@ export const seedAllKursForums = mutation({
       .filter((q: any) => q.eq(q.field("kurs"), jg))
           .first();
         if (existing) {
+          const patchFields: Record<string, unknown> = {};
           if (!existing.sectionId && sectionId) {
-            await ctx.db.patch(existing._id, { sectionId });
+            patchFields.sectionId = sectionId;
+          }
+          if (!existing.isLectureForum) {
+            patchFields.isLectureForum = true;
+          }
+          if (!existing.semesterNumber) {
+            patchFields.semesterNumber = lecture.semesterNumber;
+          }
+          if (Object.keys(patchFields).length > 0) {
+            await ctx.db.patch(existing._id, patchFields);
           }
           continue;
         }
