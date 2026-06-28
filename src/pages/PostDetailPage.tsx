@@ -238,7 +238,7 @@ function PostDetailPage() {
     setEditingContent("");
   };
 
-  const backTo = forum ? `/forum?forumId=${forum._id}` : "/forum";
+  const backTo = forumId ? `/forum/${forumId}` : "/forum";
 
   return (
     <PostDetailLayout
