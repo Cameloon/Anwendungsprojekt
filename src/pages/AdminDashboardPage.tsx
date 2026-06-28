@@ -106,6 +106,8 @@ const AdminDashboardPage = () => {
   const [newKurs, setNewKurs] = useState("");
   const [newSemester, setNewSemester] = useState("1");
   const [newLectureName, setNewLectureName] = useState("");
+  const [lecturesOpen, setLecturesOpen] = useState(true);
+  const [lectureSearch, setLectureSearch] = useState("");
 
 
   // Auto-seed base lecture data once on admin page load
@@ -514,56 +516,103 @@ const AdminDashboardPage = () => {
                 <Plus className="h-4 w-4" /> Hinzufügen
               </Button>
 
-              <div className="space-y-2">
-                {lectures === undefined ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <button
+                onClick={() => setLecturesOpen(!lecturesOpen)}
+                className="mb-3 flex w-full items-center justify-between text-left"
+              >
+                <span className="text-sm font-medium text-muted-foreground">
+                  {lectures ? `${lectures.length} Vorlesungen` : "Vorlesungen"}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${
+                    lecturesOpen ? "" : "-rotate-90"
+                  }`}
+                />
+              </button>
+
+              {lecturesOpen && (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      placeholder="Vorlesung suchen…"
+                      value={lectureSearch}
+                      onChange={(e) => setLectureSearch(e.target.value)}
+                      className="pl-3"
+                    />
                   </div>
-                ) : lectures.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">
-                    Noch keine Vorlesungen hinterlegt.
-                  </p>
-                ) : (
-                  lectures.map((lecture) => (
-                    <div
-                      key={lecture._id}
-                      className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
-                    >
-                      <div>
-                        <p className="font-medium">{lecture.lectureName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {lecture.kurs} · {lecture.semesterNumber}. Semester
-                        </p>
+
+                  <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+                    {lectures === undefined ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={async () => {
-                          try {
-                            await deleteLecture({ id: lecture._id });
-                            toast({
-                              title: "Gelöscht",
-                              description: `${lecture.lectureName} wurde entfernt.`,
-                            });
-                          } catch (err) {
-                            toast({
-                              title: "Fehler",
-                              description:
-                                err instanceof Error
-                                  ? err.message
-                                  : "Löschen fehlgeschlagen",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ) : lectures.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">
+                        Noch keine Vorlesungen hinterlegt.
+                      </p>
+                    ) : (
+                      (() => {
+                        const q = lectureSearch.toLowerCase();
+                        const filtered = q
+                          ? lectures.filter(
+                              (l) =>
+                                l.lectureName.toLowerCase().includes(q) ||
+                                l.kurs.toLowerCase().includes(q) ||
+                                String(l.semesterNumber).includes(q)
+                            )
+                          : lectures;
+                        return filtered.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-muted-foreground">
+                            Keine Vorlesungen gefunden.
+                          </p>
+                        ) : (
+                          filtered.map((lecture) => (
+                            <div
+                              key={lecture._id}
+                              className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  {lecture.lectureName}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {lecture.kurs} · {lecture.semesterNumber}.
+                                  Semester
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={async () => {
+                                  try {
+                                    await deleteLecture({ id: lecture._id });
+                                    toast({
+                                      title: "Gelöscht",
+                                      description: `${lecture.lectureName} wurde entfernt.`,
+                                    });
+                                  } catch (err) {
+                                    toast({
+                                      title: "Fehler",
+                                      description:
+                                        err instanceof Error
+                                          ? err.message
+                                          : "Löschen fehlgeschlagen",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))
+                        );
+                      })()
+                    )}
+                  </div>
+                </div>
+              )}
             </Panel>
 
             <div className="flex flex-col gap-6">
@@ -969,15 +1018,22 @@ function Panel({
   title,
   icon,
   description,
+  className,
   children,
 }: {
   title: string;
   icon: React.ReactNode;
   description: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
+    <div
+      className={
+        "rounded-3xl border border-border/60 bg-card p-6 shadow-sm " +
+        (className ?? "")
+      }
+    >
       <div className="mb-4 flex items-start gap-3">
         <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           {icon}
