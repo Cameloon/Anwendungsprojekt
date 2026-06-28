@@ -246,9 +246,9 @@ function PlannerPage() {
   };
 
   const submitDeadline = async () => {
-    if (!title.trim() || !date || !vorlesung) {
+    if (!title.trim() || !date || (!vorlesung && category !== "sonstiges")) {
       if (!date) toast.error("Bitte ein Datum wählen");
-      else if (!vorlesung) toast.error("Bitte eine Vorlesung auswählen");
+      else if (!vorlesung && category !== "sonstiges") toast.error("Bitte eine Vorlesung auswählen");
       else toast.error("Bitte einen Titel eingeben");
       return;
     }
@@ -714,7 +714,7 @@ function PlannerLayout({
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
                       <button
                         key={c}
-                        onClick={() => setCategory(c)}
+                        onClick={() => { setCategory(c); if (c === "sonstiges") setVorlesung(""); }}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${category === c ? categoryColors[c] : "text-muted-foreground bg-secondary border-transparent"
                           }`}
                       >
@@ -723,6 +723,7 @@ function PlannerLayout({
                     ))}
                   </div>
                   <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
+                  {category !== "sonstiges" && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Vorlesung </p>
                     <Select value={vorlesung} onValueChange={setVorlesung}>
@@ -736,6 +737,7 @@ function PlannerLayout({
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Skripte verlinken (optional)</p>
                     <div className="flex flex-wrap gap-1.5 mb-2">
