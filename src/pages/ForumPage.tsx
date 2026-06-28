@@ -1658,9 +1658,9 @@ function ForumPageLayout({
       </Dialog>
 
       <Dialog open={whiteboardOpen} onOpenChange={setWhiteboardOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl h-[min(680px,90vh)] flex flex-col overflow-hidden">
           <DialogHeader><DialogTitle>Whiteboard-Skizze</DialogTitle></DialogHeader>
-          <Whiteboard height={460} saveLabel="Skizze übernehmen" onSave={(dataUrl) => { setSketch(dataUrl); setWhiteboardOpen(false); }} />
+          <Whiteboard fillHeight saveLabel="Skizze übernehmen" onSave={(dataUrl) => { setSketch(dataUrl); setWhiteboardOpen(false); }} />
         </DialogContent>
       </Dialog>
 

@@ -19,11 +19,12 @@ interface WhiteboardProps {
   compact?: boolean;
   onSave?: (dataUrl: string) => void;
   saveLabel?: string;
+  fillHeight?: boolean;
 }
 
 const COLORS = ["#0f172a", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7"];
 
-const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLabel = "Übernehmen" }: WhiteboardProps) => {
+const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLabel = "Übernehmen", fillHeight = false }: WhiteboardProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<Tool>("pen");
@@ -93,10 +94,13 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
     if (!cvs || !wrap) return;
     const ro = new ResizeObserver(() => {
       const dpr = window.devicePixelRatio || 1;
-      cvs.width = wrap.clientWidth * dpr;
-      cvs.height = height * dpr;
-      cvs.style.width = wrap.clientWidth + "px";
-      cvs.style.height = height + "px";
+      const w = wrap.clientWidth;
+      const h = fillHeight ? wrap.clientHeight : height;
+      if (!w || !h) return;
+      cvs.width = w * dpr;
+      cvs.height = h * dpr;
+      cvs.style.width = w + "px";
+      cvs.style.height = h + "px";
       const ctx = cvs.getContext("2d")!;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       redraw();
@@ -104,7 +108,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
     ro.observe(wrap);
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height]);
+  }, [height, fillHeight]);
 
   useEffect(() => {
     redraw();
@@ -168,7 +172,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
   ];
 
   return (
-    <div className="space-y-3">
+    <div className={fillHeight ? "flex flex-col flex-1 min-h-0 gap-3" : "space-y-3"}>
       <div className={cn("flex flex-wrap items-center gap-2 p-2 rounded-xl bg-secondary/60 border border-border", compact && "p-1.5")}>
         <div className="flex gap-1">
           {tools.map((t) => (
@@ -215,7 +219,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
           title="Größe"
         />
 
-        <div className="ml-auto flex gap-1">
+        <div className="flex gap-1">
           <Button size="sm" variant="ghost" onClick={undo} title="Rückgängig">
             <Undo2 className="h-4 w-4" />
           </Button>
@@ -240,7 +244,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
         </div>
       </div>
 
-      <div ref={wrapRef} className="rounded-xl overflow-hidden border border-border bg-white shadow-sm">
+      <div ref={wrapRef} className={cn("rounded-xl overflow-hidden border border-border bg-white shadow-sm", fillHeight && "flex-1 min-h-0")}>
         <canvas
           ref={canvasRef}
           onPointerDown={onDown}
