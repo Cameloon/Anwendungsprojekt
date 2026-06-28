@@ -153,6 +153,8 @@ export default defineSchema({
   deadlines: defineTable({
     title: v.string(),
     date: v.string(),
+    time: v.optional(v.string()),
+    remindBefore: v.optional(v.array(v.number())),
     category: v.union(
       v.literal("abgabe"),
       v.literal("pruefung"),

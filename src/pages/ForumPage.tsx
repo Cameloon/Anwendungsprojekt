@@ -1092,6 +1092,7 @@ function ForumPageLayout({
 
               {/* Archive section */}
               {(() => {
+                if (isAdmin) return null;
                 const archivedForums = forums.filter(
                   (f) => f.archivedByMe
                 );

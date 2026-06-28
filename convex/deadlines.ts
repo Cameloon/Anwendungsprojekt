@@ -95,6 +95,8 @@ export const create = mutation({
   args: {
     title: v.string(),
     date: v.string(),
+    time: v.optional(v.string()),
+    remindBefore: v.optional(v.array(v.number())),
     category: v.union(
       v.literal("abgabe"),
       v.literal("pruefung"),
@@ -119,6 +121,8 @@ export const create = mutation({
     return await ctx.db.insert("deadlines", {
       title: args.title.trim(),
       date: args.date,
+      time: args.time,
+      remindBefore: args.remindBefore?.filter(Boolean),
       category: args.category,
       done: false,
       note: args.note?.trim(),
@@ -170,6 +174,8 @@ export const update = mutation({
     deadlineId: v.id("deadlines"),
     title: v.optional(v.string()),
     date: v.optional(v.string()),
+    time: v.optional(v.string()),
+    remindBefore: v.optional(v.array(v.number())),
     category: v.optional(
       v.union(v.literal("abgabe"), v.literal("pruefung"), v.literal("sonstiges"))
     ),
@@ -199,6 +205,8 @@ export const update = mutation({
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.title !== undefined) patch.title = args.title.trim();
     if (args.date !== undefined) patch.date = args.date;
+    if (args.time !== undefined) patch.time = args.time;
+    if (args.remindBefore !== undefined) patch.remindBefore = args.remindBefore;
     if (args.category !== undefined) patch.category = args.category;
     if (args.note !== undefined) patch.note = args.note?.trim();
     if (args.vorlesung !== undefined) patch.vorlesung = args.vorlesung?.trim();

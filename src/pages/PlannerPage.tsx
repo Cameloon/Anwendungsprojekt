@@ -26,6 +26,7 @@ import {
   ChevronDown,
   MoreVertical,
   Users,
+  Bell,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,8 @@ interface DeadlineItem {
   id: string;
   title: string;
   date: string;
+  time?: string;
+  remindBefore?: number[];
   category: "abgabe" | "pruefung" | "sonstiges";
   done: boolean;
   note?: string;
@@ -143,6 +146,8 @@ function PlannerPage() {
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [remindBefore, setRemindBefore] = useState<number[]>([]);
   const [category, setCategory] = useState<"abgabe" | "pruefung" | "sonstiges">("abgabe");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -169,6 +174,8 @@ function PlannerPage() {
     id: d._id,
     title: d.title,
     date: d.date,
+    time: d.time,
+    remindBefore: d.remindBefore,
     category: d.category,
     done: d.done,
     note: d.note,
@@ -197,6 +204,8 @@ function PlannerPage() {
   const resetForm = () => {
     setTitle("");
     setDate("");
+    setTime("");
+    setRemindBefore([]);
     setCategory("abgabe");
     setNote("");
     setPendingAttachments([]);
@@ -276,6 +285,8 @@ function PlannerPage() {
           deadlineId: editingId as Id<"deadlines">,
           title: title.trim(),
           date,
+          time: time || undefined,
+          remindBefore: remindBefore.length ? remindBefore : undefined,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
@@ -303,6 +314,8 @@ function PlannerPage() {
         const result = await createMutation({
           title: title.trim(),
           date,
+          time: time || undefined,
+          remindBefore: remindBefore.length ? remindBefore : undefined,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
@@ -331,6 +344,8 @@ function PlannerPage() {
   const startEdit = (d: DeadlineItem) => {
     setTitle(d.title);
     setDate(d.date);
+    setTime(d.time ?? "");
+    setRemindBefore(d.remindBefore ?? 0);
     setCategory(d.category);
     setNote(d.note ?? "");
     setLinkedScriptIds(d.linkedScriptIds ?? []);
@@ -439,6 +454,10 @@ function PlannerPage() {
       setTitle={setTitle}
       date={date}
       setDate={(v) => { setDate(v); pastDateConfirmed.current = false; setShowPastWarning(false); }}
+      time={time}
+      setTime={setTime}
+      remindBefore={remindBefore}
+      setRemindBefore={setRemindBefore}
       category={category}
       setCategory={setCategory}
       note={note}
@@ -526,6 +545,10 @@ function PlannerLayout({
   setTitle,
   date,
   setDate,
+  time,
+  setTime,
+  remindBefore,
+  setRemindBefore,
   category,
   setCategory,
   note,
@@ -588,6 +611,10 @@ function PlannerLayout({
   setTitle: (v: string) => void;
   date: string;
   setDate: (v: string) => void;
+  time: string;
+  setTime: (v: string) => void;
+  remindBefore: number[];
+  setRemindBefore: (v: number[]) => void;
   category: string;
   setCategory: (v: any) => void;
   note: string;
@@ -709,6 +736,34 @@ function PlannerLayout({
                   <div className="grid sm:grid-cols-2 gap-3">
                     <Input placeholder="Titel (z. B. Hausarbeit Mathe)" value={title} onChange={(e) => setTitle(e.target.value)} />
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Uhrzeit (optional)</p>
+                      <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Erinnern (optional)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 5].map((d) => (
+                          <button
+                            key={d}
+                            onClick={() =>
+                              setRemindBefore((prev) =>
+                                prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+                              )
+                            }
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                              remindBefore.includes(d)
+                                ? "bg-primary/10 text-primary border-primary/30"
+                                : "text-muted-foreground bg-secondary border-transparent"
+                            }`}
+                          >
+                            {d} Tag{d > 1 ? "e" : ""}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
@@ -1002,7 +1057,13 @@ function PlannerLayout({
                                 <span className="inline-flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
                                   {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                  {d.time && `, ${d.time}`}
                                 </span>
+                                {d.remindBefore && d.remindBefore > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-warning">
+                                    <Bell className="h-3 w-3" /> {d.remindBefore} Tag{d.remindBefore > 1 ? "e" : ""} vorher
+                                  </span>
+                                )}
                                 {d.visibility === "private" && (
                                   <span className="inline-flex items-center gap-1">
                                     <Lock className="h-3 w-3" /> Privat
@@ -1139,7 +1200,13 @@ function PlannerLayout({
                                     <span className="inline-flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
                                       {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                      {d.time && `, ${d.time}`}
                                     </span>
+                                    {d.remindBefore && d.remindBefore.length > 0 && (
+                                      <span className="inline-flex items-center gap-1 text-warning">
+                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} Tag${r > 1 ? "e" : ""}`).join(", ")} vorher
+                                      </span>
+                                    )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
                                         <Lock className="h-3 w-3" /> Privat
@@ -1300,7 +1367,13 @@ function PlannerLayout({
                                     <span className="inline-flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
                                       {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
+                                      {d.time && `, ${d.time}`}
                                     </span>
+                                    {d.remindBefore && d.remindBefore.length > 0 && (
+                                      <span className="inline-flex items-center gap-1 text-warning">
+                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} Tag${r > 1 ? "e" : ""}`).join(", ")} vorher
+                                      </span>
+                                    )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
                                         <Lock className="h-3 w-3" /> Privat
