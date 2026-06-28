@@ -10,12 +10,10 @@ import {
   Files,
   MessageSquare,
   Plus,
-  Users,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
-import GroupsPanel from "@/components/GroupsPanel";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -42,7 +40,6 @@ const DashboardPage = () => {
     api.semesterLectures.getLecturesForMyKurs,
     {},
   );
-  const [groupsOpen, setGroupsOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const name = profile?.display_name ?? "";
   const now = useMemo(() => new Date(), []);
@@ -264,14 +261,6 @@ const DashboardPage = () => {
                     <Plus className="h-4 w-4" /> Neue Aufgabe
                   </Button>
                 </Link>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => setGroupsOpen(true)}
-                  className="gap-2 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                >
-                  <Users className="h-4 w-4" /> Gruppen
-                </Button>
               </div>
             </div>
 
@@ -422,7 +411,6 @@ const DashboardPage = () => {
           </section>
         </div>
       </main>
-      <GroupsPanel open={groupsOpen} onOpenChange={setGroupsOpen} />
     </div>
   );
 };

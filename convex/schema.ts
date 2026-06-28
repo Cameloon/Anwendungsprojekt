@@ -223,7 +223,7 @@ export default defineSchema({
     fileName: v.optional(v.string()),
     fileType: v.optional(v.string()),
     fileSize: v.optional(v.number()),
-    groupId: v.optional(v.id("groups")),
+    forumId: v.optional(v.id("forums")),
     authorJahrgang: v.optional(v.string()), // @deprecated use authorKurs
     authorKurs: v.optional(v.string()),
     createdAt: v.number(),

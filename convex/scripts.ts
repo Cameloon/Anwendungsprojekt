@@ -42,11 +42,11 @@ async function canAccess(ctx: any, script: any, viewerId: string): Promise<boole
   }
 
   if (script.visibility === "group") {
-    if (!script.groupId) return false;
+    if (!script.forumId) return false;
     const member = await ctx.db
-      .query("groupMembers")
-      .withIndex("by_group_user", (q: any) =>
-        q.eq("groupId", script.groupId).eq("userId", viewerId)
+      .query("forumMembers")
+      .withIndex("by_forum_user", (q: any) =>
+        q.eq("forumId", script.forumId).eq("userId", viewerId)
       )
       .unique();
     return !!member;
@@ -196,7 +196,7 @@ export const create = mutation({
     fileName: v.optional(v.string()),
     fileType: v.optional(v.string()),
     fileSize: v.optional(v.number()),
-    groupId: v.optional(v.id("groups")),
+    forumId: v.optional(v.id("forums")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -210,9 +210,9 @@ export const create = mutation({
       throw new Error("Datei darf maximal 25 MB groß sein.");
     }
 
-    // Group visibility requires a groupId
-    if (args.visibility === "group" && !args.groupId) {
-      throw new Error("Für Gruppen-Sichtbarkeit muss eine Gruppe ausgewählt werden.");
+    // Group visibility requires a forumId
+    if (args.visibility === "group" && !args.forumId) {
+      throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
     }
 
     // Per-user quota
@@ -246,7 +246,7 @@ export const create = mutation({
       fileName: args.fileName,
       fileType: args.fileType,
       fileSize: args.fileSize,
-      groupId: args.groupId,
+      forumId: args.forumId,
       createdAt: now,
       updatedAt: now,
     });
@@ -276,7 +276,7 @@ export const update = mutation({
         v.literal("group"),
       )
     ),
-    groupId: v.optional(v.id("groups")),
+    forumId: v.optional(v.id("forums")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -294,12 +294,12 @@ export const update = mutation({
     if (args.pages !== undefined) patch.pages = args.pages;
     if (args.type !== undefined) patch.type = args.type;
     if (args.visibility !== undefined) {
-      if (args.visibility === "group" && !args.groupId && !script.groupId) {
-        throw new Error("Für Gruppen-Sichtbarkeit muss eine Gruppe ausgewählt werden.");
+      if (args.visibility === "group" && !args.forumId && !script.forumId) {
+        throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
       }
       patch.visibility = args.visibility;
     }
-    if (args.groupId !== undefined) patch.groupId = args.groupId;
+    if (args.forumId !== undefined) patch.forumId = args.forumId;
 
     await ctx.db.patch(args.scriptId, patch);
   },

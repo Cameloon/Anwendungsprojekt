@@ -22,10 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  validateScriptDescription,
-  validateFileSize,
-} from "@/lib/validation";
+import { validateScriptDescription, validateFileSize } from "@/lib/validation";
 import Combobox from "@/components/ui/combobox";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -85,7 +82,7 @@ interface ScriptItem {
   visibility: Visibility;
   url?: string;
   fileName?: string;
-  groupId?: string;
+  forumId?: string;
 }
 
 const SkriptePage = () => {
@@ -95,11 +92,17 @@ const SkriptePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs);
-  const groupsQuery = useQuery(api.groups.listForUser, {});
+  const privateForumsQuery = useQuery(api.forums.getPrivateForumsForUser, {});
   const lectures = lecturesQuery ?? [];
-  const myGroups = groupsQuery ?? [];
-  const lectureOptions = lectures.map((l) => ({ value: l._id, label: l.lectureName }));
-  const groupOptions = myGroups.map((g) => ({ value: g._id, label: g.name }));
+  const privateForums = privateForumsQuery ?? [];
+  const lectureOptions = lectures.map((l) => ({
+    value: l._id,
+    label: l.lectureName,
+  }));
+  const forumOptions = privateForums.map((f) => ({
+    value: f._id,
+    label: f.name,
+  }));
 
   const createMutation = useMutation(api.scripts.create);
   const deleteMutation = useMutation(api.scripts.deleteScript);
@@ -112,7 +115,7 @@ const SkriptePage = () => {
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<Visibility>("public");
-  const [groupId, setGroupId] = useState("");
+  const [forumId, setForumId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -134,7 +137,7 @@ const SkriptePage = () => {
     visibility: s.visibility,
     url: s.url,
     fileName: s.fileName,
-    groupId: s.groupId,
+    forumId: s.forumId,
   }));
 
   const subjects = useMemo(() => {
@@ -181,20 +184,25 @@ const SkriptePage = () => {
   };
 
   const subjectArg = lectureId
-    ? ({ type: "lecture" as const, lectureId: lectureId as Id<"semesterLectures"> } as const)
+    ? ({
+        type: "lecture" as const,
+        lectureId: lectureId as Id<"semesterLectures">,
+      } as const)
     : "";
 
   const addScript = async () => {
-    const nextTitleError = title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+    const nextTitleError =
+      title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextDescriptionError) return;
 
-    if (visibility === "group" && !groupId) {
-      toast.error("Bitte eine Gruppe auswählen.");
+    if (visibility === "group" && !forumId) {
+      toast.error("Bitte ein Forum auswählen.");
       return;
     }
 
-    const groupArg = visibility === "group" ? (groupId as Id<"groups">) : undefined;
+    const forumArg =
+      visibility === "group" ? (forumId as Id<"forums">) : undefined;
 
     if (!selectedFile) {
       try {
@@ -205,7 +213,7 @@ const SkriptePage = () => {
           pages: 0,
           type: "Notiz",
           visibility,
-          groupId: groupArg,
+          forumId: forumArg,
         });
         toast.success("Skript erstellt");
       } catch (e: any) {
@@ -224,7 +232,9 @@ const SkriptePage = () => {
         body: selectedFile,
       });
       if (!result.ok) throw new Error("Upload fehlgeschlagen");
-      const { storageId } = (await result.json()) as { storageId: Id<"_storage"> };
+      const { storageId } = (await result.json()) as {
+        storageId: Id<"_storage">;
+      };
 
       await createMutation({
         title: title.trim(),
@@ -237,7 +247,7 @@ const SkriptePage = () => {
         fileName: selectedFile.name,
         fileType: selectedFile.type,
         fileSize: selectedFile.size,
-        groupId: groupArg,
+        forumId: forumArg,
       });
       toast.success("Skript hochgeladen");
     } catch (e: any) {
@@ -252,7 +262,7 @@ const SkriptePage = () => {
     setLectureId("");
     setDescription("");
     setVisibility("public");
-    setGroupId("");
+    setForumId("");
     setShowUpload(false);
     setSelectedFile(null);
     setFileError("");
@@ -273,7 +283,7 @@ const SkriptePage = () => {
       .filter(
         (s) =>
           s.title.toLowerCase().includes(search.toLowerCase()) ||
-          s.description.toLowerCase().includes(search.toLowerCase())
+          s.description.toLowerCase().includes(search.toLowerCase()),
       )
       .filter((s) => activeSubject === "alle" || s.subject === activeSubject);
   }, [scripts, search, activeSubject, me]);
@@ -305,8 +315,12 @@ const SkriptePage = () => {
   ];
 
   // derived validation messages (live) so they update/clear automatically
-  const titleError = title.trim().length > 0 && title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
-  const descriptionError = description.trim().length > 0 ? validateScriptDescription(description) : "";
+  const titleError =
+    title.trim().length > 0 && title.trim().length < 3
+      ? "Mindestens 3 Zeichen."
+      : "";
+  const descriptionError =
+    description.trim().length > 0 ? validateScriptDescription(description) : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -324,7 +338,9 @@ const SkriptePage = () => {
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm text-muted-foreground">Lernmaterial</span>
+                <span className="text-sm text-muted-foreground">
+                  Lernmaterial
+                </span>
               </div>
               <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
                 Skript-<span className="text-gradient">Bibliothek</span>
@@ -333,7 +349,10 @@ const SkriptePage = () => {
                 Alle Skripte und Notizen an einem Ort
               </p>
             </div>
-            <Button onClick={() => setShowUpload(!showUpload)} className="gap-2">
+            <Button
+              onClick={() => setShowUpload(!showUpload)}
+              className="gap-2"
+            >
               <Upload className="h-4 w-4" /> Hochladen
             </Button>
           </motion.div>
@@ -348,12 +367,18 @@ const SkriptePage = () => {
                 transition={{ delay: 0.05 + i * 0.05 }}
                 className="glass-card p-4 flex items-center gap-3"
               >
-                <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center`}>
+                <div
+                  className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center`}
+                >
                   <s.icon className={`h-5 w-5 ${s.color}`} />
                 </div>
                 <div>
-                  <p className="font-heading text-2xl font-bold leading-none">{s.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+                  <p className="font-heading text-2xl font-bold leading-none">
+                    {s.value}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {s.label}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -376,7 +401,9 @@ const SkriptePage = () => {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                       />
-                      {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+                      {titleError && (
+                        <p className="text-xs text-destructive">{titleError}</p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <Combobox
@@ -395,14 +422,19 @@ const SkriptePage = () => {
                       rows={3}
                       className="resize-none"
                     />
-                    {descriptionError && <p className="text-xs text-destructive">{descriptionError}</p>}
+                    {descriptionError && (
+                      <p className="text-xs text-destructive">
+                        {descriptionError}
+                      </p>
+                    )}
                   </div>
                   <div
                     role="button"
                     tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+                      if (e.key === "Enter" || e.key === " ")
+                        fileInputRef.current?.click();
                     }}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -430,7 +462,8 @@ const SkriptePage = () => {
                             {selectedFile.name}
                           </p>
                           <p className="text-[10px] mt-0.5">
-                            {formatFileSize(selectedFile.size)} · {inferScriptType(selectedFile)}
+                            {formatFileSize(selectedFile.size)} ·{" "}
+                            {inferScriptType(selectedFile)}
                           </p>
                         </div>
                         <button
@@ -448,18 +481,28 @@ const SkriptePage = () => {
                     ) : (
                       <>
                         <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
-                        <p className="font-medium text-foreground">Datei hierher ziehen</p>
-                        <p className="text-xs mt-1">PDF, DOCX oder Bilder · max. 25 MB</p>
+                        <p className="font-medium text-foreground">
+                          Datei hierher ziehen
+                        </p>
+                        <p className="text-xs mt-1">
+                          PDF, DOCX oder Bilder · max. 25 MB
+                        </p>
                       </>
                     )}
                   </div>
-                  {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+                  {fileError && (
+                    <p className="text-xs text-destructive">{fileError}</p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {(
                       [
                         { value: "public", label: "Öffentlich", icon: Globe },
                         { value: "private", label: "Privat", icon: Lock },
-                        { value: "jahrgang", label: "Kurs", icon: GraduationCap },
+                        {
+                          value: "jahrgang",
+                          label: "Kurs",
+                          icon: GraduationCap,
+                        },
                         { value: "group", label: "Gruppe", icon: Users },
                       ] as const
                     ).map(({ value, label, icon: Icon }) => (
@@ -478,20 +521,25 @@ const SkriptePage = () => {
                   </div>
                   {visibility === "group" && (
                     <Combobox
-                      value={groupId}
-                      onChange={setGroupId}
-                      options={groupOptions}
+                      value={forumId}
+                      onChange={setForumId}
+                      options={forumOptions}
                       placeholder="Gruppe auswählen"
                     />
                   )}
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" onClick={resetForm} disabled={uploading}>
+                    <Button
+                      variant="outline"
+                      onClick={resetForm}
+                      disabled={uploading}
+                    >
                       Abbrechen
                     </Button>
                     <Button onClick={addScript} disabled={uploading}>
                       {uploading ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Lädt hoch…
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Lädt
+                          hoch…
                         </>
                       ) : selectedFile ? (
                         <>
@@ -555,7 +603,8 @@ const SkriptePage = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className={`h-12 w-12 rounded-xl flex items-center justify-center ${
-                      subjectColors[script.subject] || "bg-secondary text-muted-foreground"
+                      subjectColors[script.subject] ||
+                      "bg-secondary text-muted-foreground"
                     }`}
                   >
                     <FileText className="h-5 w-5" />
@@ -612,7 +661,12 @@ const SkriptePage = () => {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {script.url && (
-                      <a href={script.url} target="_blank" download className="inline-flex">
+                      <a
+                        href={script.url}
+                        target="_blank"
+                        download
+                        className="inline-flex"
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
