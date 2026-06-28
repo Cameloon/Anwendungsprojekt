@@ -175,7 +175,7 @@ function PlannerPage() {
     title: d.title,
     date: d.date,
     time: d.time,
-    remindBefore: d.remindBefore,
+    remindBefore: Array.isArray(d.remindBefore) ? d.remindBefore : d.remindBefore != null ? [d.remindBefore] : [],
     category: d.category,
     done: d.done,
     note: d.note,
@@ -345,7 +345,7 @@ function PlannerPage() {
     setTitle(d.title);
     setDate(d.date);
     setTime(d.time ?? "");
-    setRemindBefore(d.remindBefore ?? 0);
+    setRemindBefore(Array.isArray(d.remindBefore) ? d.remindBefore : []);
     setCategory(d.category);
     setNote(d.note ?? "");
     setLinkedScriptIds(d.linkedScriptIds ?? []);
