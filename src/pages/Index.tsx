@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   CalendarDays,
   MessageSquare,
@@ -19,7 +21,8 @@ import { Button } from "@/components/ui/button";
 const features = [
   {
     title: "Termin-Planner",
-    description: "Behalte den Überblick über Abgabetermine, Prüfungen und wichtige Deadlines.",
+    description:
+      "Behalte den Überblick über Abgabetermine, Prüfungen und wichtige Deadlines.",
     icon: CalendarDays,
     path: "/planner",
   },
@@ -31,7 +34,8 @@ const features = [
   },
   {
     title: "Skript-Bibliothek",
-    description: "Lade Skripte hoch und organisiere dein Lernmaterial an einem Ort.",
+    description:
+      "Lade Skripte hoch und organisiere dein Lernmaterial an einem Ort.",
     icon: FileText,
     path: "/skripte",
   },
@@ -85,6 +89,15 @@ const stats = [
 ];
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -114,7 +127,8 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="font-heading text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-[1.05] tracking-tight"
           >
-            Dein Studium an der<br />
+            Dein Studium an der
+            <br />
             <span className="text-gradient">DHBW</span>, organisiert
           </motion.h1>
 
@@ -135,7 +149,10 @@ const Index = () => {
             className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <Link to="/dashboard">
-              <Button size="lg" className="gap-2 text-base shadow-lg shadow-primary/25">
+              <Button
+                size="lg"
+                className="gap-2 text-base shadow-lg shadow-primary/25"
+              >
                 Jetzt loslegen <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -157,7 +174,9 @@ const Index = () => {
                 <p className="font-heading text-3xl md:text-4xl font-bold text-gradient">
                   {s.value}
                 </p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">{s.label}</p>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  {s.label}
+                </p>
               </div>
             ))}
           </motion.div>
@@ -169,7 +188,8 @@ const Index = () => {
         <div className="container mx-auto max-w-5xl">
           <div className="text-center mb-12">
             <h2 className="font-heading text-3xl md:text-5xl font-bold mb-3">
-              Alles drin. <span className="text-gradient">Nichts überflüssig.</span>
+              Alles drin.{" "}
+              <span className="text-gradient">Nichts überflüssig.</span>
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Drei Werkzeuge, die wirklich zusammen funktionieren.
@@ -208,7 +228,9 @@ const Index = () => {
                   <b.icon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="font-heading font-semibold mb-2">{b.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{b.text}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {b.text}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -235,7 +257,10 @@ const Index = () => {
               >
                 <div className="flex gap-0.5 mb-3">
                   {[...Array(5)].map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-primary text-primary" />
+                    <Star
+                      key={j}
+                      className="h-4 w-4 fill-primary text-primary"
+                    />
                   ))}
                 </div>
                 <p className="text-sm text-foreground/80 leading-relaxed mb-4">
@@ -263,10 +288,10 @@ const Index = () => {
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
             <div className="relative">
               <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
-                Bereit, dein Studium zu rocken?
+                Bereit, Ordnung ins Chaos zu bringen?
               </h2>
               <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                Starte jetzt – kein Konto, keine Kreditkarte, einfach loslegen.
+                Starte jetzt – ohne Kosten, einfach loslegen.
               </p>
               <Link to="/dashboard">
                 <Button size="lg" className="gap-2 text-base">
