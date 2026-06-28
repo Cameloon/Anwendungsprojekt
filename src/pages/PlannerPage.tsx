@@ -969,7 +969,9 @@ function PlannerLayout({
           <div className="space-y-2">
             {(() => {
               const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-              const activeFiltered = filtered.filter((d) => !d.done && new Date(d.date).getTime() > thirtyDaysAgo);
+              const activeFiltered = filtered
+                .filter((d) => !d.done && new Date(d.date).getTime() > thirtyDaysAgo)
+                .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               const doneFiltered = filtered.filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo);
               const archivedFiltered = filtered.filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo);
               return (
