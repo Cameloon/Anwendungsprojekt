@@ -1,26 +1,17 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Calendar, BookOpen, Hash, MapPin, Settings, FileText, MessageSquare, Users } from "lucide-react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { Mail, Calendar, BookOpen, Hash, MapPin, Settings, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import AccountSettingsDialog from "@/components/AccountSettingsDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { useLanguage } from "@/hooks/useLanguage";
 
 const ProfilePage = () => {
-  const { language, setLanguage } = useLanguage();
-  
   const { user } = useAuth();
   const profile = useProfile();
-  const scriptsData = useQuery(api.scripts.listVisible);
-  const postsData = useQuery(api.posts.listRecent);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (!user) return null;
@@ -30,9 +21,6 @@ const ProfilePage = () => {
   const joined = user.created_at
     ? new Date(user.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })
     : "";
-
-  const myScripts = scriptsData?.filter((s) => s.authorId === user.id).length ?? 0;
-  const myPosts = postsData?.filter((p) => p.authorId === user.id).length ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,41 +61,9 @@ const ProfilePage = () => {
             </CardContent>
           </Card>
 
-          <div className="grid sm:grid-cols-2 gap-4 mt-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Forenbeiträge
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{myPosts}</div>
-                <Link to="/forum" className="text-xs text-primary hover:underline">Zum Forum →</Link>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <FileText className="h-4 w-4" /> Hochgeladene Skripte
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{myScripts}</div>
-                <Link to="/skripte" className="text-xs text-primary hover:underline">Zur Bibliothek →</Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {profile?.studienfach && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Badge variant="secondary">{profile.studienfach}</Badge>
-              {profile?.hochschule && <Badge variant="outline">{profile.hochschule}</Badge>}
-              {profile?.kurs && <Badge>{profile.kurs}</Badge>}
-            </div>
-          )}
         </motion.div>
       </main>
-      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen}  />
+      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
