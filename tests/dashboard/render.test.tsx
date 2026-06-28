@@ -69,7 +69,7 @@ vi.mock("@/hooks/useProfile", () => ({
     created_at: "2026-06-09T08:00:00.000Z",
     role: "user",
   }),
-});
+}));
 
 vi.mock("../../convex/_generated/api", () => ({
   api: {
