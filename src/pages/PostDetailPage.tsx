@@ -31,13 +31,11 @@ import { ReportDialog } from "@/components/ReportDialog";
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
-  lerngruppe: "bg-primary/15 text-primary border-primary/20",
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
 const tagLabels: Record<string, string> = {
   frage: "Frage",
-  lerngruppe: "Lerngruppe",
   material: "Material",
   diskussion: "Diskussion",
 };

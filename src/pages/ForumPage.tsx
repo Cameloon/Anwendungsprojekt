@@ -61,13 +61,11 @@ import {
 
 const tagStyles: Record<string, string> = {
   frage: "bg-info/15 text-info border-info/20",
-  lerngruppe: "bg-primary/15 text-primary border-primary/20",
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
 const tagLabels: Record<string, string> = {
   frage: "Frage",
-  lerngruppe: "Lerngruppe",
   material: "Material",
   diskussion: "Diskussion",
 };
@@ -387,7 +385,7 @@ function ForumPage() {
         forumId: activeForum.id as Id<"forums">,
         title: title.trim(),
         content: content.trim(),
-        tag: tag as "frage" | "lerngruppe" | "material" | "diskussion",
+        tag: tag as "frage" | "material" | "diskussion",
         sketch,
         linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
         linkedDeadlineIds: linkedDeadlineIds.length ? (linkedDeadlineIds as Id<"deadlines">[]) : undefined,
@@ -556,7 +554,7 @@ function ForumPage() {
   const tags = [
     { id: "alle" as const, label: "Alle" },
     { id: "frage" as const, label: "Fragen" },
-    { id: "lerngruppe" as const, label: "Lerngruppen" },
+
     { id: "material" as const, label: "Material" },
     { id: "diskussion" as const, label: "Diskussionen" },
   ];
@@ -1233,7 +1231,7 @@ function ForumPageLayout({
                       <div>
                         <p className="text-xs text-muted-foreground mb-2">Kategorie</p>
                         <div className="flex flex-wrap gap-2">
-                          {(["frage", "lerngruppe", "material", "diskussion"] as const).map((t) => (
+                          {(["frage", "material", "diskussion"] as const).map((t) => (
                             <button
                               key={t}
                               onClick={() => setTag(t)}
