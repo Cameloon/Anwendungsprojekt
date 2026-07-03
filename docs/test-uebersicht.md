@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-06-26 09:20 UTC -->
+<!-- Letzte Aktualisierung: 2026-07-03 14:51 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 72 | 0 | 5 | 0 |
+| 76 | 0 | 1 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -26,7 +26,7 @@
 ### Dashboard lecture filter
 
 - ✅ filters forum posts and deadlines by selected lecture
-- 🔜 filters scripts by selected lecture — aktivieren sobald subject-Feld korrekt befüllt wird (Issue #47)
+- ✅ filters scripts by selected lecture — aktivieren sobald subject-Feld korrekt befüllt wird (Issue #47)
 - ✅ shows empty-state texts per widget when selected lecture has no matching content
 - ✅ resets to full overview when 'Gesamtübersicht' is clicked after filtering
 
@@ -36,22 +36,6 @@
 
 - ✅ shows current forum and scripts widgets and links navigate
 - ✅ shows empty-state text when no lectures, posts and scripts exist
-
-## tests/forum/author_controls.test.tsx
-
-### Forum – Autor-Kontrolle: Edit/Delete-Buttons
-
-- 🔜 Autor sieht Bearbeiten- und Löschen-Buttons am eigenen Beitrag
-- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
-- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
-- 🔜 Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
-
-## tests/forum/post_comment.test.tsx
-
-### Forum post and comment flow
-
-- ✅ creates a post and shows it with author and tag in the forum list
-- ✅ shows post detail with author, tag and content; adds comments in chronological order
 
 ## tests/planner/crud.test.tsx
 
@@ -67,7 +51,7 @@
 - ✅ öffnet das Formular beim Klick auf Hochladen
 - 🔜 Submit-Button ist deaktiviert solange keine Datei ausgewählt ist
 - ✅ verhindert Submission bei ungültigen Eingaben — Formular bleibt offen
-- 🔜 zeigt Fehlermeldung bei ungültigem Dateityp
+- ✅ zeigt Fehlermeldung bei ungültigem Dateityp
 - ✅ fügt neues Skript zur Liste hinzu nach erfolgreichem Upload
 - ✅ Sichtbarkeit-Buttons Öffentlich und Privat sind im Formular sichtbar
 - ✅ privates Skript zeigt Privat-Badge in der Liste
@@ -87,6 +71,22 @@
 - ✅ validateFileSize(29360128 Bytes) → ""
 - ✅ validateFileSize(29360129 Bytes) → "Datei darf maximal 25 MB groß sein."
 - ✅ validateFileSize(52428800 Bytes) → "Datei darf maximal 25 MB groß sein."
+
+## tests/forum/author_controls.test.tsx
+
+### Forum – Autor-Kontrolle: Edit/Delete-Buttons
+
+- ✅ Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag
+- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
+- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
+- ✅ Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
+
+## tests/forum/post_comment.test.tsx
+
+### Forum post and comment flow
+
+- ✅ creates a post and shows it with author and tag in the forum list
+- ✅ shows post detail with author, tag and content; adds comments in chronological order
 
 ## tests/unit/demoStore.test.ts
 

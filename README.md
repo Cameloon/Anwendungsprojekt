@@ -35,13 +35,18 @@ Eine Datei `.env` im Projektordner anlegen (auf Basis der benötigten Schlüssel
 ```env
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...        # Clerk Publishable Key
 VITE_CONVEX_URL=https://...convex.cloud       # Convex Deployment URL
-CLERK_FRONTEND_API_URL=https://...clerk.accounts.dev
 ```
 
 Die tatsächlichen Werte bekommt ihr vom Team oder aus den jeweiligen Dashboards:
 
 - Clerk-Schlüssel: [dashboard.clerk.com](https://dashboard.clerk.com/) → Projekt → API Keys
 - Convex-URL: [dashboard.convex.dev](https://dashboard.convex.dev/) → Projekt → Settings → URL & Deploy Key
+
+Zusätzlich muss die Convex-Backend-Umgebungsvariable `CLERK_JWT_ISSUER_DOMAIN` (Wert: die Clerk Frontend API URL, z. B. `https://...clerk.accounts.dev`) gesetzt werden — **nicht** in der lokalen `.env`, sondern direkt in der Convex-Umgebung:
+
+```bash
+npx convex env set CLERK_JWT_ISSUER_DOMAIN https://...clerk.accounts.dev
+```
 
 ### 4. Convex Backend verbinden
 

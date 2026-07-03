@@ -45,9 +45,9 @@
 │  │                                 │                               │  │
 │  │  ┌──────────────────────────────▼───────────────────────────┐  │  │
 │  │  │                  Datenzugriffs-Schicht                    │  │  │
-│  │  │  Convex React Client  │  LocalStorage Stores (Demo)       │  │  │
-│  │  │  (useQuery/useMutation│  forumsStore / scriptsStore etc.  │  │  │
-│  │  │  aus convex/react)    │                                   │  │  │
+│  │  │  Convex React Client  │  LocalStorage Demo-Store          │  │  │
+│  │  │  (useQuery/useMutation│  (Auth/Profil, kein Backend       │  │  │
+│  │  │  aus convex/react)    │   nötig)                          │  │  │
 │  │  └──────────────────────────────────────────────────────────┘  │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
@@ -135,6 +135,7 @@
 | `feedback.ts` | Plattform-Feedback |
 | `userReports.ts` | Bug-/Feature-Meldungen |
 | `auth.config.ts` | Clerk JWT-Konfiguration |
+| `migrations.ts` | Datenmigrationen (z. B. `renameJahrgangToKurs`) |
 
 ---
 
@@ -150,7 +151,7 @@ Convex       ──── JWT-Validierung ────────────�
 - **Convex**: persistente WebSocket-Verbindung für reaktive Daten-Queries — automatisches Re-Rendering bei Datenänderungen, kein manuelles Polling
 - **Clerk**: JWT-basierte Authentifizierung; Token wird von Convex serverseitig validiert
 - **Supabase**: REST-API für Datei-Uploads (Skripte / Vorlesungsmaterial)
-- **LocalStorage**: Fallback-Datenschicht im Demo-Modus (kein Backend erforderlich)
+- **LocalStorage**: Fallback-Datenschicht im Demo-Modus für Auth/Profil (kein Backend erforderlich); alle übrigen Daten (Foren, Skripte, Deadlines) laufen ausschließlich über Convex
 
 ---
 

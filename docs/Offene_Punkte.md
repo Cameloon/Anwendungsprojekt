@@ -10,12 +10,7 @@ Folgende Tests sind als `Todo` markiert und noch nicht grün (Stand: `docs/test-
 
 | Test | Datei | Verweis |
 |---|---|---|
-| Dashboard: Skripte nach Vorlesung filtern | `tests/dashboard/filter.test.tsx` | Issue #47 |
-| Forum: Autor sieht Bearbeiten/Löschen am eigenen Beitrag | `tests/forum/author_controls.test.tsx` | — |
-| Forum: Eigener Kommentar zeigt Löschen-Button | `tests/forum/author_controls.test.tsx` | — |
-| Forum: Klick auf Bearbeiten öffnet Inline-Formular | `tests/forum/author_controls.test.tsx` | — |
-| Upload: Submit-Button deaktiviert ohne Dateiauswahl | `tests/skripte/upload_ui.test.tsx` | — |
-| Upload: Fehlermeldung bei ungültigem Dateityp | `tests/skripte/upload_ui.test.tsx` | — |
+| Upload: Submit-Button deaktiviert ohne Dateiauswahl | `tests/skripte/upload_ui.test.tsx` | Widerspruch zur FA: aktuelle Implementierung erlaubt bewusst Submission ohne Datei ("Als Notiz speichern") — Klärung mit Product Owner nötig |
 
 ---
 

@@ -108,6 +108,9 @@ vi.mock("../../convex/_generated/api", () => ({
     groups: {
       listForUser: "groups.listForUser",
     },
+    forums: {
+      getPrivateForumsForUser: "forums.getPrivateForumsForUser",
+    },
   },
 }));
 
@@ -202,7 +205,9 @@ describe("SkriptePage – Upload-Dialog", () => {
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
-  // FA: Datei ist Pflicht — file-input noch nicht implementiert
+  // FA fordert Datei-Pflicht, aktuelle Implementierung erlaubt bewusst Submission
+  // ohne Datei ("Als Notiz speichern") — Klärung mit Product Owner nötig, bevor
+  // dieser Test geschrieben werden kann (siehe Issue #47 / Funktionale_Anforderungen.md)
   it.todo("Submit-Button ist deaktiviert solange keine Datei ausgewählt ist");
 
   it("verhindert Submission bei ungültigen Eingaben — Formular bleibt offen", () => {
@@ -213,8 +218,20 @@ describe("SkriptePage – Upload-Dialog", () => {
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
-  // FA: Upload verweigert mit Fehlermeldung bei falschem Format — file-input noch nicht implementiert
-  it.todo("zeigt Fehlermeldung bei ungültigem Dateityp");
+  it("zeigt Fehlermeldung bei ungültigem Dateityp", () => {
+    const { container } = render(<SkriptePage />);
+    fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const invalidFile = new File(["Inhalt"], "malware.exe", {
+      type: "application/x-msdownload",
+    });
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+
+    expect(
+      screen.getByText(/Nur PDF, DOCX und Bilder \(PNG, JPG, WebP\) sind erlaubt\./i)
+    ).toBeInTheDocument();
+  });
 
   it("fügt neues Skript zur Liste hinzu nach erfolgreichem Upload", async () => {
     render(<SkriptePage />);

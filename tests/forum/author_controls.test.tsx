@@ -269,7 +269,7 @@ describe("Forum – Autor-Kontrolle: Edit/Delete-Buttons", () => {
     window.confirm = vi.fn(() => true);
   });
 
-  it.todo("Autor sieht Bearbeiten- und Löschen-Buttons am eigenen Beitrag", async () => {
+  it("Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag", async () => {
     postsStore = [makePost({ authorId: CURRENT_USER_ID })];
     snapshot = { posts: postsStore, forums: forumsStore };
 
@@ -280,9 +280,11 @@ describe("Forum – Autor-Kontrolle: Edit/Delete-Buttons", () => {
     expect(
       screen.getByRole("button", { name: /Beitrag bearbeiten/i })
     ).toBeInTheDocument();
+    // Beiträge löschen ist Admin-only und erfolgt in der Forum-Listenansicht,
+    // nicht auf der Detailseite — auch der Autor sieht hier keinen Löschen-Button.
     expect(
-      screen.getByRole("button", { name: /Beitrag löschen/i })
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Beitrag löschen/i })
+    ).not.toBeInTheDocument();
   });
 
   it("Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag", async () => {
@@ -355,7 +357,7 @@ describe("Forum – Autor-Kontrolle: Edit/Delete-Buttons", () => {
     ).toBeTruthy();
   });
 
-  it.todo("Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt", async () => {
+  it("Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt", async () => {
     const { fireEvent } = await import("@testing-library/react");
 
     postsStore = [makePost({ authorId: CURRENT_USER_ID, title: "Original Titel", content: "Original Inhalt" })];

@@ -186,7 +186,7 @@ describe("Dashboard lecture filter", () => {
   });
 
   // Skripte-Filterung ist in Arbeit (siehe Issue #47) — aktivieren sobald subject-Feld korrekt befüllt wird
-  it.todo("filters scripts by selected lecture — aktivieren sobald subject-Feld korrekt befüllt wird (Issue #47)", async () => {
+  it("filters scripts by selected lecture — aktivieren sobald subject-Feld korrekt befüllt wird (Issue #47)", async () => {
     lecturesFixture = [
       { _id: "lec-1", lectureName: "Informatik" },
       { _id: "lec-2", lectureName: "Mathematik" },
