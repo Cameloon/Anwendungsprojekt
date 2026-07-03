@@ -163,6 +163,9 @@ export default defineSchema({
     done: v.boolean(),
     note: v.optional(v.string()),
     vorlesung: v.optional(v.string()),
+    priority: v.optional(
+      v.union(v.literal("low"), v.literal("med"), v.literal("high"))
+    ),
     declinedBy: v.optional(v.array(v.string())),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
@@ -214,6 +217,7 @@ export default defineSchema({
     type: v.union(
       v.literal("PDF"),
       v.literal("DOCX"),
+      v.literal("PPTX"),
       v.literal("Notiz")
     ),
     visibility: v.union(

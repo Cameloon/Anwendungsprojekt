@@ -7,12 +7,13 @@ import { getType } from "./schema";
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/png",
   "image/jpeg",
   "image/webp",
 ]);
 
-const FILE_MAX_BYTES = 28 * 1024 * 1024; // 25 MB display, 28 MB actual limit
+const FILE_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 const MAX_SCRIPTS_PER_USER = 50;
 
 // ─── Helpers ───
@@ -185,7 +186,7 @@ export const create = mutation({
     ),
     description: v.string(),
     pages: v.number(),
-    type: v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("Notiz")),
+    type: v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("PPTX"), v.literal("Notiz")),
     visibility: v.union(
       v.literal("public"),
       v.literal("private"),
@@ -266,7 +267,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     pages: v.optional(v.number()),
     type: v.optional(
-      v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("Notiz"))
+      v.union(v.literal("PDF"), v.literal("DOCX"), v.literal("PPTX"), v.literal("Notiz"))
     ),
     visibility: v.optional(
       v.union(

@@ -8,7 +8,6 @@ import {
   Download,
   Search,
   BookOpen,
-  HardDrive,
   Filter,
   Globe,
   Lock,
@@ -42,18 +41,24 @@ import type { Id } from "../../convex/_generated/dataModel";
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/png",
   "image/jpeg",
   "image/webp",
 ];
 
-function inferScriptType(file: File): "PDF" | "DOCX" | "Notiz" {
+function inferScriptType(file: File): "PDF" | "DOCX" | "PPTX" | "Notiz" {
   if (file.type === "application/pdf") return "PDF";
   if (
     file.type ===
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   )
     return "DOCX";
+  if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  )
+    return "PPTX";
   return "Notiz";
 }
 
@@ -73,6 +78,7 @@ const subjectColors: Record<string, string> = {
 const typeColors: Record<string, string> = {
   PDF: "bg-destructive/10 text-destructive",
   DOCX: "bg-info/10 text-info",
+  PPTX: "bg-accent/10 text-accent",
   Notiz: "bg-success/10 text-success",
 };
 
@@ -87,7 +93,7 @@ interface ScriptItem {
   authorId: string;
   date: string;
   pages: number;
-  type: "PDF" | "DOCX" | "Notiz";
+  type: "PDF" | "DOCX" | "PPTX" | "Notiz";
   visibility: Visibility;
   url?: string;
   fileName?: string;
@@ -163,7 +169,9 @@ const SkriptePage = () => {
       return;
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setFileError("Nur PDF, DOCX und Bilder (PNG, JPG, WebP) sind erlaubt.");
+      setFileError(
+        "Nur PDF, DOCX, PPTX und Bilder (PNG, JPG, WebP) sind erlaubt.",
+      );
       return;
     }
     const sizeErr = validateFileSize(file.size);
@@ -300,21 +308,21 @@ const SkriptePage = () => {
   }, [scripts, search, activeSubject, me]);
 
   const openScript = openScriptId
-    ? scripts.find((script) => script.id === openScriptId) ?? null
+    ? (scripts.find((script) => script.id === openScriptId) ?? null)
     : null;
 
   useEffect(() => {
     const scriptFromQuery = searchParams.get("script");
     if (!scriptFromQuery) return;
 
-    const matchedScript = scripts.find((script) => script.id === scriptFromQuery);
+    const matchedScript = scripts.find(
+      (script) => script.id === scriptFromQuery,
+    );
     if (matchedScript && openScriptId !== scriptFromQuery) {
       setOpenScriptId(scriptFromQuery);
       setActiveSubject(matchedScript.subject);
     }
   }, [openScriptId, scripts, searchParams]);
-
-  const totalPages = scripts.reduce((sum, s) => sum + s.pages, 0);
 
   const stats = [
     {
@@ -330,13 +338,6 @@ const SkriptePage = () => {
       icon: BookOpen,
       bg: "bg-info/10",
       color: "text-info",
-    },
-    {
-      label: "Seiten gesamt",
-      value: totalPages,
-      icon: HardDrive,
-      bg: "bg-success/10",
-      color: "text-success",
     },
   ];
 
@@ -384,7 +385,7 @@ const SkriptePage = () => {
           </motion.div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-3 mb-6">
             {stats.map((s, i) => (
               <motion.div
                 key={s.label}
@@ -476,7 +477,7 @@ const SkriptePage = () => {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+                      accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
                       onChange={onFileInputChange}
                       className="hidden"
                     />
@@ -511,7 +512,7 @@ const SkriptePage = () => {
                           Datei hierher ziehen
                         </p>
                         <p className="text-xs mt-1">
-                          PDF, DOCX oder Bilder · max. 25 MB
+                          PDF, DOCX, PPTX oder Bilder · max. 25 MB
                         </p>
                       </>
                     )}
@@ -681,10 +682,7 @@ const SkriptePage = () => {
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
                   <div className="min-w-0">
                     <p className="truncate">{script.authorName}</p>
-                    <p className="text-[10px] mt-0.5">
-                      {script.date}
-                      {script.pages > 0 && ` · ${script.pages} S.`}
-                    </p>
+                    <p className="text-[10px] mt-0.5">{script.date}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {script.url && (
@@ -762,9 +760,13 @@ const SkriptePage = () => {
 
               <div className="flex items-center justify-between rounded-xl border p-3 text-sm">
                 <div>
-                  <p className="font-medium">{openScript.fileName || openScript.title}</p>
+                  <p className="font-medium">
+                    {openScript.fileName || openScript.title}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {openScript.pages > 0 ? `${openScript.pages} Seiten` : "Notiz oder Datei ohne Seitenangabe"}
+                    {openScript.pages > 0
+                      ? `${openScript.pages} Seiten`
+                      : "Notiz oder Datei ohne Seitenangabe"}
                   </p>
                 </div>
                 {openScript.url && (

@@ -27,6 +27,7 @@ import {
   MoreVertical,
   Users,
   Bell,
+  Filter as FilterIcon,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,13 @@ const categoryColors: Record<string, string> = {
 };
 const categoryLabels: Record<string, string> = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
 
+const priorityColors: Record<string, string> = {
+  low: "bg-muted text-muted-foreground border-border",
+  med: "bg-warning/15 text-warning border-warning/20",
+  high: "bg-destructive/15 text-destructive border-destructive/20",
+};
+const priorityLabels: Record<string, string> = { low: "Niedrig", med: "Mittel", high: "Hoch" };
+
 interface Attachment {
   id: string;
   name: string;
@@ -97,6 +105,7 @@ interface DeadlineItem {
   done: boolean;
   note?: string;
   vorlesung?: string;
+  priority: "low" | "med" | "high";
   attachments: Attachment[];
   messages: { id: string; author: string; text: string; createdAt: string }[];
   visibility: "public" | "private";
@@ -107,7 +116,11 @@ interface DeadlineItem {
   ownerId: string;
 }
 
-type Filter = "alle" | "offen" | "erledigt" | "dringend";
+type Filter = "alle" | "offen" | "erledigt" | "dringend" | "ueberfaellig";
+
+const URGENT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+const endOfDay = (dateStr: string) => new Date(dateStr + "T23:59:59").getTime();
 
 const formatBytes = (b: number) => {
   if (b < 1024) return `${b} B`;
@@ -154,6 +167,8 @@ function PlannerPage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("alle");
+  const [activeVorlesung, setActiveVorlesung] = useState<string>("alle");
+  const [activePriority, setActivePriority] = useState<string>("alle");
   const [openId, setOpenId] = useState<string | null>(null);
   const [doneOpen, setDoneOpen] = useState(true);
   const [archiveOpen, setArchiveOpen] = useState(true);
@@ -164,6 +179,7 @@ function PlannerPage() {
   const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [vorlesung, setVorlesung] = useState("");
+  const [priority, setPriority] = useState<"low" | "med" | "high">("med");
   const [inviteeSearch, setInviteeSearch] = useState("");
   const [selectedInvitees, setSelectedInvitees] = useState<{ userId: string; displayName: string }[]>([]);
   const [highlightIndex, setHighlightIndex] = useState(0);
@@ -194,6 +210,7 @@ function PlannerPage() {
     })),
     visibility: d.visibility,
     vorlesung: d.vorlesung,
+    priority: d.priority ?? "med",
     invitees: d.invitees ?? [],
     allowedKurse: d.allowedKurse ?? [],
     linkedScriptIds: d.linkedScriptIds ?? [],
@@ -213,6 +230,7 @@ function PlannerPage() {
     setLinkedGroupIds([]);
     setVisibility("private");
     setVorlesung("");
+    setPriority("med");
     setInviteeSearch("");
     setSelectedInvitees([]);
     setEditingId(null);
@@ -261,6 +279,9 @@ function PlannerPage() {
       else toast.error("Bitte einen Titel eingeben");
       return;
     }
+    if (title.trim().length > 50) {
+      return;
+    }
     let inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
     const inviteeNames = visibility === "private" ? selectedInvitees.map((s) => s.displayName) : [];
 
@@ -290,6 +311,7 @@ function PlannerPage() {
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
+          priority,
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
           linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
@@ -319,6 +341,7 @@ function PlannerPage() {
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
+          priority,
           visibility,
           invitees: inviteeIds.length ? inviteeIds : undefined,
           linkedScriptIds: linkedScriptIds.length ? (linkedScriptIds as Id<"scripts">[]) : undefined,
@@ -352,6 +375,7 @@ function PlannerPage() {
     setLinkedGroupIds(d.linkedGroupIds ?? []);
     setVorlesung(d.vorlesung ?? "");
     setVisibility(d.visibility);
+    setPriority(d.priority ?? "med");
     const people = kursPeopleQuery ?? [];
     setSelectedInvitees(
       (d.invitees ?? []).map((id: string) => ({
@@ -415,27 +439,42 @@ function PlannerPage() {
     }
   };
 
+  const vorlesungen = useMemo(() => {
+    const set = new Set(deadlines.map((d) => d.vorlesung).filter(Boolean) as string[]);
+    return ["alle", ...Array.from(set)];
+  }, [deadlines]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return deadlines
       .filter((d) => d.title.toLowerCase().includes(q))
+      .filter((d) => activeVorlesung === "alle" || d.vorlesung === activeVorlesung)
+      .filter((d) => activePriority === "alle" || d.priority === activePriority)
       .filter((d) => {
         if (filter === "offen") return !d.done;
         if (filter === "erledigt") return d.done;
         if (filter === "dringend") {
-          const diff = new Date(d.date).getTime() - Date.now();
-          return !d.done && diff < 3 * 24 * 60 * 60 * 1000;
+          const diff = endOfDay(d.date) - Date.now();
+          return !d.done && diff >= 0 && diff < URGENT_WINDOW_MS;
+        }
+        if (filter === "ueberfaellig") {
+          const diff = endOfDay(d.date) - Date.now();
+          return !d.done && diff < 0;
         }
         return true;
       });
-  }, [deadlines, search, filter]);
+  }, [deadlines, search, filter, activeVorlesung, activePriority]);
 
   const stats = useMemo(
     () => ({
       offen: deadlines.filter((d) => !d.done).length,
       dringend: deadlines.filter((d) => {
-        const diff = new Date(d.date).getTime() - Date.now();
-        return !d.done && diff < 3 * 24 * 60 * 60 * 1000;
+        const diff = endOfDay(d.date) - Date.now();
+        return !d.done && diff >= 0 && diff < URGENT_WINDOW_MS;
+      }).length,
+      ueberfaellig: deadlines.filter((d) => {
+        const diff = endOfDay(d.date) - Date.now();
+        return !d.done && diff < 0;
       }).length,
       erledigt: deadlines.filter((d) => d.done).length,
     }),
@@ -476,6 +515,11 @@ function PlannerPage() {
       setSearch={setSearch}
       filter={filter}
       setFilter={setFilter}
+      vorlesungen={vorlesungen}
+      activeVorlesung={activeVorlesung}
+      setActiveVorlesung={setActiveVorlesung}
+      activePriority={activePriority}
+      setActivePriority={setActivePriority}
       openId={openId}
       setOpenId={setOpenId}
       activeTab={activeTab}
@@ -489,6 +533,8 @@ function PlannerPage() {
       setVisibility={setVisibility}
       vorlesung={vorlesung}
       setVorlesung={setVorlesung}
+      priority={priority}
+      setPriority={setPriority}
       lectures={lecturesQuery ?? []}
       inviteeSearch={inviteeSearch}
       setInviteeSearch={setInviteeSearch}
@@ -567,6 +613,11 @@ function PlannerLayout({
   setSearch,
   filter,
   setFilter,
+  vorlesungen,
+  activeVorlesung,
+  setActiveVorlesung,
+  activePriority,
+  setActivePriority,
   openId,
   setOpenId,
   activeTab,
@@ -580,6 +631,8 @@ function PlannerLayout({
   setVisibility,
   vorlesung,
   setVorlesung,
+  priority,
+  setPriority,
   lectures,
   inviteeSearch,
   setInviteeSearch,
@@ -606,7 +659,7 @@ function PlannerLayout({
 }: {
   deadlines: DeadlineItem[];
   filtered: DeadlineItem[];
-  stats: { offen: number; dringend: number; erledigt: number };
+  stats: { offen: number; dringend: number; ueberfaellig: number; erledigt: number };
   title: string;
   setTitle: (v: string) => void;
   date: string;
@@ -633,6 +686,11 @@ function PlannerLayout({
   setSearch: (v: string) => void;
   filter: Filter;
   setFilter: (v: Filter) => void;
+  vorlesungen: string[];
+  activeVorlesung: string;
+  setActiveVorlesung: (v: string) => void;
+  activePriority: string;
+  setActivePriority: (v: string) => void;
   openId: string | null;
   setOpenId: (v: string | null) => void;
   activeTab: "files" | "forum";
@@ -646,6 +704,8 @@ function PlannerLayout({
   setVisibility: (v: "public" | "private") => void;
   vorlesung: string;
   setVorlesung: (v: string) => void;
+  priority: "low" | "med" | "high";
+  setPriority: (v: "low" | "med" | "high") => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lectures: any[];
   inviteeSearch: string;
@@ -705,10 +765,11 @@ function PlannerLayout({
           </motion.div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
               { label: "Offen", count: stats.offen, icon: ListTodo, color: "text-info" },
-              { label: "Dringend", count: stats.dringend, icon: Flame, color: "text-destructive" },
+              { label: "Dringend", count: stats.dringend, icon: Flame, color: "text-warning" },
+              { label: "Überfällig", count: stats.ueberfaellig, icon: AlertCircle, color: "text-destructive" },
               { label: "Erledigt", count: stats.erledigt, icon: CheckCircle2, color: "text-success" },
             ].map((s) => (
               <div key={s.label} className="glass-card p-4 flex items-center gap-3">
@@ -734,7 +795,12 @@ function PlannerLayout({
               >
                 <div className="glass-card p-5 space-y-4">
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <Input placeholder="Titel (z. B. Hausarbeit Mathe)" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <div className="space-y-1">
+                      <Input placeholder="Titel (z. B. Hausarbeit Mathe)" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      {title.trim().length > 50 && (
+                        <p className="text-xs text-destructive">Titel darf maximal 50 Zeichen lang sein.</p>
+                      )}
+                    </div>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
@@ -776,6 +842,21 @@ function PlannerLayout({
                         {categoryLabels[c]}
                       </button>
                     ))}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Priorität</p>
+                    <div className="flex gap-2">
+                      {(["low", "med", "high"] as const).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPriority(p)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${priority === p ? priorityColors[p] : "text-muted-foreground bg-secondary border-transparent"
+                            }`}
+                        >
+                          {priorityLabels[p]}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
                   {category !== "sonstiges" && (
@@ -951,18 +1032,57 @@ function PlannerLayout({
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Termine durchsuchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 w-fit">
-              {(["alle", "offen", "dringend", "erledigt"] as Filter[]).map((f) => (
+            <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 w-fit flex-wrap">
+              {(["alle", "offen", "dringend", "ueberfaellig", "erledigt"] as Filter[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
+                  title={f === "dringend" ? "Innerhalb der nächsten 3 Tage" : undefined}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                     }`}
                 >
-                  {f === "dringend" ? "Dringend" : f === "offen" ? "Offen" : f === "erledigt" ? "Erledigt" : "Alle"}
+                  {f === "dringend" ? "Dringend" : f === "ueberfaellig" ? "Überfällig" : f === "offen" ? "Offen" : f === "erledigt" ? "Erledigt" : "Alle"}
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Vorlesung filter */}
+          {vorlesungen.length > 1 && (
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <FilterIcon className="h-4 w-4 text-muted-foreground" />
+              {vorlesungen.map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setActiveVorlesung(v)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    activeVorlesung === v
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
+                  }`}
+                >
+                  {v === "alle" ? "Alle Vorlesungen" : v}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Priority filter */}
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <FilterIcon className="h-4 w-4 text-muted-foreground" />
+            {(["alle", "low", "med", "high"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setActivePriority(p)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  activePriority === p
+                    ? priorityColors[p] ?? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
+                }`}
+              >
+                {p === "alle" ? "Alle Prioritäten" : priorityLabels[p]}
+              </button>
+            ))}
           </div>
 
           {/* Deadline list */}
@@ -972,8 +1092,12 @@ function PlannerLayout({
               const activeFiltered = filtered
                 .filter((d) => !d.done && new Date(d.date).getTime() > thirtyDaysAgo)
                 .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
-              const doneFiltered = filtered.filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo);
-              const archivedFiltered = filtered.filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo);
+              const doneFiltered = filtered
+                .filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo)
+                .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
+              const archivedFiltered = filtered
+                .filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo)
+                .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               return (
                 <>
                   {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
@@ -983,9 +1107,9 @@ function PlannerLayout({
                     </div>
                   ) : null}
                   {activeFiltered.map((d) => {
-                    const diff = new Date(d.date).getTime() - Date.now();
+                    const diff = endOfDay(d.date) - Date.now();
                     const overdue = diff < 0 && !d.done;
-                    const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
+                    const urgent = diff >= 0 && diff < URGENT_WINDOW_MS && !d.done;
                     const messageCount = d.messages?.length ?? 0;
                     const fileCount = d.attachments?.length ?? 0;
                     const isOwn = d.ownerId === me;
@@ -1074,6 +1198,9 @@ function PlannerLayout({
                                 {d.invitees.length > 0 && (
                                   <span>{d.invitees.length} Eingeladene</span>
                                 )}
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${priorityColors[d.priority]}`}>
+                                  Prio: {priorityLabels[d.priority]}
+                                </span>
                               </div>
                             </div>
                           </div>

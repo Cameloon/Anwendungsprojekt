@@ -45,7 +45,7 @@ export function validateScriptDescription(description: string): string {
   return "";
 }
 
-export const FILE_MAX_BYTES = 28 * 1024 * 1024; // 25 MB
+export const FILE_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
 export function validateFileSize(bytes: number): string {
   if (bytes > FILE_MAX_BYTES) return "Datei darf maximal 25 MB groß sein.";

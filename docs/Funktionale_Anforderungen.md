@@ -22,7 +22,7 @@ Diese Datei beschreibt die funktionalen Anforderungen in Must/Should/Could/Wont�
     - Gruppentermine können von jedem Gruppenmitglied bearbeitet werden (gemeinsamer Status)
     - Einladungen erscheinen in den Benachrichtigungen und können akzeptiert oder abgelehnt werden
     - Aufgaben können nach Vorlesungen gefiltert werden
-  - Validierung: `lecturetitle` & `lectureId` & `dueDate` sind Pflicht; `dueDate` darf nicht in der Vergangenheit liegen (bei Erstellung); `title` max. 200 Zeichen.
+  - Validierung: `lecturetitle` & `lectureId` & `dueDate` sind Pflicht; `dueDate` darf nicht in der Vergangenheit liegen (bei Erstellung); `title` max. 50 Zeichen (angepasst am 03.07.2026 durch DM: vorher 200 Zeichen).
   - Akzeptanzkriterien: 1) Erstellen einer Aufgabe speichert alle Pflichtfelder und erscheint sofort im Dashboard.
 
 - **Foren / Diskussionen**

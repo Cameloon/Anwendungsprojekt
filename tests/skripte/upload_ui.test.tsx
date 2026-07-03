@@ -229,7 +229,7 @@ describe("SkriptePage – Upload-Dialog", () => {
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
     expect(
-      screen.getByText(/Nur PDF, DOCX und Bilder \(PNG, JPG, WebP\) sind erlaubt\./i)
+      screen.getByText(/Nur PDF, DOCX, PPTX und Bilder \(PNG, JPG, WebP\) sind erlaubt\./i)
     ).toBeInTheDocument();
   });
 

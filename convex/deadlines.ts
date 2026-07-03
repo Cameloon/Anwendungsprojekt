@@ -126,6 +126,9 @@ export const create = mutation({
     ),
     note: v.optional(v.string()),
     vorlesung: v.optional(v.string()),
+    priority: v.optional(
+      v.union(v.literal("low"), v.literal("med"), v.literal("high"))
+    ),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
     allowedKurse: v.optional(v.array(v.string())),
@@ -135,13 +138,17 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const title = args.title.trim();
+    if (title.length > 50) throw new Error("Titel darf maximal 50 Zeichen lang sein.");
+
     const now = Date.now();
     const invitees = args.visibility === "public"
       ? await getKursUserIds(ctx, identity.subject)
       : args.invitees?.filter(Boolean);
 
     return await ctx.db.insert("deadlines", {
-      title: args.title.trim(),
+      title,
       date: args.date,
       time: args.time,
       remindBefore: args.remindBefore?.filter(Boolean),
@@ -149,6 +156,7 @@ export const create = mutation({
       done: false,
       note: args.note?.trim(),
       vorlesung: args.vorlesung?.trim(),
+      priority: args.priority ?? "med",
       visibility: args.visibility,
       invitees,
       allowedKurse: args.allowedKurse?.filter(Boolean),
@@ -178,8 +186,8 @@ export const create = mutation({
             recipientName,
             fromId: identity.subject,
             fromName,
-            title: args.title.trim(),
-            message: `${fromName} hat dich zum Termin „${args.title.trim()}“ eingeladen (öffentlich).`,
+            title,
+            message: `${fromName} hat dich zum Termin „${title}“ eingeladen (öffentlich).`,
             deadlineId,
             status: "pending",
             createdAt: now,
@@ -203,6 +211,9 @@ export const update = mutation({
     ),
     note: v.optional(v.string()),
     vorlesung: v.optional(v.string()),
+    priority: v.optional(
+      v.union(v.literal("low"), v.literal("med"), v.literal("high"))
+    ),
     visibility: v.optional(
       v.union(v.literal("public"), v.literal("private"))
     ),
@@ -224,6 +235,10 @@ export const update = mutation({
         throw new Error("Not authorized — nur der Besitzer oder Eingeladene dürfen bearbeiten");
     }
 
+    if (args.title !== undefined && args.title.trim().length > 50) {
+      throw new Error("Titel darf maximal 50 Zeichen lang sein.");
+    }
+
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.title !== undefined) patch.title = args.title.trim();
     if (args.date !== undefined) patch.date = args.date;
@@ -232,6 +247,7 @@ export const update = mutation({
     if (args.category !== undefined) patch.category = args.category;
     if (args.note !== undefined) patch.note = args.note?.trim();
     if (args.vorlesung !== undefined) patch.vorlesung = args.vorlesung?.trim();
+    if (args.priority !== undefined) patch.priority = args.priority;
     if (args.visibility !== undefined) patch.visibility = args.visibility;
     if (args.invitees !== undefined) patch.invitees = args.invitees?.filter(Boolean);
     if (args.allowedKurse !== undefined) patch.allowedKurse = args.allowedKurse?.filter(Boolean);
