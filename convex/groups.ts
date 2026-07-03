@@ -260,6 +260,14 @@ export const getGroupFiles = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const member = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_group_user", (q) =>
+        q.eq("groupId", args.groupId).eq("userId", identity.subject)
+      )
+      .unique();
+    if (!member) throw new Error("Not a member of this group");
+
     const files = await ctx.db
       .query("groupFiles")
       .withIndex("by_group", (q) => q.eq("groupId", args.groupId))

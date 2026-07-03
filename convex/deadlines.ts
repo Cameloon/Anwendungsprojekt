@@ -19,6 +19,23 @@ async function getKursUserIds(ctx: any, userId: string): Promise<string[]> {
     .map((p: any) => p.userId);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isAdmin(ctx: any, userId: string): Promise<boolean> {
+  const profile = await ctx.db
+    .query("profiles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+  return profile?.role === "admin";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function canAccessDeadline(ctx: any, deadline: any, userId: string): Promise<boolean> {
+  if (deadline.ownerId === userId) return true;
+  if (deadline.invitees?.includes(userId)) return true;
+  return await isAdmin(ctx, userId);
+}
+
 // ─── Queries ───
 
 export const listForUser = query({
@@ -63,6 +80,11 @@ export const getAttachments = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Deadline not found");
+    if (!(await canAccessDeadline(ctx, deadline, identity.subject))) {
+      throw new Error("Not authorized");
+    }
     const files = await ctx.db
       .query("deadlineAttachments")
       .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
