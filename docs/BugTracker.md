@@ -57,15 +57,6 @@ Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Lösche
 Hinweis: Bearbeiter mit Kürzel ergänzen
 
 
-### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge  
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Dashboard UI
-**Priorität:** Niedrig
-**Beschreibung:**
-Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), unabhängig davon, ob der Nutzer die Beiträge bereits gesehen hat. Die Kennzahl suggeriert Aktualität, ist aber kein zuverlässiger Indikator für wirklich neue Inhalte.
-**Fundort:** `src/pages/DashboardPage.tsx`, Zeile 110
 
 ---
 
@@ -154,3 +145,16 @@ Der „Melden"-Button in `PostDetailPage` und `ForumPage` öffnet einen `ReportD
 **Beschreibung:**
 Der Löschen-Button für Kommentare wird nur Admins angezeigt (`{isAdmin && …}`). Das Backend erlaubt es dem Verfasser, den eigenen Kommentar zu löschen, die UI bietet diese Möglichkeit jedoch nicht an. Nutzer können ihre eigenen Kommentare nicht entfernen.
 **Fundort:** `src/pages/PostDetailPage.tsx`, Zeile 463
+
+---
+
+### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge  
+
+**Datum erfasst:** 25-06-2026
+**Verfasser:** CC
+**Komponente/Bereich:** Dashboard UI
+**Priorität:** Niedrig
+**Beschreibung:**
+Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), unabhängig davon, ob der Nutzer die Beiträge bereits gesehen hat. Die Kennzahl suggeriert Aktualität, ist aber kein zuverlässiger Indikator für wirklich neue Inhalte.
+**Fundort:** `src/pages/DashboardPage.tsx`, Zeile 110
+
