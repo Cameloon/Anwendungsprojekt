@@ -78,14 +78,14 @@ const categoryColors: Record<string, string> = {
   pruefung: "bg-destructive/15 text-destructive border-destructive/20",
   sonstiges: "bg-primary/15 text-primary border-primary/20",
 };
-const categoryLabels: Record<string, string> = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
+const tCategoryLabels: Record<string, string> = { abgabe: "Abgabe", pruefung: "Prüfung", sonstiges: "Sonstiges" };
 
 const priorityColors: Record<string, string> = {
   low: "bg-muted text-muted-foreground border-border",
   med: "bg-warning/15 text-warning border-warning/20",
   high: "bg-destructive/15 text-destructive border-destructive/20",
 };
-const priorityLabels: Record<string, string> = { low: "Niedrig", med: "Mittel", high: "Hoch" };
+const tPriorityLabels: Record<string, string> = { low: "Niedrig", med: "Mittel", high: "Hoch" };
 
 interface Attachment {
   id: string;
@@ -94,6 +94,8 @@ interface Attachment {
   type: string;
   url: string;
 }
+
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface DeadlineItem {
   id: string;
@@ -134,7 +136,8 @@ function PlannerPage() {
   const { user } = useAuth();
   const profile = useProfile();
   const me = user?.id || "";
-  const displayName = profile?.display_name || "Unbekannt";
+  const { language } = useLanguage();
+  const displayName = profile?.display_name || language.match({ english: () => "Unknown", german: () => "Unbekannt" });
 
   const deadlinesQuery = useQuery(api.deadlines.listForUser);
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs, {});
@@ -274,9 +277,15 @@ function PlannerPage() {
 
   const submitDeadline = async () => {
     if (!title.trim() || !date || (!vorlesung && category !== "sonstiges")) {
-      if (!date) toast.error("Bitte ein Datum wählen");
-      else if (!vorlesung && category !== "sonstiges") toast.error("Bitte eine Vorlesung auswählen");
-      else toast.error("Bitte einen Titel eingeben");
+      //"Bitte ein Datum wählen"
+      if (!date) toast.error(
+        language.match({
+          english: () => "please choose a date",
+          german: () => "Bitte ein Datum wählen",
+        })
+      );
+      else if (!vorlesung && category !== "sonstiges") toast.error(language.match({ english: () => "Please select a lecture", german: () => "Bitte eine Vorlesung auswählen" }));
+      else toast.error(language.match({ english: () => "Please enter a title", german: () => "Bitte einen Titel eingeben" }));
       return;
     }
     if (title.trim().length > 50) {
@@ -331,7 +340,7 @@ function PlannerPage() {
             });
           }
         }
-        toast.success("Termin aktualisiert");
+        toast.success(language.match({ english: () => "Deadline updated", german: () => "Termin aktualisiert" }));
       } else {
         const result = await createMutation({
           title: title.trim(),
@@ -356,11 +365,11 @@ function PlannerPage() {
             fromName: displayName,
           });
         }
-        toast.success("Termin erstellt");
+        toast.success(language.match({ english: () => "Deadline created", german: () => "Termin erstellt" }));
       }
       resetForm();
     } catch {
-      toast.error("Fehler beim Speichern");
+      toast.error(language.match({ english: () => "Error saving", german: () => "Fehler beim Speichern" }));
     }
   };
 
@@ -392,36 +401,36 @@ function PlannerPage() {
     try {
       await toggleDoneMutation({ deadlineId: id as Id<"deadlines"> });
     } catch {
-      toast.error("Fehler beim Aktualisieren");
+      toast.error(language.match({ english: () => "Error updating", german: () => "Fehler beim Aktualisieren" }));
     }
   };
 
   const removeDeadline = async (id: string) => {
-    if (!window.confirm("Termin wirklich löschen?")) return;
+    if (!window.confirm(language.match({ english: () => "Really delete deadline?", german: () => "Termin wirklich löschen?" }))) return;
     try {
       await deleteMutation({ deadlineId: id as Id<"deadlines"> });
       if (openId === id) setOpenId(null);
-      toast.success("Termin gelöscht");
+      toast.success(language.match({ english: () => "Deadline deleted", german: () => "Termin gelöscht" }));
     } catch {
-      toast.error("Fehler beim Löschen");
+      toast.error(language.match({ english: () => "Error deleting", german: () => "Fehler beim Löschen" }));
     }
   };
 
   const declineInvite = async (id: string) => {
     try {
       await declineDeadlineMutation({ deadlineId: id as Id<"deadlines"> });
-      toast.success("Abgelehnt");
+      toast.success(language.match({ english: () => "Declined", german: () => "Abgelehnt" }));
     } catch {
-      toast.error("Fehler");
+      toast.error(language.match({ english: () => "Error", german: () => "Fehler" }));
     }
   };
 
   const acceptInvite = async (id: string) => {
     try {
       await acceptDeadlineMutation({ deadlineId: id as Id<"deadlines"> });
-      toast.success("Termin angenommen — eigene Kopie erstellt");
+      toast.success(language.match({ english: () => "Deadline accepted — own copy created", german: () => "Termin angenommen — eigene Kopie erstellt" }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Fehler beim Annehmen");
+      toast.error(e instanceof Error ? e.message : language.match({ english: () => "Error accepting", german: () => "Fehler beim Annehmen" }));
     }
   };
 
@@ -435,7 +444,7 @@ function PlannerPage() {
       });
       setNewMessage("");
     } catch {
-      toast.error("Fehler beim Senden");
+      toast.error(language.match({ english: () => "Error sending", german: () => "Fehler beim Senden" }));
     }
   };
 
@@ -563,16 +572,16 @@ function PlannerPage() {
         <AlertDialogContent className="max-w-sm border-destructive/20 bg-destructive/5">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" /> Datum liegt in der Vergangenheit
+              <AlertCircle className="h-5 w-5" /> {language.match({ english: () => "Date is in the past", german: () => "Datum liegt in der Vergangenheit" })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Das gewählte Datum liegt in der Vergangenheit. Möchtest du den Termin trotzdem erstellen?
+              {language.match({ english: () => "The selected date is in the past. Do you still want to create the deadline?", german: () => "Das gewählte Datum liegt in der Vergangenheit. Möchtest du den Termin trotzdem erstellen?" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowPastWarning(false)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setShowPastWarning(false)}>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { pastDateConfirmed.current = true; setShowPastWarning(false); submitDeadline(); }}>
-              Trotzdem erstellen
+              {language.match({ english: () => "Create anyway", german: () => "Trotzdem erstellen" })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -734,6 +743,17 @@ function PlannerLayout({
   archiveOpen: boolean;
   setArchiveOpen: (v: boolean) => void;
 }) {
+  const { language} = useLanguage();
+  const tCategoryLabels: Record<string, string> = {
+    abgabe: language.match({ english: () => "Assignment", german: () => "Abgabe" }),
+    pruefung: language.match({ english: () => "Exam", german: () => "Prüfung" }),
+    sonstiges: language.match({ english: () => "Other", german: () => "Sonstiges" }),
+  };
+  const tPriorityLabels: Record<string, string> = {
+    low: language.match({ english: () => "Low", german: () => "Niedrig" }),
+    med: language.match({ english: () => "Medium", german: () => "Mittel" }),
+    high:language.match({ english: () => "High", german: () => "Hoch" }),
+  };
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -750,27 +770,27 @@ function PlannerLayout({
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
                   <CalendarDays className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm text-muted-foreground">Planer</span>
+                <span className="text-sm text-muted-foreground">{language.match({ english: () => "Planner", german: () => "Planer" })}</span>
               </div>
               <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
-                <span className="text-gradient">Termine</span> & Abgaben
+                <span className="text-gradient">{language.match({ english: () => "Deadlines", german: () => "Termine" })}</span> & {language.match({ english: () => "Submissions", german: () => "Abgaben" })}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Behalte Fristen, Prüfungen und Abgaben im Blick.
+                {language.match({ english: () => "Keep track of deadlines, exams and submissions.", german: () => "Behalte Fristen, Prüfungen und Abgaben im Blick." })}
               </p>
             </div>
             <Button onClick={() => { resetForm(); setShowForm((v) => !v); }} className="gap-2 shrink-0">
-              <Plus className="h-4 w-4" /> Neuer Termin
+              <Plus className="h-4 w-4" /> {language.match({ english: () => "New Deadline", german: () => "Neuer Termin" })}
             </Button>
           </motion.div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: "Offen", count: stats.offen, icon: ListTodo, color: "text-info" },
-              { label: "Dringend", count: stats.dringend, icon: Flame, color: "text-warning" },
-              { label: "Überfällig", count: stats.ueberfaellig, icon: AlertCircle, color: "text-destructive" },
-              { label: "Erledigt", count: stats.erledigt, icon: CheckCircle2, color: "text-success" },
+              { label: language.match({ english: () => "Open", german: () => "Offen" }), count: stats.offen, icon: ListTodo, color: "text-info" },
+              { label: language.match({ english: () => "Urgent", german: () => "Dringend" }), count: stats.dringend, icon: Flame, color: "text-warning" },
+              { label: language.match({ english: () => "Overdue", german: () => "Überfällig" }), count: stats.ueberfaellig, icon: AlertCircle, color: "text-destructive" },
+              { label: language.match({ english: () => "Done", german: () => "Erledigt" }), count: stats.erledigt, icon: CheckCircle2, color: "text-success" },
             ].map((s) => (
               <div key={s.label} className="glass-card p-4 flex items-center gap-3">
                 <div className={`h-9 w-9 rounded-lg bg-secondary/80 flex items-center justify-center ${s.color}`}>
@@ -796,20 +816,20 @@ function PlannerLayout({
                 <div className="glass-card p-5 space-y-4">
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Input placeholder="Titel (z. B. Hausarbeit Mathe)" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      <Input placeholder={language.match({ english: () => "Title (e.g. Math assignment)", german: () => "Titel (z. B. Hausarbeit Mathe)" })} value={title} onChange={(e) => setTitle(e.target.value)} />
                       {title.trim().length > 50 && (
-                        <p className="text-xs text-destructive">Titel darf maximal 50 Zeichen lang sein.</p>
+                        <p className="text-xs text-destructive">{language.match({ english: () => "Title must not exceed 50 characters.", german: () => "Titel darf maximal 50 Zeichen lang sein." })}</p>
                       )}
                     </div>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Uhrzeit (optional)</p>
+                      <p className="text-xs text-muted-foreground mb-1">{language.match({ english: () => "Time (optional)", german: () => "Uhrzeit (optional)" })}</p>
                       <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Erinnern (optional)</p>
+                      <p className="text-xs text-muted-foreground mb-1">{language.match({ english: () => "Remind (optional)", german: () => "Erinnern (optional)" })}</p>
                       <div className="flex flex-wrap gap-2">
                         {[1, 2, 3, 5].map((d) => (
                           <button
@@ -825,7 +845,7 @@ function PlannerLayout({
                                 : "text-muted-foreground bg-secondary border-transparent"
                             }`}
                           >
-                            {d} Tag{d > 1 ? "e" : ""}
+                            {d} {language.match({ english: () => `day${d > 1 ? "s" : ""}`, german: () => `Tag${d > 1 ? "e" : ""}` })}
                           </button>
                         ))}
                       </div>
@@ -839,12 +859,12 @@ function PlannerLayout({
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${category === c ? categoryColors[c] : "text-muted-foreground bg-secondary border-transparent"
                           }`}
                       >
-                        {categoryLabels[c]}
+                        {tCategoryLabels[c]}
                       </button>
                     ))}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Priorität</p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Priority", german: () => "Priorität" })}</p>
                     <div className="flex gap-2">
                       {(["low", "med", "high"] as const).map((p) => (
                         <button
@@ -853,18 +873,18 @@ function PlannerLayout({
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${priority === p ? priorityColors[p] : "text-muted-foreground bg-secondary border-transparent"
                             }`}
                         >
-                          {priorityLabels[p]}
+                          {tPriorityLabels[p]}
                         </button>
                       ))}
                     </div>
                   </div>
-                  <Textarea placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
+                  <Textarea placeholder={language.match({ english: () => "Note (optional)", german: () => "Notiz (optional)" })} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="resize-none" />
                   {category !== "sonstiges" && (
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Vorlesung </p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Lecture", german: () => "Vorlesung" })}</p>
                     <Select value={vorlesung} onValueChange={setVorlesung}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Vorlesung wählen" />
+                        <SelectValue placeholder={language.match({ english: () => "Select lecture", german: () => "Vorlesung wählen" })} />
                       </SelectTrigger>
                       <SelectContent>
                         {lectures.map((l: any) => (
@@ -875,7 +895,7 @@ function PlannerLayout({
                   </div>
                   )}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Skripte verlinken (optional)</p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Link scripts (optional)", german: () => "Skripte verlinken (optional)" })}</p>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {linkedScriptIds.map((id) => {
                         const s = scripts.find((x: any) => x._id === id);
@@ -893,7 +913,7 @@ function PlannerLayout({
                     </div>
                     <Select value="" onValueChange={(id) => { if (id && !linkedScriptIds.includes(id)) setLinkedScriptIds((prev) => [...prev, id]); }}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Skript auswählen" />
+                        <SelectValue placeholder={language.match({ english: () => "Select script", german: () => "Skript auswählen" })} />
                       </SelectTrigger>
                       <SelectContent>
                         {scripts
@@ -905,7 +925,7 @@ function PlannerLayout({
                     </Select>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Gruppen verlinken (optional)</p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Link groups (optional)", german: () => "Gruppen verlinken (optional)" })}</p>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {linkedGroupIds.map((id) => {
                         const g = groups.find((x: any) => x._id === id);
@@ -923,7 +943,7 @@ function PlannerLayout({
                     </div>
                     <Select value="" onValueChange={(id) => { if (id && !linkedGroupIds.includes(id)) setLinkedGroupIds((prev) => [...prev, id]); }}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Gruppe auswählen" />
+                        <SelectValue placeholder={language.match({ english: () => "Select group", german: () => "Gruppe auswählen" })} />
                       </SelectTrigger>
                       <SelectContent>
                         {groups
@@ -935,28 +955,28 @@ function PlannerLayout({
                     </Select>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Sichtbarkeit</p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Visibility", german: () => "Sichtbarkeit" })}</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setVisibility("public")}
                         className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${visibility === "public" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
                           }`}
                       >
-                        <Globe className="h-4 w-4" /> Öffentlich
+                        <Globe className="h-4 w-4" /> {language.match({ english: () => "Public", german: () => "Öffentlich" })}
                       </button>
                       <button
                         onClick={() => setVisibility("private")}
                         className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${visibility === "private" ? "bg-primary/10 text-primary border-primary/30" : "text-muted-foreground bg-secondary border-transparent"
                           }`}
                       >
-                        <Lock className="h-4 w-4" /> Privat
+                        <Lock className="h-4 w-4" /> {language.match({ english: () => "Private", german: () => "Privat" })}
                       </button>
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Personen einladen</p>
+                    <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Invite people", german: () => "Personen einladen" })}</p>
                     {visibility === "public" ? (
-                      <p className="text-xs text-muted-foreground italic">Alle Personen deines Kurses werden automatisch eingeladen.</p>
+                      <p className="text-xs text-muted-foreground italic">{language.match({ english: () => "All people in your course will be invited automatically.", german: () => "Alle Personen deines Kurses werden automatisch eingeladen." })}</p>
                     ) : (
                       <div>
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -974,7 +994,7 @@ function PlannerLayout({
                         </div>
                         <div className="relative">
                           <Input
-                            placeholder="Namen suchen…"
+                            placeholder={language.match({ english: () => "Search names…", german: () => "Namen suchen…" })}
                             value={inviteeSearch}
                             onChange={(e) => { setInviteeSearch(e.target.value); setHighlightIndex(0); }}
                             onFocus={() => setInviteeSearch((v) => v)}
@@ -993,7 +1013,7 @@ function PlannerLayout({
                             return (
                               <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md max-h-36 overflow-y-auto">
                                 {shown.length === 0 ? (
-                                  <p className="px-3 py-2 text-xs text-muted-foreground">Keine Personen gefunden</p>
+                                  <p className="px-3 py-2 text-xs text-muted-foreground">{language.match({ english: () => "No people found", german: () => "Keine Personen gefunden" })}</p>
                                 ) : (
                                   shown.map((p, i) => (
                                     <button
@@ -1018,8 +1038,8 @@ function PlannerLayout({
                     )}
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
-                    <Button variant="outline" onClick={resetForm}>Abbrechen</Button>
-                    <Button onClick={submitDeadline}>{editingId ? "Aktualisieren" : "Erstellen"}</Button>
+                    <Button variant="outline" onClick={resetForm}>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</Button>
+                    <Button onClick={submitDeadline}>{editingId ? language.match({ english: () => "Update", german: () => "Aktualisieren" }) : language.match({ english: () => "Create", german: () => "Erstellen" })}</Button>
                   </div>
                 </div>
               </motion.div>
@@ -1030,18 +1050,18 @@ function PlannerLayout({
           <div className="flex flex-col md:flex-row gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Termine durchsuchen…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder={language.match({ english: () => "Search deadlines…", german: () => "Termine durchsuchen…" })} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 w-fit flex-wrap">
               {(["alle", "offen", "dringend", "ueberfaellig", "erledigt"] as Filter[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  title={f === "dringend" ? "Innerhalb der nächsten 3 Tage" : undefined}
+                  title={f === "dringend" ? language.match({ english: () => "Within the next 3 days", german: () => "Innerhalb der nächsten 3 Tage" }) : undefined}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-colors ${filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                     }`}
                 >
-                  {f === "dringend" ? "Dringend" : f === "ueberfaellig" ? "Überfällig" : f === "offen" ? "Offen" : f === "erledigt" ? "Erledigt" : "Alle"}
+                  {f === "dringend" ? language.match({ english: () => "Urgent", german: () => "Dringend" }) : f === "ueberfaellig" ? language.match({ english: () => "Overdue", german: () => "Überfällig" }) : f === "offen" ? language.match({ english: () => "Open", german: () => "Offen" }) : f === "erledigt" ? language.match({ english: () => "Done", german: () => "Erledigt" }) : language.match({ english: () => "All", german: () => "Alle" })}
                 </button>
               ))}
             </div>
@@ -1061,7 +1081,7 @@ function PlannerLayout({
                       : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
                   }`}
                 >
-                  {v === "alle" ? "Alle Vorlesungen" : v}
+                  {v === "alle" ? language.match({ english: () => "All lectures", german: () => "Alle Vorlesungen" }) : v}
                 </button>
               ))}
             </div>
@@ -1080,7 +1100,7 @@ function PlannerLayout({
                     : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
                 }`}
               >
-                {p === "alle" ? "Alle Prioritäten" : priorityLabels[p]}
+                {p === "alle" ? language.match({ english: () => "All priorities", german: () => "Alle Prioritäten" }) : tPriorityLabels[p]}
               </button>
             ))}
           </div>
@@ -1103,7 +1123,7 @@ function PlannerLayout({
                   {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
                     <div className="glass-card p-10 text-center">
                       <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                      <p className="text-muted-foreground">Keine Termine gefunden.</p>
+                      <p className="text-muted-foreground">{language.match({ english: () => "No deadlines found.", german: () => "Keine Termine gefunden." })}</p>
                     </div>
                   ) : null}
                   {activeFiltered.map((d) => {
@@ -1133,10 +1153,10 @@ function PlannerLayout({
                               </button>
                             ) : d.invitees?.includes(me) ? (
                               <div className="flex gap-1 shrink-0">
-                                <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title="Annehmen">
+                                <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title={language.match({ english: () => "Accept", german: () => "Annehmen" })}>
                                   <Check className="h-3 w-3" />
                                 </Button>
-                                <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title="Ablehnen">
+                                <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title={language.match({ english: () => "Decline", german: () => "Ablehnen" })}>
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
@@ -1157,7 +1177,7 @@ function PlannerLayout({
                                 </span>
                               )}
                               <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                {categoryLabels[d.category]}
+                                {tCategoryLabels[d.category]}
                               </span>
                             </div>
                               <div className="flex-1 min-w-0">
@@ -1165,8 +1185,8 @@ function PlannerLayout({
                                 <p className={`font-medium truncate ${d.done ? "line-through" : ""}`}>
                                   {d.title}
                                 </p>
-                                {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Überfällig</Badge>}
-                                {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">Bald</Badge>}
+                                {overdue && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">{language.match({ english: () => "Overdue", german: () => "Überfällig" })}</Badge>}
+                                {urgent && <Badge variant="outline" className="text-[10px] text-warning border-warning/30">{language.match({ english: () => "Soon", german: () => "Bald" })}</Badge>}
                               </div>
                               <div className="flex sm:hidden flex-row flex-wrap items-center gap-1.5 mt-1">
                                 {d.vorlesung && (
@@ -1176,7 +1196,7 @@ function PlannerLayout({
                                   </span>
                                 )}
                                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                  {categoryLabels[d.category]}
+                                  {tCategoryLabels[d.category]}
                                 </span>
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -1185,21 +1205,21 @@ function PlannerLayout({
                                   {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
                                   {d.time && `, ${d.time}`}
                                 </span>
-                                {d.remindBefore && d.remindBefore > 0 && (
-                                  <span className="inline-flex items-center gap-1 text-warning">
-                                    <Bell className="h-3 w-3" /> {d.remindBefore} Tag{d.remindBefore > 1 ? "e" : ""} vorher
-                                  </span>
-                                )}
-                                {d.visibility === "private" && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Lock className="h-3 w-3" /> Privat
-                                  </span>
-                                )}
-                                {d.invitees.length > 0 && (
-                                  <span>{d.invitees.length} Eingeladene</span>
-                                )}
-                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${priorityColors[d.priority]}`}>
-                                  Prio: {priorityLabels[d.priority]}
+                        {d.remindBefore && d.remindBefore > 0 && (
+                          <span className="inline-flex items-center gap-1 text-warning">
+                            <Bell className="h-3 w-3" /> {d.remindBefore} {language.match({ english: () => `day${d.remindBefore > 1 ? "s" : ""} before`, german: () => `Tag${d.remindBefore > 1 ? "e" : ""} vorher` })}
+                          </span>
+                        )}
+                              {d.visibility === "private" && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
+                                </span>
+                              )}
+                              {d.invitees.length > 0 && (
+                                <span>{d.invitees.length} {language.match({ english: () => "Invited", german: () => "Eingeladene" })}</span>
+                              )}
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${priorityColors[d.priority]}`}>
+                                {language.match({ english: () => "Prio:", german: () => "Prio:" })} {tPriorityLabels[d.priority]}
                                 </span>
                               </div>
                             </div>
@@ -1215,15 +1235,15 @@ function PlannerLayout({
                                 <MessageSquare className="h-3 w-3" /> {messageCount}
                               </span>
                             )}
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                               <MessageSquare className="h-4 w-4" />
                             </Button>
                             {isOwn || d.visibility === "public" ? (
                               <>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
@@ -1238,24 +1258,24 @@ function PlannerLayout({
                             <DropdownMenuContent align="end" className="min-w-36">
                               {fileCount > 0 && (
                                 <DropdownMenuItem disabled className="gap-2 text-xs">
-                                  <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                  <Paperclip className="h-3.5 w-3.5" /> {fileCount} {language.match({ english: () => "file(s)", german: () => "Datei(en)" })}
                                 </DropdownMenuItem>
                               )}
                               {messageCount > 0 && (
                                 <DropdownMenuItem disabled className="gap-2 text-xs">
-                                  <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                  <MessageSquare className="h-3.5 w-3.5" /> {messageCount} {language.match({ english: () => "post(s)", german: () => "Beitrag/Beträge" })}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
-                                <MessageSquare className="h-3.5 w-3.5" /> Details
+                                <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                               </DropdownMenuItem>
                               {(isOwn || d.visibility === "public") && (
                                 <>
                                   <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                    <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                    <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                    <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                    <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -1271,7 +1291,7 @@ function PlannerLayout({
                         <div className="flex-grow border-t border-border/30" />
                         <button onClick={() => setDoneOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
                           <CheckCircle2 className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
-                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Erledigt</span>
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">{language.match({ english: () => "Done", german: () => "Erledigt" })}</span>
                           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${doneOpen ? "" : "-rotate-90"}`} />
                         </button>
                         <div className="flex-grow border-t border-border/30" />
@@ -1307,7 +1327,7 @@ function PlannerLayout({
                                     </span>
                                   )}
                                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                    {categoryLabels[d.category]}
+                                    {tCategoryLabels[d.category]}
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -1322,7 +1342,7 @@ function PlannerLayout({
                                       </span>
                                     )}
                                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                      {categoryLabels[d.category]}
+                                      {tCategoryLabels[d.category]}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3 text-xs text-muted-foreground/60 mt-0.5">
@@ -1333,16 +1353,16 @@ function PlannerLayout({
                                     </span>
                                     {d.remindBefore && d.remindBefore.length > 0 && (
                                       <span className="inline-flex items-center gap-1 text-warning">
-                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} Tag${r > 1 ? "e" : ""}`).join(", ")} vorher
+                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} ${language.match({ english: () => `day${r > 1 ? "s" : ""}`, german: () => `Tag${r > 1 ? "e" : ""}` })}`).join(", ")} {language.match({ english: () => "before", german: () => "vorher" })}
                                       </span>
                                     )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
-                                        <Lock className="h-3 w-3" /> Privat
+                                        <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
                                       </span>
                                     )}
                                     {d.invitees.length > 0 && (
-                                      <span>{d.invitees.length} Eingeladene</span>
+                                      <span>{d.invitees.length} {language.match({ english: () => "Invited", german: () => "Eingeladene" })}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1358,15 +1378,15 @@ function PlannerLayout({
                                     <MessageSquare className="h-3 w-3" /> {messageCount}
                                   </span>
                                 )}
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                                   <MessageSquare className="h-4 w-4" />
                                 </Button>
                                 {isOwn || d.visibility === "public" ? (
                                   <>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </>
@@ -1381,24 +1401,24 @@ function PlannerLayout({
                                 <DropdownMenuContent align="end" className="min-w-36">
                                   {fileCount > 0 && (
                                     <DropdownMenuItem disabled className="gap-2 text-xs">
-                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} {language.match({ english: () => "file(s)", german: () => "Datei(en)" })}
                                     </DropdownMenuItem>
                                   )}
                                   {messageCount > 0 && (
                                     <DropdownMenuItem disabled className="gap-2 text-xs">
-                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} {language.match({ english: () => "post(s)", german: () => "Beitrag/Beträge" })}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
-                                    <MessageSquare className="h-3.5 w-3.5" /> Details
+                                    <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                                   </DropdownMenuItem>
                                   {(isOwn || d.visibility === "public") && (
                                     <>
                                       <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                        <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                        <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                        <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                        <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
                                       </DropdownMenuItem>
                                     </>
                                   )}
@@ -1416,7 +1436,7 @@ function PlannerLayout({
                         <div className="flex-grow border-t border-border/30" />
                         <button onClick={() => setArchiveOpen((v) => !v)} className="flex items-center gap-2 mx-3 group">
                           <Archive className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
-                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">Archiv (&gt; 30 Tage)</span>
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60 group-hover:text-foreground transition-colors font-normal">{language.match({ english: () => "Archive (> 30 days)", german: () => "Archiv (> 30 Tage)" })}</span>
                           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-all ${archiveOpen ? "" : "-rotate-90"}`} />
                         </button>
                         <div className="flex-grow border-t border-border/30" />
@@ -1448,10 +1468,10 @@ function PlannerLayout({
                                   </button>
                                 ) : d.invitees?.includes(me) ? (
                                   <div className="flex gap-1 shrink-0">
-                                    <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title="Annehmen">
+                                    <Button size="icon" className="h-7 w-7" onClick={() => acceptInvite(d.id)} title={language.match({ english: () => "Accept", german: () => "Annehmen" })}>
                                       <Check className="h-3 w-3" />
                                     </Button>
-                                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title="Ablehnen">
+                                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => declineInvite(d.id)} title={language.match({ english: () => "Decline", german: () => "Ablehnen" })}>
                                       <X className="h-3 w-3" />
                                     </Button>
                                   </div>
@@ -1472,7 +1492,7 @@ function PlannerLayout({
                                       </span>
                                     )}
                                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                      {categoryLabels[d.category]}
+                                      {tCategoryLabels[d.category]}
                                     </span>
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -1489,7 +1509,7 @@ function PlannerLayout({
                                         </span>
                                       )}
                                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[d.category]}`}>
-                                        {categoryLabels[d.category]}
+                                        {tCategoryLabels[d.category]}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -1500,16 +1520,16 @@ function PlannerLayout({
                                     </span>
                                     {d.remindBefore && d.remindBefore.length > 0 && (
                                       <span className="inline-flex items-center gap-1 text-warning">
-                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} Tag${r > 1 ? "e" : ""}`).join(", ")} vorher
+                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} ${language.match({ english: () => `day${r > 1 ? "s" : ""}`, german: () => `Tag${r > 1 ? "e" : ""}` })}`).join(", ")} {language.match({ english: () => "before", german: () => "vorher" })}
                                       </span>
                                     )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
-                                        <Lock className="h-3 w-3" /> Privat
+                                        <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
                                       </span>
                                     )}
                                     {d.invitees.length > 0 && (
-                                      <span>{d.invitees.length} Eingeladene</span>
+                                      <span>{d.invitees.length} {language.match({ english: () => "Invited", german: () => "Eingeladene" })}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1525,15 +1545,15 @@ function PlannerLayout({
                                     <MessageSquare className="h-3 w-3" /> {messageCount}
                                   </span>
                                 )}
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title="Details">
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                                   <MessageSquare className="h-4 w-4" />
                                 </Button>
                                 {isOwn || d.visibility === "public" ? (
                                   <>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title="Bearbeiten">
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title="Löschen">
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </>
@@ -1548,24 +1568,24 @@ function PlannerLayout({
                                 <DropdownMenuContent align="end" className="min-w-36">
                                   {fileCount > 0 && (
                                     <DropdownMenuItem disabled className="gap-2 text-xs">
-                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} Datei(en)
+                                      <Paperclip className="h-3.5 w-3.5" /> {fileCount} {language.match({ english: () => "file(s)", german: () => "Datei(en)" })}
                                     </DropdownMenuItem>
                                   )}
                                   {messageCount > 0 && (
                                     <DropdownMenuItem disabled className="gap-2 text-xs">
-                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} Beitrag/Beträge
+                                      <MessageSquare className="h-3.5 w-3.5" /> {messageCount} {language.match({ english: () => "post(s)", german: () => "Beitrag/Beträge" })}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
-                                    <MessageSquare className="h-3.5 w-3.5" /> Details
+                                    <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                                   </DropdownMenuItem>
                                   {(isOwn || d.visibility === "public") && (
                                     <>
                                       <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                        <Pencil className="h-3.5 w-3.5" /> Bearbeiten
+                                        <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                        <Trash2 className="h-3.5 w-3.5" /> Löschen
+                                        <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
                                       </DropdownMenuItem>
                                     </>
                                   )}
@@ -1590,14 +1610,14 @@ function PlannerLayout({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
-              {openDeadline?.title || "Termin"}
+              {openDeadline?.title || language.match({ english: () => "Deadline", german: () => "Termin" })}
             </DialogTitle>
             <DialogDescription>
               {openDeadline && (
                 <span className="inline-flex items-center gap-2">
                   <span>{new Date(openDeadline.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}</span>
                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${categoryColors[openDeadline.category]}`}>
-                    {categoryLabels[openDeadline.category]}
+                    {tCategoryLabels[openDeadline.category]}
                   </span>
                   {openDeadline.vorlesung && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent/15 text-accent">
@@ -1611,16 +1631,16 @@ function PlannerLayout({
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum")} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="mb-3">
               <TabsTrigger value="files" className="gap-1.5">
-                <Paperclip className="h-4 w-4" /> Dateien
+                <Paperclip className="h-4 w-4" /> {language.match({ english: () => "Files", german: () => "Dateien" })}
               </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1.5">
-                <MessageSquare className="h-4 w-4" /> Forum ({openDeadline?.messages?.length ?? 0})
+                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Forum", german: () => "Forum" })} ({openDeadline?.messages?.length ?? 0})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="files" className="flex-1 overflow-y-auto space-y-3">
               {(!openDeadline || openDeadline.attachments.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-8">Keine Dateien angehängt.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{language.match({ english: () => "No files attached.", german: () => "Keine Dateien angehängt." })}</p>
               )}
               {openDeadline?.attachments.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border">
@@ -1635,10 +1655,10 @@ function PlannerLayout({
                 </div>
               ))}
               <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-2">Datei anhängen</p>
+                <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Attach file", german: () => "Datei anhängen" })}</p>
                 <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-dashed cursor-pointer hover:bg-secondary/40 transition-colors">
                   <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Klicken zum Hochladen</span>
+                    <span className="text-sm text-muted-foreground">{language.match({ english: () => "Click to upload", german: () => "Klicken zum Hochladen" })}</span>
                   <input type="file" className="hidden" multiple onChange={() => { }} />
                 </label>
               </div>
@@ -1647,7 +1667,7 @@ function PlannerLayout({
             <TabsContent value="forum" className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto space-y-2 mb-3">
                 {(!openDeadline || openDeadline.messages.length === 0) && (
-                  <p className="text-sm text-muted-foreground text-center py-8">Keine Nachrichten.</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{language.match({ english: () => "No messages.", german: () => "Keine Nachrichten." })}</p>
                 )}
                 {openDeadline?.messages.map((m) => (
                   <div key={m.id} className="p-3 rounded-lg bg-secondary/40">
@@ -1660,7 +1680,7 @@ function PlannerLayout({
                 ))}
               </div>
               <div className="flex gap-2 pt-2 border-t">
-                <Input placeholder="Nachricht schreiben…" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") addMessage(); }} />
+                <Input placeholder={language.match({ english: () => "Write a message…", german: () => "Nachricht schreiben…" })} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") addMessage(); }} />
                 <Button size="icon" onClick={addMessage} disabled={!newMessage.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
