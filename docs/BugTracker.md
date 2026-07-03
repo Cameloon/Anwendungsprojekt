@@ -48,7 +48,7 @@ Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Lösche
 
 ---
 
-BUG-010: Dashboard – Skriptbereich zeigt nur öffentliche Skripte
+### BUG-010: Dashboard – Skriptbereich zeigt nur öffentliche Skripte
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Dashboard UI
@@ -59,7 +59,7 @@ Fundort: src/pages/DashboardPage.tsx, Query für Skripte
 
 ---
 
-BUG-011: Dashboard – Fachfilter berücksichtigt nur Vorlesungen des aktuellen Semesters
+### BUG-011: Dashboard – Fachfilter berücksichtigt nur Vorlesungen des aktuellen Semesters
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Dashboard UI
@@ -71,7 +71,7 @@ Fundort: src/pages/DashboardPage.tsx, convex/semesterLectures.ts
 ---
 
 
-BUG-012: Dashboard – Zeitabhängige Kennzahlen können ohne Re-Render veralten
+### BUG-012: Dashboard – Zeitabhängige Kennzahlen können ohne Re-Render veralten
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Dashboard UI
@@ -83,7 +83,7 @@ Fundort: src/pages/DashboardPage.tsx, Berechnung von nextDeadline und urgentDead
 ---
 
 
-BUG-013: Projektweite Zeichenkodierung – fehlerhafte Sonderzeichen in der UI
+### BUG-013: Projektweite Zeichenkodierung – fehlerhafte Sonderzeichen in der UI
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: UI / Frontend-Texte
@@ -95,7 +95,7 @@ Fundort: z. B. src/pages/PlannerPage.tsx, src/pages/DashboardPage.tsx
 ---
 
 
-BUG-014: PlannerPage – Detail-Dialog für Termine verhält sich beim Schließen instabil
+### BUG-014: PlannerPage – Detail-Dialog für Termine verhält sich beim Schließen instabil
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Planer
@@ -107,7 +107,7 @@ Fundort: src/pages/PlannerPage.tsx, Dialog- und Query-Logik für Termin-Details
 ---
 
 
-BUG-015: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
+### BUG-015: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Projektqualität / Frontend-Architektur
