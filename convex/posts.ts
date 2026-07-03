@@ -617,6 +617,23 @@ export const getPostFiles = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+
+    const forum = await ctx.db.get(post.forumId);
+    if (forum?.visibility === "private") {
+      const member = await ctx.db
+        .query("forumMembers")
+        .withIndex("by_forum_user", (q) =>
+          q.eq("forumId", post.forumId).eq("userId", identity.subject)
+        )
+        .unique();
+      if (!member) {
+        const admin = await isAdmin(ctx, identity.subject);
+        if (!admin) throw new Error("Not a member of this forum");
+      }
+    }
+
     const files = await ctx.db
       .query("postFiles")
       .withIndex("by_post", (q) => q.eq("postId", args.postId))
