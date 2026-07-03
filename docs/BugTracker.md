@@ -48,7 +48,16 @@ Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Lösche
 
 ---
 
-### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge
+
+
+---
+
+## Bugs in Bearbeitung
+
+Hinweis: Bearbeiter mit Kürzel ergänzen
+
+
+### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge  
 
 **Datum erfasst:** 25-06-2026
 **Verfasser:** CC
@@ -57,12 +66,6 @@ Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Lösche
 **Beschreibung:**
 Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), unabhängig davon, ob der Nutzer die Beiträge bereits gesehen hat. Die Kennzahl suggeriert Aktualität, ist aber kein zuverlässiger Indikator für wirklich neue Inhalte.
 **Fundort:** `src/pages/DashboardPage.tsx`, Zeile 110
-
----
-
-## Bugs in Bearbeitung
-
-Hinweis: Bearbeiter mit Kürzel ergänzen
 
 ---
 
