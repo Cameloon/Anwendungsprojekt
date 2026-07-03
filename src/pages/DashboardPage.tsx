@@ -104,9 +104,13 @@ const DashboardPage = () => {
       }).length,
     [now, openDeadlines],
   );
-  const newPostsCount = latestPosts.length;
-  const newScriptsCount = latestScripts.length;
+  const latestPostsCount = latestPosts.length;
+  const latestScriptsCount = latestScripts.length;
 
+  const latestPostsHint =
+    latestPostsCount > 0 ? "Neueste EintrÃ¤ge im Forum" : "Keine aktuellen BeitrÃ¤ge";
+  const latestScriptsHint =
+    latestScriptsCount > 0 ? "Neueste Uploads in der Bibliothek" : "Keine aktuellen Skripte";
   const quote = useMemo(() => QUOTES[now.getDate() % QUOTES.length], [now]);
 
   const overviewBlocks = selectedSubject
@@ -124,6 +128,7 @@ const DashboardPage = () => {
               year: "numeric",
             }),
             extra: deadline.note || "",
+            itemLink: `/planner?deadline=${deadline._id}`,
             badgeClass: deadline.done
               ? "bg-success/15 text-success"
               : "bg-primary/10 text-primary",
@@ -140,6 +145,7 @@ const DashboardPage = () => {
             title: post.title,
             meta: post.tag || "Forum",
             extra: post.content,
+            itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
           emptyText: "Keine Beiträge.",
         },
@@ -152,6 +158,7 @@ const DashboardPage = () => {
             title: script.title,
             meta: `${script.subject} · ${script.authorName}`,
             extra: script.description || "",
+            itemLink: `/skripte?script=${script._id}`,
           })),
           emptyText: "Keine Skripte.",
         },
@@ -170,6 +177,7 @@ const DashboardPage = () => {
               year: "numeric",
             })}`,
             extra: deadline.note || "",
+            itemLink: `/planner?deadline=${deadline._id}`,
             badgeClass: deadline.done
               ? "bg-success/15 text-success"
               : "bg-primary/10 text-primary",
@@ -186,6 +194,7 @@ const DashboardPage = () => {
             title: post.title,
             meta: post.tag || "Forum",
             extra: post.content,
+            itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
           emptyText: "Keine Beiträge.",
         },
@@ -198,6 +207,7 @@ const DashboardPage = () => {
             title: script.title,
             meta: `${script.subject} · ${script.authorName}`,
             extra: script.description || "",
+            itemLink: `/skripte?script=${script._id}`,
           })),
           emptyText: "Keine Skripte.",
         },
@@ -222,10 +232,6 @@ const DashboardPage = () => {
       : urgentDeadlinesCount > 0
         ? `${urgentDeadlinesCount} dringend`
         : "Gut im Plan";
-  const newPostsHint =
-    newPostsCount > 0 ? "Im Forum ansehen" : "Keine neuen Beiträge";
-  const newScriptsHint =
-    newScriptsCount > 0 ? "In der Bibliothek" : "Keine neuen Skripte";
 
   return (
     <div className="min-h-screen bg-background">
@@ -283,18 +289,18 @@ const DashboardPage = () => {
                 to="/planner"
               />
               <HeroStat
-                label="Neue Beiträge"
-                value={newPostsCount}
+                label="Letzte Beitraege"
+                value={latestPostsCount}
                 icon={<MessageSquare className="h-5 w-5" />}
-                hint={newPostsHint}
+                hint={latestPostsHint}
                 labelClassName="text-sm sm:text-base font-semibold text-foreground"
                 to="/forum"
               />
               <HeroStat
-                label="Neue Skripte"
-                value={newScriptsCount}
+                label="Letzte Skripte"
+                value={latestScriptsCount}
                 icon={<Files className="h-5 w-5" />}
-                hint={newScriptsHint}
+                hint={latestScriptsHint}
                 tone="hot"
                 labelClassName="text-sm sm:text-base font-semibold text-foreground"
                 to="/skripte"
@@ -498,6 +504,7 @@ function OverviewBlock({
     title: string;
     meta?: string;
     extra?: string;
+    itemLink?: string;
     badgeClass?: string;
     badgeText?: string;
     done?: boolean;
@@ -520,11 +527,8 @@ function OverviewBlock({
         <p className="text-xs text-muted-foreground">{emptyText}</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((item, index) => (
-            <li
-              key={`${item.title}-${index}`}
-              className="rounded-xl border border-border/60 bg-card p-3"
-            >
+          {items.map((item, index) => {
+            const content = (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.title}</p>
@@ -557,8 +561,23 @@ function OverviewBlock({
                   </button>
                 )}
               </div>
-            </li>
-          ))}
+            );
+
+            return (
+              <li
+                key={`${item.title}-${index}`}
+                className="rounded-xl border border-border/60 bg-card p-3"
+              >
+                {item.itemLink ? (
+                  <Link to={item.itemLink} className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                    {content}
+                  </Link>
+                ) : (
+                  content
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -566,3 +585,5 @@ function OverviewBlock({
 }
 
 export default DashboardPage;
+
+

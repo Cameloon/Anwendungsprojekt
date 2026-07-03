@@ -1,5 +1,7 @@
 import { useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   FileText,
   Upload,
@@ -22,6 +24,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { validateScriptDescription, validateFileSize } from "@/lib/validation";
 import Combobox from "@/components/ui/combobox";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +95,7 @@ interface ScriptItem {
 }
 
 const SkriptePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const me = user?.id || "";
 
@@ -120,6 +130,7 @@ const SkriptePage = () => {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [openScriptId, setOpenScriptId] = useState<string | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawScripts: any[] = (scriptsQuery ?? []) as any[];
@@ -287,6 +298,21 @@ const SkriptePage = () => {
       )
       .filter((s) => activeSubject === "alle" || s.subject === activeSubject);
   }, [scripts, search, activeSubject, me]);
+
+  const openScript = openScriptId
+    ? scripts.find((script) => script.id === openScriptId) ?? null
+    : null;
+
+  useEffect(() => {
+    const scriptFromQuery = searchParams.get("script");
+    if (!scriptFromQuery) return;
+
+    const matchedScript = scripts.find((script) => script.id === scriptFromQuery);
+    if (matchedScript && openScriptId !== scriptFromQuery) {
+      setOpenScriptId(scriptFromQuery);
+      setActiveSubject(matchedScript.subject);
+    }
+  }, [openScriptId, scripts, searchParams]);
 
   const totalPages = scripts.reduce((sum, s) => sum + s.pages, 0);
 
@@ -598,7 +624,8 @@ const SkriptePage = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="glass-card p-5 flex flex-col hover:shadow-md hover:border-primary/30 transition-all group"
+                className="glass-card p-5 flex flex-col hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer"
+                onClick={() => setOpenScriptId(script.id)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div
@@ -666,6 +693,7 @@ const SkriptePage = () => {
                         target="_blank"
                         download
                         className="inline-flex"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Button
                           variant="ghost"
@@ -681,7 +709,10 @@ const SkriptePage = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeScript(script.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeScript(script.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -693,6 +724,62 @@ const SkriptePage = () => {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={!!openScriptId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOpenScriptId(null);
+            if (searchParams.get("script")) {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete("script");
+              setSearchParams(nextParams, { replace: true });
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{openScript?.title || "Skript"}</DialogTitle>
+            <DialogDescription>
+              {openScript
+                ? `${openScript.subject} · ${openScript.authorName} · ${openScript.date}`
+                : "Details zum Skript"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {openScript && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{openScript.subject}</Badge>
+                <Badge variant="outline">{openScript.type}</Badge>
+                <Badge variant="outline">{openScript.visibility}</Badge>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                {openScript.description || "Keine Beschreibung vorhanden."}
+              </p>
+
+              <div className="flex items-center justify-between rounded-xl border p-3 text-sm">
+                <div>
+                  <p className="font-medium">{openScript.fileName || openScript.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {openScript.pages > 0 ? `${openScript.pages} Seiten` : "Notiz oder Datei ohne Seitenangabe"}
+                  </p>
+                </div>
+                {openScript.url && (
+                  <a href={openScript.url} target="_blank" download>
+                    <Button className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Öffnen
+                    </Button>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
