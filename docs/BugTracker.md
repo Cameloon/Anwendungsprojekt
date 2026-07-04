@@ -24,54 +24,6 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
-### BUG-004: PlannerPage – Datei-Upload im Termin-Dialog ist ein toter Stub
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Planer
-**Priorität:** Mittel
-**Beschreibung:**
-Im Detail-Dialog eines Termins existiert ein Datei-Upload-Element, dessen `onChange`-Handler leer ist (`onChange={() => {}}`). Die Mutationen `generateUploadUrl` und `attachFile` sind importiert, aber nicht mit dem UI-Element verbunden. Dateien können nicht angehängt werden.
-**Fundort:** `src/pages/PlannerPage.tsx`, Zeile 923
-
----
-
-### BUG-005: PlannerPage – Bearbeiten/Löschen bei fremden öffentlichen Terminen sichtbar
-
-**Datum erfasst:** 25-06-2026
-**Verfasser:** CC
-**Komponente/Bereich:** Planer
-**Priorität:** Mittel
-**Beschreibung:**
-Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Löschen-Buttons für alle öffentlichen Termine, auch wenn der angemeldete Nutzer nicht der Ersteller ist. Das Backend lehnt solche Aktionen ab, die UI ist jedoch irreführend.
-**Fundort:** `src/pages/PlannerPage.tsx`, Zeile 850
-
----
-
-
-### BUG-012: Projektweite Zeichenkodierung – fehlerhafte Sonderzeichen in der UI
-Datum erfasst: 03-07-2026
-Verfasser: CC
-Komponente/Bereich: UI / Frontend-Texte
-Priorität: Mittel
-Beschreibung:
-Mehrere Benutzertexte enthalten fehlerhaft dargestellte Sonderzeichen wie Ã¼, Ã–, Ã¤ oder das Ersatzzeichen �. Dadurch wirken Oberfläche und Texte technisch fehlerhaft und unprofessionell. Der Fehler tritt nicht nur im Dashboard, sondern auch in anderen Seiten wie dem Planer auf.
-Fundort: z. B. src/pages/PlannerPage.tsx, src/pages/DashboardPage.tsx
-
----
-
-
-### BUG-013: PlannerPage – Detail-Dialog für Termine verhält sich beim Schließen instabil
-Datum erfasst: 03-07-2026
-Verfasser: CC
-Komponente/Bereich: Planer
-Priorität: Hoch
-Beschreibung:
-Der Detail-Dialog eines Termins zeigt instabiles Verhalten beim Schließen. In Verbindung mit der URL-basierten Öffnungslogik (?deadline=...) kann es dazu kommen, dass der Dialog nicht zuverlässig geschlossen wird oder unmittelbar wieder geöffnet erscheint. Das Verhalten ist für Nutzer irritierend und wirkt wie ein hängendes Modal.
-Fundort: src/pages/PlannerPage.tsx, Dialog- und Query-Logik für Termin-Details
-
----
-
 
 ### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
 Datum erfasst: 03-07-2026
@@ -215,4 +167,66 @@ Priorität: Niedrig
 Beschreibung:
 Kennzahlen wie „Nächster Termin“ und die Anzahl dringender Termine hängen direkt von der aktuellen Uhrzeit ab. Bleibt die Seite länger geöffnet, können diese Werte ohne regelmäßige Aktualisierung veralten und nicht mehr den tatsächlichen Stand widerspiegeln.
 Fundort: src/pages/DashboardPage.tsx, Berechnung von nextDeadline und urgentDeadlinesCount
+
+---
+
+### BUG-004: PlannerPage – Datei-Upload im Termin-Dialog ist ein toter Stub
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Planer
+**Priorität:** Mittel
+**Beschreibung:**
+Im Detail-Dialog eines Termins existiert ein Datei-Upload-Element, dessen `onChange`-Handler leer ist (`onChange={() => {}}`). Die Mutationen `generateUploadUrl` und `attachFile` sind importiert, aber nicht mit dem UI-Element verbunden. Dateien können nicht angehängt werden.
+**Fundort:** `src/pages/PlannerPage.tsx`, Zeile 923
+**Fix:** `onChange` ruft jetzt echten Upload auf (`generateUploadUrl` → Datei hochladen → `attachFile`); zusätzlich Löschen-Button pro Anhang ergänzt. Nebenbefund behoben: Anhänge wurden nie geladen (`listForUser` liefert sie nicht mit), daher neue Query `api.deadlines.getAttachments` für den geöffneten Termin ergänzt. Außerdem fehlte in `attachFile` jede Zugriffsprüfung – jetzt über `canAccessDeadline` abgesichert.
+
+---
+
+### BUG-012: Projektweite Zeichenkodierung – fehlerhafte Sonderzeichen in der UI
+
+**Datum erfasst:** 03-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** UI / Frontend-Texte
+**Priorität:** Mittel
+**Beschreibung:**
+Mehrere Benutzertexte enthalten fehlerhaft dargestellte Sonderzeichen wie Ã¼, Ã–, Ã¤ oder das Ersatzzeichen �. Dadurch wirken Oberfläche und Texte technisch fehlerhaft und unprofessionell. Der Fehler tritt nicht nur im Dashboard, sondern auch in anderen Seiten wie dem Planer auf.
+**Fundort:** z. B. `src/pages/PlannerPage.tsx`, `src/pages/DashboardPage.tsx`
+**Fix:** In `DashboardPage.tsx` fehlerhafte ASCII-Ersetzungen korrigiert ("Forenbeitraege"→"Forenbeiträge", "Beitraege"→"Beiträge", "Eintraege"→"Einträge", "fuer"→"für", "Naechster"→"Nächster", "gewaehlte"→"gewählte", "Gesamtuebersicht"→"Gesamtübersicht"). `PlannerPage.tsx` war bereits durch eine frühere Übersetzungsarbeit sauber.
+
+---
+
+### BUG-013: Detail-Dialog verhält sich beim Schließen instabil
+
+**Datum erfasst:** 03-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** ~~Planer~~ **Skripte** (siehe Hinweis unten)
+**Priorität:** Hoch
+**Beschreibung:**
+Der Detail-Dialog eines Termins zeigt instabiles Verhalten beim Schließen. In Verbindung mit der URL-basierten Öffnungslogik (?deadline=...) kann es dazu kommen, dass der Dialog nicht zuverlässig geschlossen wird oder unmittelbar wieder geöffnet erscheint. Das Verhalten ist für Nutzer irritierend und wirkt wie ein hängendes Modal.
+**Fundort:** ~~`src/pages/PlannerPage.tsx`, Dialog- und Query-Logik für Termin-Details~~
+**Hinweis:** Der Fehler war beim Ersterfassen falsch verortet. `PlannerPage.tsx` hat gar keine URL-basierte Öffnungslogik (kein `useSearchParams`, auch nicht in der Git-Historie vor dieser Session) – der `?deadline=...`-Link aus dem Dashboard führt dort aktuell ins Leere. Das beschriebene Bug-Muster (Dialog öffnet sich nach dem Schließen sofort wieder) trat tatsächlich in **`src/pages/SkriptePage.tsx`** auf, bei der `?script=...`-Öffnungslogik für die Skript-Detailansicht.
+**Fix:** Der `useEffect`, der den Dialog aus dem URL-Parameter öffnet, hing u. a. von `scripts` ab – da sich diese Liste durch Convex-Reactivity ständig referenziell ändert, konnte der Effekt kurz nach dem Schließen erneut feuern, bevor der URL-Parameter tatsächlich entfernt war, und den Dialog sofort wieder öffnen. Fix über ein Ref (`dismissedQueryScriptId`), das sich merkt, welche Script-ID der Nutzer bereits geschlossen hat, und ein erneutes Öffnen dafür verhindert. Ein entsprechendes Deep-Link-Feature für den Planer (`?deadline=...`) existiert weiterhin nicht und müsste als eigenes Feature neu gebaut werden.
+
+---
+
+### BUG-005: PlannerPage – Bearbeiten/Löschen bei fremden öffentlichen Terminen sichtbar
+
+**Datum erfasst:** 25-06-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM
+**Komponente/Bereich:** Planer
+**Priorität:** Mittel
+**Beschreibung:**
+Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Löschen-Buttons für alle öffentlichen Termine, auch wenn der angemeldete Nutzer nicht der Ersteller ist. Das Backend lehnt solche Aktionen ab, die UI ist jedoch irreführend.
+**Fundort:** `src/pages/PlannerPage.tsx`, Zeile 850
+**Hinweis:** Die ursprüngliche Annahme "Das Backend lehnt solche Aktionen ab" traf nicht zu – `update` und `deleteDeadline` in `convex/deadlines.ts` prüften die Berechtigung bisher nur bei `visibility === "private"`; bei öffentlichen Terminen gab es serverseitig gar keine Eigentümer-Prüfung.
+**Fix:** Backend: Berechtigungsprüfung in `update` (Besitzer oder Eingeladene) und `deleteDeadline` (nur Besitzer) gilt jetzt unabhängig von `visibility`, nicht mehr nur für private Termine. Frontend: Bearbeiten-Button an allen 6 Stellen zeigt sich jetzt nur noch für Besitzer oder Eingeladene, Löschen-Button nur noch für den Besitzer.
 

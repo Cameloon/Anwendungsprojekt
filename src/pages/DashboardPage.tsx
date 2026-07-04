@@ -116,7 +116,7 @@ const DashboardPage = () => {
   const latestScriptsCount = latestScripts.length;
 
   const latestPostsHint =
-    latestPostsCount > 0 ? "Neueste Eintraege im Forum" : "Keine aktuellen Beitraege";
+    latestPostsCount > 0 ? "Neueste Einträge im Forum" : "Keine aktuellen Beiträge";
   const latestScriptsHint =
     latestScriptsCount > 0 ? "Neueste Uploads in der Bibliothek" : "Keine aktuellen Skripte";
   const quote = useMemo(() => QUOTES[now.getDate() % QUOTES.length], [now]);
@@ -145,7 +145,7 @@ const DashboardPage = () => {
           emptyText: "Keine Termine.",
         },
         {
-          title: "Forenbeitraege",
+          title: "Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
           linkLabel: "Forum",
@@ -155,7 +155,7 @@ const DashboardPage = () => {
             extra: post.content,
             itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
-          emptyText: "Keine Beitraege.",
+          emptyText: "Keine Beiträge.",
         },
         {
           title: "Skripte",
@@ -194,7 +194,7 @@ const DashboardPage = () => {
           emptyText: "Keine Termine.",
         },
         {
-          title: "Alle Forenbeitraege",
+          title: "Alle Forenbeiträge",
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
           linkLabel: "Forum",
@@ -204,7 +204,7 @@ const DashboardPage = () => {
             extra: post.content,
             itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
-          emptyText: "Keine Beitraege.",
+          emptyText: "Keine Beiträge.",
         },
         {
           title: "Alle Skripte",
@@ -223,7 +223,7 @@ const DashboardPage = () => {
 
   const activeSubject = selectedSubject ?? "Alle Vorlesungen";
   const activeSubjectDescription = selectedSubject
-    ? `Inhalte fuer ${selectedSubject}`
+    ? `Inhalte für ${selectedSubject}`
     : "Gesamtansicht aller Vorlesungen";
 
   const nextDeadlineValue = nextDeadline
@@ -280,7 +280,7 @@ const DashboardPage = () => {
 
             <div className="grid grid-cols-2 gap-3 lg:col-span-2">
               <HeroStat
-                label="Naechster Termin"
+                label="Nächster Termin"
                 value={nextDeadlineValue}
                 icon={<CalendarDays className="h-5 w-5" />}
                 hint={nextDeadlineHint}
@@ -297,7 +297,7 @@ const DashboardPage = () => {
                 to="/planner"
               />
               <HeroStat
-                label="Letzte Beitraege"
+                label="Letzte Beiträge"
                 value={latestPostsCount}
                 icon={<MessageSquare className="h-5 w-5" />}
                 hint={latestPostsHint}
@@ -320,7 +320,7 @@ const DashboardPage = () => {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {subjectsList.length === 0 ? (
                 <div className="rounded-3xl border border-border/60 bg-card p-8 text-sm text-muted-foreground sm:col-span-2 xl:col-span-4">
-                  Keine Inhalte fuer die gewaehlte Filtereinstellung.
+                  Keine Inhalte für die gewählte Filtereinstellung.
                 </div>
               ) : (
                 subjectsList.map((subject) => {
@@ -404,7 +404,7 @@ const DashboardPage = () => {
                   onClick={() => setSelectedSubject(null)}
                   disabled={!selectedSubject}
                 >
-                  Gesamtuebersicht
+                  Gesamtübersicht
                 </Button>
               </div>
             </div>

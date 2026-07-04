@@ -229,7 +229,7 @@ export const update = mutation({
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
 
-    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject) {
+    if (deadline.ownerId !== identity.subject) {
       const isInvited = deadline.invitees?.includes(identity.subject);
       if (!isInvited)
         throw new Error("Not authorized — nur der Besitzer oder Eingeladene dürfen bearbeiten");
@@ -429,7 +429,7 @@ export const deleteDeadline = mutation({
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
 
-    if (deadline.visibility === "private" && deadline.ownerId !== identity.subject)
+    if (deadline.ownerId !== identity.subject)
       throw new Error("Not authorized — nur der Besitzer darf löschen");
 
     // For public copies: add user to declinedBy on the ORIGINAL only, not other copies
@@ -490,6 +490,11 @@ export const attachFile = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Deadline not found");
+    if (!(await canAccessDeadline(ctx, deadline, identity.subject))) {
+      throw new Error("Not authorized");
+    }
     await ctx.db.insert("deadlineAttachments", {
       deadlineId: args.deadlineId,
       name: args.name,

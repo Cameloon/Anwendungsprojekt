@@ -5,8 +5,17 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import SkriptePage from "../../src/pages/SkriptePage";
 import { validateFileSize, FILE_MAX_BYTES } from "../../src/lib/validation";
+
+function renderSkriptePage() {
+  return render(
+    <MemoryRouter>
+      <SkriptePage />
+    </MemoryRouter>
+  );
+}
 
 // ── Reactive in-memory store ──
 
@@ -195,12 +204,12 @@ describe("SkriptePage – Upload-Dialog", () => {
   });
 
   it("Upload-Formular ist initial ausgeblendet", () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     expect(screen.queryByPlaceholderText("Titel des Skripts")).not.toBeInTheDocument();
   });
 
   it("öffnet das Formular beim Klick auf Hochladen", () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
@@ -211,7 +220,7 @@ describe("SkriptePage – Upload-Dialog", () => {
   it.todo("Submit-Button ist deaktiviert solange keine Datei ausgewählt ist");
 
   it("verhindert Submission bei ungültigen Eingaben — Formular bleibt offen", () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     // Kein Titel → Validierung schlägt fehl → Formular bleibt offen
     fireEvent.click(screen.getByRole("button", { name: /Als Notiz speichern/i }));
@@ -219,7 +228,7 @@ describe("SkriptePage – Upload-Dialog", () => {
   });
 
   it("zeigt Fehlermeldung bei ungültigem Dateityp", () => {
-    const { container } = render(<SkriptePage />);
+    const { container } = renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
@@ -234,7 +243,7 @@ describe("SkriptePage – Upload-Dialog", () => {
   });
 
   it("fügt neues Skript zur Liste hinzu nach erfolgreichem Upload", async () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
       target: { value: "Mein Testskript" },
@@ -251,14 +260,14 @@ describe("SkriptePage – Upload-Dialog", () => {
   });
 
   it("Sichtbarkeit-Buttons Öffentlich und Privat sind im Formular sichtbar", () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     expect(screen.getByRole("button", { name: /Öffentlich/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Privat$/i })).toBeInTheDocument();
   });
 
   it("privates Skript zeigt Privat-Badge in der Liste", async () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
       target: { value: "Geheimes Skript" },
@@ -278,7 +287,7 @@ describe("SkriptePage – Upload-Dialog", () => {
   });
 
   it("Abbrechen schließt das Formular ohne Eintrag hinzuzufügen", () => {
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
     fireEvent.change(screen.getByPlaceholderText("Titel des Skripts"), {
       target: { value: "Wird nicht gespeichert" },
@@ -321,7 +330,7 @@ describe("SkriptePage – Suche und Subject-Filter", () => {
       { title: "Analysis Zusammenfassung", subject: "Mathematik", description: "" },
       { title: "OOP Grundlagen", subject: "Informatik", description: "" },
     ]);
-    const { findByText } = render(<SkriptePage />);
+    const { findByText } = renderSkriptePage();
     expect(await findByText("Analysis Zusammenfassung")).toBeInTheDocument();
     expect(await findByText("OOP Grundlagen")).toBeInTheDocument();
   });
@@ -331,7 +340,7 @@ describe("SkriptePage – Suche und Subject-Filter", () => {
       { title: "Analysis Zusammenfassung", subject: "Mathematik", description: "" },
       { title: "OOP Grundlagen", subject: "Informatik", description: "" },
     ]);
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {
       target: { value: "Analysis" },
     });
@@ -344,7 +353,7 @@ describe("SkriptePage – Suche und Subject-Filter", () => {
       { title: "Skript A", subject: "Mathematik", description: "Enthält Integralrechnung" },
       { title: "Skript B", subject: "Informatik", description: "Objektorientierung" },
     ]);
-    render(<SkriptePage />);
+    renderSkriptePage();
     fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {
       target: { value: "Integralrechnung" },
     });
@@ -357,7 +366,7 @@ describe("SkriptePage – Suche und Subject-Filter", () => {
       { title: "Analysis Zusammenfassung", subject: "Webprogrammierung", description: "" },
       { title: "OOP Grundlagen", subject: "Software Engineering", description: "" },
     ]);
-    render(<SkriptePage />);
+    renderSkriptePage();
     // Subject-Filter-Buttons erscheinen sobald Skripte geladen sind
     const filterBtn = await screen.findByRole("button", { name: /^Webprogrammierung$/i });
     fireEvent.click(filterBtn);
@@ -371,7 +380,7 @@ describe("SkriptePage – Suche und Subject-Filter", () => {
       { title: "Analysis Notiz", subject: "Software Engineering", description: "" },
       { title: "OOP Grundlagen", subject: "Webprogrammierung", description: "" },
     ]);
-    render(<SkriptePage />);
+    renderSkriptePage();
     const filterBtn = await screen.findByRole("button", { name: /^Webprogrammierung$/i });
     fireEvent.click(filterBtn);
     fireEvent.change(screen.getByPlaceholderText(/Skripte durchsuchen/i), {

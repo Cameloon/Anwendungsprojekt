@@ -106,6 +106,7 @@ const SkriptePage = () => {
   const me = user?.id || "";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dismissedQueryScriptId = useRef<string | null>(null);
   const scriptsQuery = useQuery(api.scripts.listVisible);
   const lecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs);
   const privateForumsQuery = useQuery(api.forums.getPrivateForumsForUser, {});
@@ -314,6 +315,11 @@ const SkriptePage = () => {
   useEffect(() => {
     const scriptFromQuery = searchParams.get("script");
     if (!scriptFromQuery) return;
+    // Nutzer hat den Dialog für genau diesen Script-Parameter bereits geschlossen —
+    // nicht erneut öffnen, auch wenn dieser Effekt (z. B. durch eine Convex-
+    // Reactivity-Aktualisierung von `scripts`) erneut feuert, bevor der
+    // URL-Parameter tatsächlich entfernt wurde.
+    if (dismissedQueryScriptId.current === scriptFromQuery) return;
 
     const matchedScript = scripts.find(
       (script) => script.id === scriptFromQuery,
@@ -729,6 +735,7 @@ const SkriptePage = () => {
           if (!open) {
             setOpenScriptId(null);
             if (searchParams.get("script")) {
+              dismissedQueryScriptId.current = searchParams.get("script");
               const nextParams = new URLSearchParams(searchParams);
               nextParams.delete("script");
               setSearchParams(nextParams, { replace: true });

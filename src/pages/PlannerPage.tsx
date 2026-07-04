@@ -173,6 +173,17 @@ function PlannerPage() {
   const [activeVorlesung, setActiveVorlesung] = useState<string>("alle");
   const [activePriority, setActivePriority] = useState<string>("alle");
   const [openId, setOpenId] = useState<string | null>(null);
+  const openAttachmentsQuery = useQuery(
+    api.deadlines.getAttachments,
+    openId ? { deadlineId: openId as Id<"deadlines"> } : "skip"
+  );
+  const openAttachments: Attachment[] = (openAttachmentsQuery ?? []).map((a) => ({
+    id: a._id,
+    name: a.name,
+    size: a.size,
+    type: a.type,
+    url: a.url ?? "",
+  }));
   const [doneOpen, setDoneOpen] = useState(true);
   const [archiveOpen, setArchiveOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"files" | "forum">("files");
@@ -448,6 +459,43 @@ function PlannerPage() {
     }
   };
 
+  const handleAttachFiles = async (files: FileList | null) => {
+    if (!files || !openId) return;
+    for (const file of Array.from(files)) {
+      try {
+        const uploadUrl = await generateUploadUrlMutation();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!result.ok) throw new Error("Upload fehlgeschlagen");
+        const { storageId } = (await result.json()) as { storageId: Id<"_storage"> };
+        await attachFileMutation({
+          deadlineId: openId as Id<"deadlines">,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          storageId,
+        });
+      } catch (e) {
+        toast.error(
+          e instanceof Error
+            ? e.message
+            : language.match({ english: () => "Error uploading", german: () => "Fehler beim Hochladen" })
+        );
+      }
+    }
+  };
+
+  const removeAttachment = async (attachmentId: string) => {
+    try {
+      await deleteAttachmentMutation({ attachmentId: attachmentId as Id<"deadlineAttachments"> });
+    } catch {
+      toast.error(language.match({ english: () => "Error deleting", german: () => "Fehler beim Löschen" }));
+    }
+  };
+
   const vorlesungen = useMemo(() => {
     const set = new Set(deadlines.map((d) => d.vorlesung).filter(Boolean) as string[]);
     return ["alle", ...Array.from(set)];
@@ -536,6 +584,9 @@ function PlannerPage() {
       newMessage={newMessage}
       setNewMessage={setNewMessage}
       addMessage={addMessage}
+      openAttachments={openAttachments}
+      handleAttachFiles={handleAttachFiles}
+      removeAttachment={removeAttachment}
       pendingAttachments={pendingAttachments}
       setPendingAttachments={setPendingAttachments}
       visibility={visibility}
@@ -634,6 +685,9 @@ function PlannerLayout({
   newMessage,
   setNewMessage,
   addMessage,
+  openAttachments,
+  handleAttachFiles,
+  removeAttachment,
   pendingAttachments,
   setPendingAttachments,
   visibility,
@@ -707,6 +761,9 @@ function PlannerLayout({
   newMessage: string;
   setNewMessage: (v: string) => void;
   addMessage: () => void;
+  openAttachments: Attachment[];
+  handleAttachFiles: (files: FileList | null) => void;
+  removeAttachment: (attachmentId: string) => void;
   pendingAttachments: Attachment[];
   setPendingAttachments: (v: Attachment[]) => void;
   visibility: "public" | "private";
@@ -1238,16 +1295,16 @@ function PlannerLayout({
                             <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                               <MessageSquare className="h-4 w-4" />
                             </Button>
-                            {isOwn || d.visibility === "public" ? (
-                              <>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : null}
+                            {(isOwn || d.invitees.includes(me)) && (
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isOwn && (
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1269,15 +1326,15 @@ function PlannerLayout({
                               <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
                                 <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                               </DropdownMenuItem>
-                              {(isOwn || d.visibility === "public") && (
-                                <>
-                                  <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                    <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                    <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
-                                  </DropdownMenuItem>
-                                </>
+                              {(isOwn || d.invitees.includes(me)) && (
+                                <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                  <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
+                                </DropdownMenuItem>
+                              )}
+                              {isOwn && (
+                                <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                  <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
+                                </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1381,16 +1438,16 @@ function PlannerLayout({
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                                   <MessageSquare className="h-4 w-4" />
                                 </Button>
-                                {isOwn || d.visibility === "public" ? (
-                                  <>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : null}
+                                {(isOwn || d.invitees.includes(me)) && (
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {isOwn && (
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1412,15 +1469,15 @@ function PlannerLayout({
                                   <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
                                     <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                                   </DropdownMenuItem>
-                                  {(isOwn || d.visibility === "public") && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                        <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                        <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
-                                      </DropdownMenuItem>
-                                    </>
+                                  {(isOwn || d.invitees.includes(me)) && (
+                                    <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                      <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {isOwn && (
+                                    <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                      <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
+                                    </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1548,16 +1605,16 @@ function PlannerLayout({
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setOpenId(d.id)} title={language.match({ english: () => "Details", german: () => "Details" })}>
                                   <MessageSquare className="h-4 w-4" />
                                 </Button>
-                                {isOwn || d.visibility === "public" ? (
-                                  <>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : null}
+                                {(isOwn || d.invitees.includes(me)) && (
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => startEdit(d)} title={language.match({ english: () => "Edit", german: () => "Bearbeiten" })}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {isOwn && (
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => removeDeadline(d.id)} title={language.match({ english: () => "Delete", german: () => "Löschen" })}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1579,15 +1636,15 @@ function PlannerLayout({
                                   <DropdownMenuItem onClick={() => setOpenId(d.id)} className="gap-2 text-xs">
                                     <MessageSquare className="h-3.5 w-3.5" /> {language.match({ english: () => "Details", german: () => "Details" })}
                                   </DropdownMenuItem>
-                                  {(isOwn || d.visibility === "public") && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
-                                        <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
-                                        <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
-                                      </DropdownMenuItem>
-                                    </>
+                                  {(isOwn || d.invitees.includes(me)) && (
+                                    <DropdownMenuItem onClick={() => startEdit(d)} className="gap-2 text-xs">
+                                      <Pencil className="h-3.5 w-3.5" /> {language.match({ english: () => "Edit", german: () => "Bearbeiten" })}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {isOwn && (
+                                    <DropdownMenuItem onClick={() => removeDeadline(d.id)} className="gap-2 text-xs text-destructive">
+                                      <Trash2 className="h-3.5 w-3.5" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
+                                    </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1631,7 +1688,7 @@ function PlannerLayout({
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum")} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="mb-3">
               <TabsTrigger value="files" className="gap-1.5">
-                <Paperclip className="h-4 w-4" /> {language.match({ english: () => "Files", german: () => "Dateien" })}
+                <Paperclip className="h-4 w-4" /> {language.match({ english: () => "Files", german: () => "Dateien" })} ({openAttachments.length})
               </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1.5">
                 <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Forum", german: () => "Forum" })} ({openDeadline?.messages?.length ?? 0})
@@ -1639,10 +1696,10 @@ function PlannerLayout({
             </TabsList>
 
             <TabsContent value="files" className="flex-1 overflow-y-auto space-y-3">
-              {(!openDeadline || openDeadline.attachments.length === 0) && (
+              {openAttachments.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-8">{language.match({ english: () => "No files attached.", german: () => "Keine Dateien angehängt." })}</p>
               )}
-              {openDeadline?.attachments.map((a) => (
+              {openAttachments.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border">
                   <FileText className="h-5 w-5 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -1652,6 +1709,13 @@ function PlannerLayout({
                   <a href={a.url} download className="text-primary hover:underline text-xs inline-flex items-center gap-1">
                     <Download className="h-3.5 w-3.5" />
                   </a>
+                  <button
+                    onClick={() => removeAttachment(a.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title={language.match({ english: () => "Delete", german: () => "Löschen" })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
               <div className="pt-2">
@@ -1659,7 +1723,12 @@ function PlannerLayout({
                 <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-dashed cursor-pointer hover:bg-secondary/40 transition-colors">
                   <Upload className="h-5 w-5 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{language.match({ english: () => "Click to upload", german: () => "Klicken zum Hochladen" })}</span>
-                  <input type="file" className="hidden" multiple onChange={() => { }} />
+                  <input
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={(e) => { handleAttachFiles(e.target.files); e.target.value = ""; }}
+                  />
                 </label>
               </div>
             </TabsContent>

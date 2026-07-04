@@ -74,7 +74,7 @@ vi.mock("@/hooks/useProfile", () => ({
 vi.mock("../../convex/_generated/api", () => ({
   api: {
     posts: { listRecent: "posts.listRecent" },
-    scripts: { listPublic: "scripts.listPublic" },
+    scripts: { listVisible: "scripts.listVisible" },
     deadlines: { listForUser: "deadlines.listForUser" },
     semesterLectures: { getLecturesForMyKurs: "semesterLectures.getLecturesForMyKurs" },
     sections: { list: "sections.list", seedDefaultSections: "sections.seedDefaultSections" },
@@ -87,7 +87,7 @@ vi.mock("convex/react", async () => {
   return {
     useQuery: (query: string) => {
       if (query === "posts.listRecent") return postsFixture;
-      if (query === "scripts.listPublic") return scriptsFixture;
+      if (query === "scripts.listVisible") return scriptsFixture;
       if (query === "deadlines.listForUser") return deadlinesFixture;
       if (query === "semesterLectures.getLecturesForMyKurs") return lecturesFixture;
       if (query === "sections.list") return [];
