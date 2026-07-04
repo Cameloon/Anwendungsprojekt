@@ -4,7 +4,7 @@
 
 ### Fachliche Abweichungen von der ursprünglichen Planung
 
-- **Mehrsprachigkeit (DE/EN) nur teilweise umgesetzt.** Als Must-Have in `Funktionale_Anforderungen.md` definiert, aber `useLanguage()` ist aktuell nur in Planner und Account-Bereich verdrahtet. Dashboard, Forum und Skripte-Seite sind weiterhin fest auf Deutsch. Sollte entweder nachgezogen oder der Anforderungsstatus bewusst auf "teilweise" korrigiert werden.
+- **Auf weitere Standorte erweitert, statt nur DHBW-Lörrach** Ursprünglich nur für die DHBW-Lörrach geplant, wurden im Laufe des Projektes dennoch die weiteren DHBW Standorte aufgenommen.
 - **Dashboard-Lernfortschritt anders umgesetzt als ursprünglich beschrieben.** `Projektbeschreibung.md` sah eine "prozentuale Anzahl der fertiggestellten Wochenaufgaben" vor. Umgesetzt wurden stattdessen einfache Kennzahlen (offene Termine, dringende Termine, nächster Termin) ohne Prozent- oder Wochenbezug, da der Fokus so auf die tatsächlich anstehenden Terminen, bzw. andere aktuelle Infos aus dem Forum / den Skripten gelenkt wird.
 - **Supabase war ursprünglich geplant, wurde aber nicht angebunden.** Ursprünglich als Datei-Storage vorgesehen, aber tatsächlich liefen Uploads von Anfang an vollständig über Convex File Storage. Der ungenutzte Supabase-Client (`src/integrations/supabase/`), die Abhängigkeit `@supabase/supabase-js` sowie alle zugehörigen Env-Variablen/Docker-Build-Args wurden entfernt.
 
@@ -15,10 +15,11 @@
 - **Durchgängige Zeichenkodierungsfehler** (BUG-012) in mehreren Seiten (kaputte Umlaute) — vermutlich Folge einer früheren Copy/Paste- oder Editor-Encoding-Problematik, die erst spät im Projekt auffiel und projektweit korrigiert werden musste.
 - **Meldefunktion zunächst nur lokal:** Gemeldete Beiträge wurden zuerst in `localStorage` statt zentral in Convex gespeichert (BUG-009) und waren dadurch für Admins anderer Browser/Geräte unsichtbar — ein Beispiel dafür, dass einzelne Features zunächst als Frontend-Provisorium gebaut und erst später ans Backend angebunden wurden.
 
-
 ---
 
 ## Ausblick
+
+Mögliche Erweiterungen des StudentPlanners
 
 ### Funktionale Erweiterungen
 
@@ -34,4 +35,5 @@
 
 ### Infrastruktur & Betrieb
 
-- **Persönliches Dev-Deployment durch teameigene Produktivinstanz ablösen.** Convex läuft aktuell gebunden an den privaten Account eines einzelnen Teammitglieds; der verwendete Clerk-Key ist ebenfalls nur ein Test-Key. Für eine nachhaltige Weiterentwicklung über die Projektlaufzeit hinaus sollte ein teameigenes bzw. institutionelles Produktiv-Deployment aufgesetzt werden, damit der Zugriff nicht vom Fortbestehen eines einzelnen persönlichen Accounts abhängt.
+- **Cloud-Abhängigkeit statt DHBW-Integration.** Die Anwendung setzt vollständig auf externe Cloud-Dienste (Clerk, Convex). Eine Integration in die DHBW-IT-Landschaft (z. B. DHBW-SSO, On-Premise-Betrieb) ist nicht vorbereitet.
+- **Kein öffentliches Produktiv-Deployment — persönliches Dev-Setup ablösen.** Es existiert kein dauerhaft erreichbares Produktiv-Deployment: Convex läuft aktuell gebunden an den privaten Account eines einzelnen Teammitglieds, der verwendete Clerk-Key ist ebenfalls nur ein Test-Key. Für eine nachhaltige Weiterentwicklung über die Projektlaufzeit hinaus sollte ein teameigenes bzw. institutionelles Produktiv-Deployment aufgesetzt werden, damit der Zugriff nicht vom Fortbestehen eines einzelnen persönlichen Accounts abhängt.
