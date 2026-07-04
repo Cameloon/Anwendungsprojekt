@@ -6,13 +6,15 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Externe Systeme                         │
 │                                                                 │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐  │
-│   │    Clerk     │    │   Convex     │    │    Supabase      │  │
-│   │  (Auth-SaaS) │    │  (BaaS/DB)   │    │  (File-Storage)  │  │
-│   └──────┬───────┘    └──────┬───────┘    └────────┬─────────┘  │
-└──────────┼────────────────────┼─────────────────────┼───────────┘
-           │ JWT-Token           │ WebSocket/HTTP       │ HTTP REST
-           ▼                    ▼                       ▼
+│           ┌──────────────┐    ┌──────────────┐                  │
+│           │    Clerk     │    │   Convex     │                  │
+│           │  (Auth-SaaS) │    │  (BaaS/DB,   │                  │
+│           │              │    │   inkl. File │                  │
+│           │              │    │   Storage)   │                  │
+│           └──────┬───────┘    └──────┬───────┘                  │
+└──────────────────┼────────────────────┼─────────────────────────┘
+                    │ JWT-Token           │ WebSocket/HTTP
+                    ▼                    ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                    React SPA (Browser)                           │
 │                    Vite + React 18 + TypeScript                  │
@@ -51,18 +53,19 @@
 │  │  └──────────────────────────────────────────────────────────┘  │  │
 │  └─────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────┘
-            │ WebSocket (Realtime)          │ HTTPS REST
-            ▼                              ▼
-┌────────────────────────┐     ┌───────────────────────────┐
-│   Convex Backend       │     │        Supabase            │
-│   (Serverless BaaS)    │     │   (Datei-Upload / Storage) │
-│                        │     └───────────────────────────┘
+            │ WebSocket (Realtime)
+            ▼
+┌────────────────────────┐          ┌───────────────────────────┐
+│   Convex Backend       │◄────────►│   Clerk (Auth Provider)   │
+│   (Serverless BaaS,    │          │   JWT-Ausstellung +        │
+│    inkl. File Storage) │          │   Benutzerverwaltung       │
+│                        │          └───────────────────────────┘
 │  ┌──────────────────┐  │
-│  │  Convex-Datenbank│  │     ┌───────────────────────────┐
-│  │  (26 Tabellen:   │◄────►  │   Clerk (Auth Provider)   │
-│  │  profiles, forums│  │     │   JWT-Ausstellung +        │
-│  │  posts, deadlines│  │     │   Benutzerverwaltung       │
-│  │  scripts, groups │  │     └───────────────────────────┘
+│  │  Convex-Datenbank│  │
+│  │  (26 Tabellen:   │  │
+│  │  profiles, forums│  │
+│  │  posts, deadlines│  │
+│  │  scripts, groups │  │
 │  │  sections u.v.m.)│  │
 │  └──────────────────┘  │
 │  ┌──────────────────┐  │
@@ -82,8 +85,7 @@
 |---|---|---|
 | **Frontend SPA** | React 18, Vite, TypeScript | UI-Rendering, Routing, Zustandsverwaltung |
 | **Auth-Layer** | Clerk + Demo-Mode | Authentifizierung, Sitzungsverwaltung, JWT |
-| **Backend (BaaS)** | Convex | Serverless-Funktionen, Echtzeit-Daten, Datenbank |
-| **Datei-Storage** | Supabase | Upload und Speicherung von Skripten/Dateien |
+| **Backend (BaaS)** | Convex | Serverless-Funktionen, Echtzeit-Daten, Datenbank, Datei-Storage (Skripte/Uploads) |
 | **Lokaler State** | localStorage Stores | Demo-Modus, Forum- & Skripte-Daten (offline-fähig) |
 
 ### 3.1 Convex-Datenbanktabellen (26)
@@ -143,14 +145,12 @@
 
 ```
 Browser SPA  ──── WebSocket (Realtime-Sync) ────►  Convex Backend
-Browser SPA  ──── HTTPS REST ────────────────────►  Supabase Storage
 Browser SPA  ──── HTTPS / JWT-Austausch ─────────►  Clerk Auth
 Convex       ──── JWT-Validierung ───────────────►  Clerk (issuer domain)
 ```
 
-- **Convex**: persistente WebSocket-Verbindung für reaktive Daten-Queries — automatisches Re-Rendering bei Datenänderungen, kein manuelles Polling
+- **Convex**: persistente WebSocket-Verbindung für reaktive Daten-Queries — automatisches Re-Rendering bei Datenänderungen, kein manuelles Polling; Datei-Uploads (Skripte / Vorlesungsmaterial) laufen ebenfalls über Convex File Storage
 - **Clerk**: JWT-basierte Authentifizierung; Token wird von Convex serverseitig validiert
-- **Supabase**: REST-API für Datei-Uploads (Skripte / Vorlesungsmaterial)
 - **LocalStorage**: Fallback-Datenschicht im Demo-Modus für Auth/Profil (kein Backend erforderlich); alle übrigen Daten (Foren, Skripte, Deadlines) laufen ausschließlich über Convex
 
 ---
@@ -188,10 +188,9 @@ Convex       ──── JWT-Validierung ────────────�
 | Dienst | Typ | Zweck |
 |---|---|---|
 | **Clerk** | SaaS (Cloud) | Authentifizierung & Nutzerverwaltung |
-| **Convex** | BaaS (Cloud) | Datenbank, Echtzeit-Sync, Serverlogik |
-| **Supabase** | BaaS (Cloud) | Datei-Storage (Skripte / PDFs) |
+| **Convex** | BaaS (Cloud) | Datenbank, Echtzeit-Sync, Serverlogik, Datei-Storage (Skripte / PDFs) |
 
-Alle drei Dienste sind Cloud-basiert — kein On-Premise-Betrieb.
+Beide Dienste sind Cloud-basiert — kein On-Premise-Betrieb.
 
 ---
 

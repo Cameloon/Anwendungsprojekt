@@ -6,7 +6,6 @@
 - **Backend:** Convex (serverless BaaS, 26 tables in schema)
 - **UI:** Tailwind CSS + shadcn/ui + Radix UI primitives
 - **Auth:** Clerk (JWT, `convex/auth.config.ts`) with automatic demo mode fallback
-- **File storage:** Supabase (integrated but not yet wired into main flows)
 - **Build tool:** `@vitejs/plugin-react-swc` (SWC, not Babel)
 - **Package manager:** Bun (npm also works)
 - **Testing:** Vitest + jsdom + @testing-library/react
@@ -63,7 +62,6 @@ src/
   hooks/            # useAuth, useTheme, useLanguage, useProfile, useToast, useMobile
   pages/            # Route pages (React Router v6)
   lib/              # Utilities, data lists (dhbw, studienfach, kurs), validation, demo mode
-  integrations/     # Supabase client (auto-generated boilerplate)
 tests/              # Vitest test files
 docs/               # Architecture docs, test overview, PRD, etc.
 .agents/skills/     # Installed Convex agent skills (loaded via skill tool)

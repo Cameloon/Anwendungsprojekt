@@ -23,7 +23,7 @@ Konkrete Bugs mit Fundort, Priorität und Status werden in [`docs/BugTracker.md`
 ## Bekannte Einschränkungen
 
 ### Cloud-Abhängigkeit
-Die Anwendung setzt vollständig auf externe Cloud-Dienste (Clerk, Convex, Supabase). Eine Integration in die DHBW-IT-Landschaft (z. B. DHBW-SSO, On-Premise-Betrieb) ist nicht vorbereitet.
+Die Anwendung setzt vollständig auf externe Cloud-Dienste (Clerk, Convex). Eine Integration in die DHBW-IT-Landschaft (z. B. DHBW-SSO, On-Premise-Betrieb) ist nicht vorbereitet.
 
 ### Kein öffentliches Deployment
 Es existiert kein dauerhaft erreichbares Produktiv-Deployment. Die Anwendung wird lokal oder über das Convex-Dev-Backend betrieben.
