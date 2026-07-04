@@ -24,7 +24,27 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
+BUG-025: Dashboard-Deadline-Links öffnen keinen Eintrag im Planer
+Datum erfasst: 04-07-2026
+Verfasser: SA 
+Komponente/Bereich: Dashboard UI / Planner Navigation
+Priorität: Hoch
+Beschreibung:
+Im Dashboard werden Deadline-Einträge mit Links wie /planner?deadline=... erzeugt ([src/pages/DashboardPage.tsx (line 153)], [src/pages/DashboardPage.tsx (line 202)]
+Der Planer verarbeitet diesen Query-Parameter aber aktuell nicht; in [src/pages/PlannerPage.tsx (line 1)] gibt es keine useSearchParams-Logik für deadline. Dadurch wirkt der Klick aus dem Dashboard wie eine Detail-Navigation, landet aber nur auf der allgemeinen Planer-Seite ohne den gewünschten Eintrag zu öffnen oder hervorzuheben.
+
 ---
+
+BUG-026: Fehlerhafte Sonderzeichen in mehreren UI-Texten
+Datum erfasst: 04-07-2026
+Verfasser: SA
+Komponente/Bereich: Mehrere Frontend-Seiten / Textdarstellung
+Priorität: Mittel
+Beschreibung:
+Mehrere Benutzertexte enthalten weiterhin fehlerhaft dargestellte Sonderzeichen wie Ã¤, Ã¼, Ã¶, â€ž oder RÃ¼ckgÃ¤ngig. Sichtbar ist das u. a. im Dashboard bei Texten wie „Neueste EintrÃ¤ge“, „Letzte BeitrÃ¤ge“ oder „NÃ¤chster Termin“ sowie in der Forum-Detailansicht bei Texten wie „ZurÃ¼ck“, „VerÃ¶ffentlichen“ oder Bestätigungsdialogen ([src/pages/DashboardPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/DashboardPage.tsx:1), [src/pages/ForumDetailPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/ForumDetailPage.tsx:1)).
+Dadurch wirkt die Oberfläche technisch beschädigt und teilweise schwer lesbar. Dieser Fehler scheint bereits sinngleich im BugTracker bekannt zu sein, tritt im aktuellen Code aber weiterhin sichtbar auf.
+
+
 
 ## Bugs in Bearbeitung
 
@@ -135,7 +155,7 @@ Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), u
 ### BUG-010: Dashboard – Skriptbereich zeigt nur öffentliche Skripte
 
 Datum erfasst: 03-07-2026
-Verfasser: CC
+Verfasser: SA
 Komponente/Bereich: Dashboard UI
 Priorität: Mittel
 Beschreibung:
@@ -147,7 +167,7 @@ Fundort: src/pages/DashboardPage.tsx, Query für Skripte
 ### BUG-011: Dashboard – Zeitabhängige Kennzahlen können ohne Re-Render veralten
 
 Datum erfasst: 03-07-2026
-Verfasser: CC
+Verfasser: SA
 Komponente/Bereich: Dashboard UI
 Priorität: Niedrig
 Beschreibung:
@@ -357,7 +377,7 @@ Der Löschen-Button für Termin-Anhänge wurde für jeden Betrachter des Termins
 
 **Datum erfasst:** 03-07-2026
 **Datum erledigt:** 04-07-2026
-**Verfasser:** CC
+**Verfasser:** SA
 **Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Projektqualität / Frontend-Architektur
 **Priorität:** Mittel
