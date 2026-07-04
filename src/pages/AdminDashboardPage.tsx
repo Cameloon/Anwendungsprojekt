@@ -50,31 +50,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const SEMESTER_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 
-const ruleCards = [
-  {
-    title: "Freischaltungen",
-    text: "Neue Nutzer prüfen, Freigaben aussprechen oder Accounts löschen.",
-    icon: <Users className="h-4 w-4" />,
-  },
-  {
-    title: "Moderation",
-    text: "Gemeldete Posts prüfen, Beiträge löschen und Maßnahmen protokollieren.",
-    icon: <ShieldCheck className="h-4 w-4" />,
-  },
-  {
-    title: "Vorlesungen",
-    text: "Vorlesungen importieren, bearbeiten und als Auswahl in Formularen bereitstellen.",
-    icon: <BookMarked className="h-4 w-4" />,
-  },
-  {
-    title: "Materialregeln",
-    text: "Formate, Maximalgröße und Sichtbarkeit für Uploads zentral steuern.",
-    icon: <FolderUp className="h-4 w-4" />,
-  },
-];
+
 
 const statusTone = (state: string) => {
   if (state === "offen" || state === "hoch")
@@ -85,6 +65,7 @@ const statusTone = (state: string) => {
 };
 
 const AdminDashboardPage = () => {
+  const { language } = useLanguage();
   const profiles = useQuery(api.admin.getAll, {});
   const approveUser = useMutation(api.admin.approveUser);
   const rejectUser = useMutation(api.admin.rejectUser);
@@ -109,6 +90,29 @@ const AdminDashboardPage = () => {
   const [lecturesOpen, setLecturesOpen] = useState(true);
   const [lectureSearch, setLectureSearch] = useState("");
 
+  const ruleCards = [
+    {
+      title: language.match({ english: () => "Approvals", german: () => "Freischaltungen" }),
+      text: language.match({ english: () => "Review new users, grant access or delete accounts.", german: () => "Neue Nutzer prüfen, Freigaben aussprechen oder Accounts löschen." }),
+      icon: <Users className="h-4 w-4" />,
+    },
+    {
+      title: language.match({ english: () => "Moderation", german: () => "Moderation" }),
+      text: language.match({ english: () => "Review reported posts, delete content and log actions.", german: () => "Gemeldete Posts prüfen, Beiträge löschen und Maßnahmen protokollieren." }),
+      icon: <ShieldCheck className="h-4 w-4" />,
+    },
+    {
+      title: language.match({ english: () => "Lectures", german: () => "Vorlesungen" }),
+      text: language.match({ english: () => "Import, edit and provide lectures as options in forms.", german: () => "Vorlesungen importieren, bearbeiten und als Auswahl in Formularen bereitstellen." }),
+      icon: <BookMarked className="h-4 w-4" />,
+    },
+    {
+      title: language.match({ english: () => "Material Rules", german: () => "Materialregeln" }),
+      text: language.match({ english: () => "Centrally control formats, max file size and visibility for uploads.", german: () => "Formate, Maximalgröße und Sichtbarkeit für Uploads zentral steuern." }),
+      icon: <FolderUp className="h-4 w-4" />,
+    },
+  ];
+
 
   // Auto-seed base lecture data once on admin page load
   useEffect(() => {
@@ -122,14 +126,14 @@ const AdminDashboardPage = () => {
     try {
       await approveUser({ userId });
       toast({
-        title: "Freigegeben",
-        description: "Der Nutzer wurde erfolgreich freigegeben.",
+        title: language.match({ english: () => "Approved", german: () => "Freigegeben" }),
+        description: language.match({ english: () => "The user has been approved.", german: () => "Der Nutzer wurde erfolgreich freigegeben." }),
       });
     } catch (err) {
       toast({
-        title: "Fehler",
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
         description:
-          err instanceof Error ? err.message : "Freigabe fehlgeschlagen",
+          err instanceof Error ? err.message : language.match({ english: () => "Approval failed", german: () => "Freigabe fehlgeschlagen" }),
         variant: "destructive",
       });
     } finally {
@@ -142,14 +146,14 @@ const AdminDashboardPage = () => {
     try {
       await rejectUser({ userId });
       toast({
-        title: "Abgelehnt",
-        description: "Der Nutzer wurde abgelehnt.",
+        title: language.match({ english: () => "Rejected", german: () => "Abgelehnt" }),
+        description: language.match({ english: () => "The user has been rejected.", german: () => "Der Nutzer wurde abgelehnt." }),
       });
     } catch (err) {
       toast({
-        title: "Fehler",
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
         description:
-          err instanceof Error ? err.message : "Ablehnung fehlgeschlagen",
+          err instanceof Error ? err.message : language.match({ english: () => "Rejection failed", german: () => "Ablehnung fehlgeschlagen" }),
         variant: "destructive",
       });
     } finally {
@@ -163,17 +167,17 @@ const AdminDashboardPage = () => {
     {
       value: 1,
       emoji: "😞",
-      label: "Schlecht",
+      label: language.match({ english: () => "Bad", german: () => "Schlecht" }),
       color: "hsl(var(--destructive))",
     },
     {
       value: 2,
       emoji: "😐",
-      label: "Okay",
+      label: language.match({ english: () => "Okay", german: () => "Okay" }),
       color: "hsl(var(--muted-foreground))",
     },
-    { value: 3, emoji: "🙂", label: "Gut", color: "hsl(var(--info))" },
-    { value: 4, emoji: "😍", label: "Super", color: "hsl(var(--success))" },
+    { value: 3, emoji: "🙂", label: language.match({ english: () => "Good", german: () => "Gut" }), color: "hsl(var(--info))" },
+    { value: 4, emoji: "😍", label: language.match({ english: () => "Great", german: () => "Super" }), color: "hsl(var(--success))" },
   ];
 
   const ratingChartData = feedbackStats
@@ -191,8 +195,8 @@ const AdminDashboardPage = () => {
     : [];
 
   const reportTypeMeta: Record<string, { label: string }> = {
-    bug: { label: "Fehler" },
-    feature: { label: "Optimierungsvorschläge" },
+    bug: { label: language.match({ english: () => "Bugs", german: () => "Fehler" }) },
+    feature: { label: language.match({ english: () => "Feature Requests", german: () => "Optimierungsvorschläge" }) },
   };
 
   const avgRating =
@@ -220,41 +224,40 @@ const AdminDashboardPage = () => {
               <div className="max-w-3xl">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.24em] text-white/85">
                   <Shield className="h-3.5 w-3.5" />
-                  Admin-Dashboard
+                  {language.match({ english: () => "Admin Dashboard", german: () => "Admin-Dashboard" })}
                 </div>
                 <h1 className="font-heading text-3xl font-bold leading-tight sm:text-4xl">
-                  Moderation, Freischaltungen und Vorlesungsverwaltung an einem
-                  Ort
+                  {language.match({ english: () => "Moderation, approvals and lecture management in one place", german: () => "Moderation, Freischaltungen und Vorlesungsverwaltung an einem Ort" })}
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm text-white/85 sm:text-base">
-                  Diese Ansicht bündelt die Aufgaben aus den funktionalen
-                  Anforderungen: Nutzer freischalten, gemeldete Beiträge prüfen,
-                  Vorlesungen administrieren und Upload-Regeln steuern.
+                  {language.match({
+                    english: () => "approve users, review reported posts, administer lectures and control upload rules.",
+                    german: () => "Nutzer freischalten, gemeldete Beiträge prüfen, Vorlesungen administrieren und Upload-Regeln steuern." })}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem] lg:flex-1">
                 <MetricCard
-                  label="Offene Freigaben"
+                  label={language.match({ english: () => "Pending Approvals", german: () => "Offene Freigaben" })}
                   value={String(pendingProfiles.length)}
-                  hint="Nutzer warten"
+                  hint={language.match({ english: () => "Users waiting", german: () => "Nutzer warten" })}
                 />
                 <MetricCard
-                  label="Meldungen"
+                  label={language.match({ english: () => "Reports", german: () => "Meldungen" })}
                   value={String(
                     postReports?.filter((r) => r.status === "offen").length ?? "—",
                   )}
-                  hint="Forum-Queue"
+                  hint={language.match({ english: () => "Forum queue", german: () => "Forum-Queue" })}
                 />
                 <MetricCard
-                  label="Vorlesungen"
+                  label={language.match({ english: () => "Lectures", german: () => "Vorlesungen" })}
                   value={String(lectures?.length ?? "—")}
-                  hint="hinterlegte Einträge"
+                  hint={language.match({ english: () => "stored entries", german: () => "hinterlegte Einträge" })}
                 />
                 <MetricCard
-                  label="Upload-Regeln"
+                  label={language.match({ english: () => "Upload Rules", german: () => "Upload-Regeln" })}
                   value="4"
-                  hint="konfigurierbar"
+                  hint={language.match({ english: () => "configurable", german: () => "konfigurierbar" })}
                 />
               </div>
             </div>
@@ -281,9 +284,9 @@ const AdminDashboardPage = () => {
 
           <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <Panel
-              title="Nutzerfreischaltungen"
+              title={language.match({ english: () => "User Approvals", german: () => "Nutzerfreischaltungen" })}
               icon={<Users className="h-4 w-4" />}
-              description="Admins prüfen neue Registrierungen, geben Nutzer frei oder löschen Accounts."
+              description={language.match({ english: () => "Admins review new registrations, approve users or delete accounts.", german: () => "Admins prüfen neue Registrierungen, geben Nutzer frei oder löschen Accounts." })}
             >
               {profiles === undefined ? (
                 <div className="flex items-center justify-center py-8">
@@ -293,7 +296,7 @@ const AdminDashboardPage = () => {
                 <div className="space-y-3">
                   {pendingProfiles.length === 0 && (
                     <p className="text-sm text-muted-foreground py-4 text-center">
-                      Alle Nutzer wurden bereits freigegeben.
+                      {language.match({ english: () => "All users have been approved.", german: () => "Alle Nutzer wurden bereits freigegeben." })}
                     </p>
                   )}
                   {pendingProfiles.map((p) => (
@@ -305,19 +308,19 @@ const AdminDashboardPage = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-foreground">
-                              {p.displayName || p.email || "Unbekannt"}
+                              {p.displayName || p.email || language.match({ english: () => "Unknown", german: () => "Unbekannt" })}
                             </p>
                             <Badge
                               variant="secondary"
                               className="bg-amber-500/10 text-amber-600"
                             >
-                              ausstehend
+                              {language.match({ english: () => "pending", german: () => "ausstehend" })}
                             </Badge>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {[p.matrikelnummer, p.studienfach, p.hochschule]
                               .filter(Boolean)
-                              .join(" · ") || "Keine Details"}
+                              .join(" · ") || language.match({ english: () => "No details", german: () => "Keine Details" })}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -330,7 +333,7 @@ const AdminDashboardPage = () => {
                             {updating === p.userId ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              "Ablehnen"
+                              language.match({ english: () => "Reject", german: () => "Ablehnen" })
                             )}
                           </Button>
                           <Button
@@ -342,7 +345,7 @@ const AdminDashboardPage = () => {
                             {updating === p.userId ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              "Freigeben"
+                              language.match({ english: () => "Approve", german: () => "Freigeben" })
                             )}
                           </Button>
                         </div>
@@ -354,9 +357,9 @@ const AdminDashboardPage = () => {
             </Panel>
 
             <Panel
-              title="Moderationsprotokoll"
+              title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
               icon={<FileWarning className="h-4 w-4" />}
-              description="Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden."
+              description={language.match({ english: () => "Reported forum posts and moderation actions must be documented traceably.", german: () => "Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden." })}
             >
               <div className="space-y-3">
                 {postReports === undefined ? (
@@ -365,7 +368,7 @@ const AdminDashboardPage = () => {
                   </div>
                 ) : postReports.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    Keine offenen Meldungen.
+                    {language.match({ english: () => "No open reports.", german: () => "Keine offenen Meldungen." })}
                   </p>
                 ) : (
                   postReports.map((report) => (
@@ -385,7 +388,7 @@ const AdminDashboardPage = () => {
                             </Badge>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {report.forumName} · gemeldet von {report.reportedBy}
+                            {report.forumName} · {language.match({ english: () => "reported by", german: () => "gemeldet von" })} {report.reportedBy}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {report.reason}
@@ -409,7 +412,7 @@ const AdminDashboardPage = () => {
                             {dismissingReport === report._id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              "Erledigt"
+                              language.match({ english: () => "Done", german: () => "Erledigt" })
                             )}
                           </Button>
                         )}
@@ -423,18 +426,18 @@ const AdminDashboardPage = () => {
 
           <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <Panel
-              title="Vorlesungsverwaltung"
+              title={language.match({ english: () => "Lecture Management", german: () => "Vorlesungsverwaltung" })}
               icon={<GraduationCap className="h-4 w-4" />}
-              description="Lege Vorlesungen pro Kurs und Semester an. Nutzer werden beim Onboarding automatisch in die passenden Vorlesungs-Foren eingeschrieben."
+              description={language.match({ english: () => "Create lectures per course and semester. Users are automatically enrolled in the matching lecture forums during onboarding.", german: () => "Lege Vorlesungen pro Kurs und Semester an. Nutzer werden beim Onboarding automatisch in die passenden Vorlesungs-Foren eingeschrieben." })}
             >
               <div className="mb-4 grid gap-3 sm:grid-cols-4">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Kurs
+                    {language.match({ english: () => "Course", german: () => "Kurs" })}
                   </label>
                   <Select value={newKurs} onValueChange={setNewKurs}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Kurs wählen" />
+                      <SelectValue placeholder={language.match({ english: () => "Select course", german: () => "Kurs wählen" })} />
                     </SelectTrigger>
                     <SelectContent>
                       {[
@@ -459,11 +462,11 @@ const AdminDashboardPage = () => {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Semester
+                    {language.match({ english: () => "Semester", german: () => "Semester" })}
                   </label>
                   <Select value={newSemester} onValueChange={setNewSemester}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Semester" />
+                      <SelectValue placeholder={language.match({ english: () => "Semester", german: () => "Semester" })} />
                     </SelectTrigger>
                     <SelectContent>
                       {SEMESTER_OPTIONS.map((s) => (
@@ -476,12 +479,12 @@ const AdminDashboardPage = () => {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Vorlesungsname
+                    {language.match({ english: () => "Lecture Name", german: () => "Vorlesungsname" })}
                   </label>
                   <Input
                     value={newLectureName}
                     onChange={(e) => setNewLectureName(e.target.value)}
-                    placeholder="z.B. Mathematik 1"
+                    placeholder={language.match({ english: () => "e.g. Mathematics 1", german: () => "z.B. Mathematik 1" })}
                   />
                 </div>
               </div>
@@ -498,22 +501,22 @@ const AdminDashboardPage = () => {
                     });
                     setNewLectureName("");
                     toast({
-                      title: "Gespeichert",
-                      description: "Vorlesung wurde angelegt.",
+                      title: language.match({ english: () => "Saved", german: () => "Gespeichert" }),
+                      description: language.match({ english: () => "Lecture has been created.", german: () => "Vorlesung wurde angelegt." }),
                     });
                   } catch (err) {
                     toast({
-                      title: "Fehler",
+                      title: language.match({ english: () => "Error", german: () => "Fehler" }),
                       description:
                         err instanceof Error
                           ? err.message
-                          : "Speichern fehlgeschlagen",
+                          : language.match({ english: () => "Save failed", german: () => "Speichern fehlgeschlagen" }),
                       variant: "destructive",
                     });
                   }
                 }}
               >
-                <Plus className="h-4 w-4" /> Hinzufügen
+                <Plus className="h-4 w-4" /> {language.match({ english: () => "Add", german: () => "Hinzufügen" })}
               </Button>
 
               <button
@@ -521,7 +524,7 @@ const AdminDashboardPage = () => {
                 className="mb-3 flex w-full items-center justify-between text-left"
               >
                 <span className="text-sm font-medium text-muted-foreground">
-                  {lectures ? `${lectures.length} Vorlesungen` : "Vorlesungen"}
+                  {lectures ? `${lectures.length} ${language.match({ english: () => "Lectures", german: () => "Vorlesungen" })}` : language.match({ english: () => "Lectures", german: () => "Vorlesungen" })}
                 </span>
                 <ChevronDown
                   className={`h-4 w-4 text-muted-foreground transition-transform ${
@@ -534,7 +537,7 @@ const AdminDashboardPage = () => {
                 <div className="space-y-3">
                   <div className="relative">
                     <Input
-                      placeholder="Vorlesung suchen…"
+                      placeholder={language.match({ english: () => "Search lecture…", german: () => "Vorlesung suchen…" })}
                       value={lectureSearch}
                       onChange={(e) => setLectureSearch(e.target.value)}
                       className="pl-3"
@@ -548,7 +551,7 @@ const AdminDashboardPage = () => {
                       </div>
                     ) : lectures.length === 0 ? (
                       <p className="py-4 text-center text-sm text-muted-foreground">
-                        Noch keine Vorlesungen hinterlegt.
+                        {language.match({ english: () => "No lectures stored yet.", german: () => "Noch keine Vorlesungen hinterlegt." })}
                       </p>
                     ) : (
                       (() => {
@@ -563,7 +566,7 @@ const AdminDashboardPage = () => {
                           : lectures;
                         return filtered.length === 0 ? (
                           <p className="py-4 text-center text-sm text-muted-foreground">
-                            Keine Vorlesungen gefunden.
+                            {language.match({ english: () => "No lectures found.", german: () => "Keine Vorlesungen gefunden." })}
                           </p>
                         ) : (
                           filtered.map((lecture) => (
@@ -577,7 +580,7 @@ const AdminDashboardPage = () => {
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                   {lecture.kurs} · {lecture.semesterNumber}.
-                                  Semester
+                                  {language.match({ english: () => "Semester", german: () => "Semester" })}
                                 </p>
                               </div>
                               <Button
@@ -588,16 +591,16 @@ const AdminDashboardPage = () => {
                                   try {
                                     await deleteLecture({ id: lecture._id });
                                     toast({
-                                      title: "Gelöscht",
-                                      description: `${lecture.lectureName} wurde entfernt.`,
+                                      title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+                                      description: language.match({ english: () => `${lecture.lectureName} has been removed.`, german: () => `${lecture.lectureName} wurde entfernt.` }),
                                     });
                                   } catch (err) {
                                     toast({
-                                      title: "Fehler",
+                                      title: language.match({ english: () => "Error", german: () => "Fehler" }),
                                       description:
                                         err instanceof Error
                                           ? err.message
-                                          : "Löschen fehlgeschlagen",
+                                          : language.match({ english: () => "Delete failed", german: () => "Löschen fehlgeschlagen" }),
                                       variant: "destructive",
                                     });
                                   }
@@ -617,26 +620,26 @@ const AdminDashboardPage = () => {
 
             <div className="flex flex-col gap-6">
               <Panel
-                title="Material- und Upload-Regeln"
+                title={language.match({ english: () => "Material & Upload Rules", german: () => "Material- und Upload-Regeln" })}
                 icon={<Settings2 className="h-4 w-4" />}
-                description="Formate, Größenlimits und Sichtbarkeit können zentral für Aufgaben und Beiträge definiert werden."
+                description={language.match({ english: () => "Formats, size limits and visibility can be centrally defined for tasks and posts.", german: () => "Formate, Größenlimits und Sichtbarkeit können zentral für Aufgaben und Beiträge definiert werden." })}
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   <SettingTile
-                    label="Erlaubte Formate"
+                    label={language.match({ english: () => "Allowed Formats", german: () => "Erlaubte Formate" })}
                     value="PDF, DOCX, PPTX, PNG, JPG"
                   />
                   <SettingTile
-                    label="Max. Upload-Größe"
-                    value="10 MB Standard"
+                    label={language.match({ english: () => "Max Upload Size", german: () => "Max. Upload-Größe" })}
+                    value={language.match({ english: () => "10 MB Standard", german: () => "10 MB Standard" })}
                   />
                   <SettingTile
-                    label="Sichtbarkeit"
+                    label={language.match({ english: () => "Visibility", german: () => "Sichtbarkeit" })}
                     value="private · course · group · public"
                   />
                   <SettingTile
-                    label="Quoten"
-                    value="pro Nutzer / Kurs konfigurierbar"
+                    label={language.match({ english: () => "Quotas", german: () => "Quoten" })}
+                    value={language.match({ english: () => "configurable per user / course", german: () => "pro Nutzer / Kurs konfigurierbar" })}
                   />
                 </div>
 
@@ -644,10 +647,9 @@ const AdminDashboardPage = () => {
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-0.5 h-5 w-5 text-accent" />
                     <div>
-                      <p className="font-medium">Protokollpflicht</p>
+                      <p className="font-medium">{language.match({ english: () => "Logging Requirement", german: () => "Protokollpflicht" })}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Moderationsaktionen, Upload-Freigaben und Löschungen
-                        sollten mit Zeitstempel dokumentiert werden.
+                        {language.match({ english: () => "Moderation actions, upload approvals and deletions should be documented with timestamps.", german: () => "Moderationsaktionen, Upload-Freigaben und Löschungen sollten mit Zeitstempel dokumentiert werden." })}
                       </p>
                     </div>
                   </div>
@@ -655,9 +657,9 @@ const AdminDashboardPage = () => {
               </Panel>
 
               <Panel
-                title="Nutzerzufriedenheit"
+                title={language.match({ english: () => "User Satisfaction", german: () => "Nutzerzufriedenheit" })}
                 icon={<MessageCircleHeart className="h-4 w-4" />}
-                description="Anonyme Bewertungen der Nutzer — Basis sind alle abgegebenen Rückmeldungen — Customer Satisfaction Score (CSAT)."
+                description={language.match({ english: () => "Anonymous user ratings — based on all submitted feedback — Customer Satisfaction Score (CSAT).", german: () => "Anonyme Bewertungen der Nutzer — Basis sind alle abgegebenen Rückmeldungen — Customer Satisfaction Score (CSAT)." })}
               >
                 {feedbackStats === undefined ? (
                   <div className="flex items-center justify-center py-8">
@@ -670,9 +672,9 @@ const AdminDashboardPage = () => {
                         <p className="text-2xl font-semibold">
                           {feedbackStats.total}
                         </p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          Rückmeldungen
-                        </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                            {language.match({ english: () => "Feedback", german: () => "Rückmeldungen" })}
+                          </p>
                       </div>
                       <TooltipProvider>
                         <Tooltip>
@@ -689,7 +691,7 @@ const AdminDashboardPage = () => {
                                 %
                               </p>
                               <p className="mt-1 flex items-center justify-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                Rücklaufquote
+                                {language.match({ english: () => "Response Rate", german: () => "Rücklaufquote" })}
                                 <Info className="h-3 w-3 shrink-0" />
                               </p>
                             </div>
@@ -698,9 +700,7 @@ const AdminDashboardPage = () => {
                             side="top"
                             className="max-w-[200px] text-center text-xs"
                           >
-                            Anteil der Nutzer, die bisher eine Bewertung
-                            abgegeben haben ({feedbackStats.total} von{" "}
-                            {feedbackStats.totalUsers})
+                            {language.match({ english: () => `Share of users who have submitted a rating (${feedbackStats.total} of ${feedbackStats.totalUsers})`, german: () => `Anteil der Nutzer, die bisher eine Bewertung abgegeben haben (${feedbackStats.total} von ${feedbackStats.totalUsers})` })}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -712,7 +712,7 @@ const AdminDashboardPage = () => {
                                 {avgRating ?? "—"}
                               </p>
                               <p className="mt-1 flex items-center justify-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                Ø Bewertung
+                                {language.match({ english: () => "Ø Rating", german: () => "Ø Bewertung" })}
                                 <Info className="h-3 w-3 shrink-0" />
                               </p>
                             </div>
@@ -721,8 +721,7 @@ const AdminDashboardPage = () => {
                             side="top"
                             className="max-w-[200px] text-center text-xs"
                           >
-                            Gewichteter Durchschnitt aller Bewertungen auf einer
-                            Skala von 1 (😞 Schlecht) bis 4 (😍 Super)
+                            {language.match({ english: () => "Weighted average of all ratings on a scale from 1 (😞 Bad) to 4 (😍 Great)", german: () => "Gewichteter Durchschnitt aller Bewertungen auf einer Skala von 1 (😞 Schlecht) bis 4 (😍 Super)" })}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -730,12 +729,12 @@ const AdminDashboardPage = () => {
 
                     {feedbackStats.total === 0 ? (
                       <p className="py-4 text-center text-sm text-muted-foreground">
-                        Noch keine Rückmeldungen eingegangen.
+                        {language.match({ english: () => "No feedback received yet.", german: () => "Noch keine Rückmeldungen eingegangen." })}
                       </p>
                     ) : (
                       <div>
                         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Bewertungsverteilung
+                          {language.match({ english: () => "Rating Distribution", german: () => "Bewertungsverteilung" })}
                         </p>
                         <ResponsiveContainer width="100%" height={180}>
                           <BarChart
@@ -777,7 +776,7 @@ const AdminDashboardPage = () => {
                                       {d.emoji} {d.label}
                                     </p>
                                     <p className="text-muted-foreground">
-                                      {d.count} Stimmen · {d.pct}%
+                                      {d.count} {language.match({ english: () => "votes", german: () => "Stimmen" })} · {d.pct}%
                                     </p>
                                   </div>
                                 );
@@ -796,7 +795,7 @@ const AdminDashboardPage = () => {
                         </ResponsiveContainer>
 
                         <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Meldungen
+                          {language.match({ english: () => "Reports", german: () => "Meldungen" })}
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                           {(["bug", "feature"] as const).map((type) => {
@@ -876,7 +875,7 @@ const AdminDashboardPage = () => {
                                       <>
                                         {open.length === 0 && (
                                           <p className="py-3 text-center text-sm text-muted-foreground">
-                                            Keine offenen Meldungen.
+                                            {language.match({ english: () => "No open reports.", german: () => "Keine offenen Meldungen." })}
                                           </p>
                                         )}
                                         {open.map((report) => (
@@ -913,9 +912,9 @@ const AdminDashboardPage = () => {
                                               {markingDone === report._id ? (
                                                 <Loader2 className="h-3 w-3 animate-spin" />
                                               ) : (
-                                                "Erledigt"
-                                              )}
-                                            </Button>
+                                                  language.match({ english: () => "Done", german: () => "Erledigt" })
+                                                )}
+                                              </Button>
                                           </div>
                                         ))}
 
@@ -924,7 +923,7 @@ const AdminDashboardPage = () => {
                                             <div className="flex items-center gap-3 py-1">
                                               <div className="h-px flex-1 bg-border/60" />
                                               <span className="text-[11px] text-muted-foreground">
-                                                Erledigt
+                                                {language.match({ english: () => "Done", german: () => "Erledigt" })}
                                               </span>
                                               <div className="h-px flex-1 bg-border/60" />
                                             </div>
@@ -963,26 +962,26 @@ const AdminDashboardPage = () => {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="font-heading text-2xl font-semibold">
-                  Weiterführende Admin-Aktionen
+                  {language.match({ english: () => "Further Admin Actions", german: () => "Weiterführende Admin-Aktionen" })}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Direkte Sprünge in die fachlich relevanten Bereiche.
+                  {language.match({ english: () => "Direct jumps to the relevant areas.", german: () => "Direkte Sprünge in die fachlich relevanten Bereiche." })}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to="/forum">
                   <Button variant="outline" className="gap-2">
-                    <Eye className="h-4 w-4" /> Forum prüfen
+                    <Eye className="h-4 w-4" /> {language.match({ english: () => "Review Forum", german: () => "Forum prüfen" })}
                   </Button>
                 </Link>
                 <Link to="/planner">
                   <Button variant="outline" className="gap-2">
-                    <LayoutGrid className="h-4 w-4" /> Aufgaben prüfen
+                    <LayoutGrid className="h-4 w-4" /> {language.match({ english: () => "Review Tasks", german: () => "Aufgaben prüfen" })}
                   </Button>
                 </Link>
                 <Link to="/dashboard">
                   <Button className="gap-2">
-                    <CheckCircle2 className="h-4 w-4" /> Zur Nutzeransicht
+                    <CheckCircle2 className="h-4 w-4" /> {language.match({ english: () => "Go to User View", german: () => "Zur Nutzeransicht" })}
                   </Button>
                 </Link>
               </div>

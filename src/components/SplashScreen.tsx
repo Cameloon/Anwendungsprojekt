@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { GraduationCap } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const SplashScreen = () => {
+  const { language } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 1 }}
@@ -26,7 +28,7 @@ const SplashScreen = () => {
           className="text-center"
         >
           <h1 className="font-heading text-3xl font-bold text-foreground">StudentPlanner</h1>
-          <p className="text-sm text-muted-foreground mt-1">Lade deinen Lernraum...</p>
+          <p className="text-sm text-muted-foreground mt-1">{language.match({ english: () => "Loading your study space...", german: () => "Lade deinen Lernraum..." })}</p>
         </motion.div>
         <motion.div
           initial={{ width: 0 }}

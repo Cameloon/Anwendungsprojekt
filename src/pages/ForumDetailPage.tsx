@@ -32,6 +32,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useProfile } from "@/hooks/useProfile";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -43,12 +44,6 @@ const tagStyles: Record<string, string> = {
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
-const tagLabels: Record<string, string> = {
-  frage: "Frage",
-  material: "Material",
-  diskussion: "Diskussion",
-};
-
 interface PostItem {
   id: string;
   _creationTime: number;
@@ -99,24 +94,13 @@ interface DeadlineItem {
   done: boolean;
 }
 
-// ── Helpers ──
-
-function formatDate(ts: number) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "gerade eben";
-  if (m < 60) return `vor ${m} Min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `vor ${h} Std`;
-  return new Date(ts).toLocaleDateString("de-DE");
-}
-
 // ── Convex production path ──
 
 const ForumDetailPage = () => {
   const { forumId } = useParams<{ forumId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const me = user?.id || "";
 
   const forumQuery = useQuery(
@@ -182,9 +166,9 @@ const ForumDetailPage = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="pt-32 md:pt-24 pb-16 px-6 container mx-auto max-w-3xl text-center">
-          <p className="text-muted-foreground mb-4">Forum nicht gefunden.</p>
+          <p className="text-muted-foreground mb-4">{language.match({ english: () => "Forum not found.", german: () => "Forum nicht gefunden." })}</p>
           <Button onClick={() => navigate("/forum")} className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Zurück
+            <ArrowLeft className="h-4 w-4" /> {language.match({ english: () => "Back", german: () => "Zurück" })}
           </Button>
         </div>
       </div>
@@ -248,13 +232,13 @@ const ForumDetailPage = () => {
     done: d.done,
   }));
 
-  const titleError = title.trim().length > 0 && title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
-  const contentError = content.trim().length > 0 && content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
-  const inviteError = selectedInvitees.length === 0 ? "Mindestens eine Person angeben." : "";
+  const titleError = title.trim().length > 0 && title.trim().length < 5 ? language.match({ english: () => "At least 5 characters.", german: () => "Mindestens 5 Zeichen." }) : "";
+  const contentError = content.trim().length > 0 && content.trim().length < 10 ? language.match({ english: () => "At least 10 characters.", german: () => "Mindestens 10 Zeichen." }) : "";
+  const inviteError = selectedInvitees.length === 0 ? language.match({ english: () => "Select at least one person.", german: () => "Mindestens eine Person angeben." }) : "";
 
   const handlePost = async () => {
-    const nextTitleError = title.trim().length < 5 ? "Mindestens 5 Zeichen." : "";
-    const nextContentError = content.trim().length < 10 ? "Mindestens 10 Zeichen." : "";
+    const nextTitleError = title.trim().length < 5 ? language.match({ english: () => "At least 5 characters.", german: () => "Mindestens 5 Zeichen." }) : "";
+    const nextContentError = content.trim().length < 10 ? language.match({ english: () => "At least 10 characters.", german: () => "Mindestens 10 Zeichen." }) : "";
     if (nextTitleError || nextContentError) return;
     try {
       await createPostMutation({
@@ -271,9 +255,9 @@ const ForumDetailPage = () => {
       setLinkedScriptIds([]);
       setLinkedDeadlineIds([]);
       setShowPostForm(false);
-      toast.success("Beitrag veröffentlicht");
+      toast.success(language.match({ english: () => "Post published", german: () => "Beitrag veröffentlicht" }));
     } catch {
-      toast.error("Fehler beim Veröffentlichen");
+      toast.error(language.match({ english: () => "Error publishing", german: () => "Fehler beim Veröffentlichen" }));
     }
   };
 
@@ -285,9 +269,9 @@ const ForumDetailPage = () => {
   const handleJoin = async () => {
     try {
       await joinMutation({ forumId: forum.id as Id<"forums"> });
-      toast.success("Beigetreten");
+      toast.success(language.match({ english: () => "Joined", german: () => "Beigetreten" }));
     } catch {
-      toast.error("Fehler beim Beitreten");
+      toast.error(language.match({ english: () => "Error joining", german: () => "Fehler beim Beitreten" }));
     }
   };
 
@@ -296,13 +280,13 @@ const ForumDetailPage = () => {
       await leaveMutation({ forumId: forum.id as Id<"forums"> });
       navigate("/forum");
     } catch {
-      toast.error("Fehler beim Verlassen");
+      toast.error(language.match({ english: () => "Error leaving", german: () => "Fehler beim Verlassen" }));
     }
   };
 
   const handleInvite = async () => {
     if (selectedInvitees.length === 0) {
-      toast.error("Mindestens eine Person angeben");
+      toast.error(language.match({ english: () => "Select at least one person", german: () => "Mindestens eine Person angeben" }));
       return;
     }
     try {
@@ -313,12 +297,12 @@ const ForumDetailPage = () => {
         recipientNames: selectedInvitees.map((p) => p.displayName),
         fromName: me,
       });
-      toast.success(`${selectedInvitees.length} Einladung(en) gesendet`);
+      toast.success(language.match({ english: () => `${selectedInvitees.length} invitation(s) sent`, german: () => `${selectedInvitees.length} Einladung(en) gesendet` }));
       setSelectedInvitees([]);
       setInviteSearch("");
       setInviteOpen(false);
     } catch {
-      toast.error("Fehler beim Senden der Einladungen");
+      toast.error(language.match({ english: () => "Error sending invitations", german: () => "Fehler beim Senden der Einladungen" }));
     }
   };
 
@@ -470,6 +454,21 @@ function ForumDetailLayout({
   deletePostMutation: (args: any) => any;
   deleteCommentMutation: (args: any) => any;
 }) {
+  const { language } = useLanguage();
+  const tTagLabels: Record<string, string> = {
+    frage: language.match({ english: () => "Question", german: () => "Frage" }),
+    material: language.match({ english: () => "Material", german: () => "Material" }),
+    diskussion: language.match({ english: () => "Discussion", german: () => "Diskussion" }),
+  };
+  const formatDate = (ts: number) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return language.match({ english: () => "just now", german: () => "gerade eben" });
+    if (m < 60) return language.match({ english: () => `${m} min ago`, german: () => `vor ${m} Min` });
+    const h = Math.floor(m / 60);
+    if (h < 24) return language.match({ english: () => `${h} hr ago`, german: () => `vor ${h} Std` });
+    return new Date(ts).toLocaleDateString("de-DE");
+  };
   const Icon = forum.visibility === "public" ? Hash : Lock;
 
   return (
@@ -483,7 +482,7 @@ function ForumDetailLayout({
             onClick={() => navigate("/forum")}
             className="gap-1.5 mb-4 -ml-2"
           >
-            <ArrowLeft className="h-4 w-4" /> Alle Foren
+            <ArrowLeft className="h-4 w-4" /> {language.match({ english: () => "All Forums", german: () => "Alle Foren" })}
           </Button>
 
           <motion.div
@@ -498,10 +497,10 @@ function ForumDetailLayout({
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <Badge variant="outline" className="text-[10px]">
-                    {forum.visibility === "public" ? "Öffentlich" : "Privat"}
+                    {forum.visibility === "public" ? language.match({ english: () => "Public", german: () => "Öffentlich" }) : language.match({ english: () => "Private", german: () => "Privat" })}
                   </Badge>
                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {forum.members.length} Mitglieder
+                    <Users className="h-3 w-3" /> {forum.members.length} {language.match({ english: () => "Members", german: () => "Mitglieder" })}
                   </span>
                 </div>
                 <h1 className="font-heading text-3xl font-bold tracking-tight">{forum.name}</h1>
@@ -520,44 +519,44 @@ function ForumDetailLayout({
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-foreground/80">{forum.vorlesung}</span>
                     )}
                     {forum.professor && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-foreground/80">Prof. {forum.professor}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-foreground/80">{language.match({ english: () => "Prof. ", german: () => "Prof. " })}{forum.professor}</span>
                     )}
                   </div>
                 )}
               </div>
               <div className="flex flex-col gap-2 shrink-0">
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInviteOpen(true)}>
-                  <UserPlus className="h-4 w-4" /> Einladen
+                  <UserPlus className="h-4 w-4" /> {language.match({ english: () => "Invite", german: () => "Einladen" })}
                 </Button>
                 {!isOwner && isMember && (
                   <Button size="sm" variant="ghost" onClick={handleLeave}>
-                    Verlassen
+                    {language.match({ english: () => "Leave", german: () => "Verlassen" })}
                   </Button>
                 )}
                 {isMember && (
                   forum.archivedByMe ? (
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => { try { await unarchiveForumMutation({ forumId: forum.id as any }); toast.success("Forum wiederhergestellt"); } catch { toast.error("Fehler"); } }}>
-                      <Archive className="h-4 w-4" /> Rückgängig
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => { try { await unarchiveForumMutation({ forumId: forum.id as any }); toast.success(language.match({ english: () => "Forum restored", german: () => "Forum wiederhergestellt" })); } catch { toast.error(language.match({ english: () => "Error", german: () => "Fehler" })); } }}>
+                      <Archive className="h-4 w-4" /> {language.match({ english: () => "Undo", german: () => "Rückgängig" })}
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => { try { await archiveForumMutation({ forumId: forum.id as any }); toast.success("Forum archiviert"); } catch { toast.error("Fehler"); } }}>
-                      <Archive className="h-4 w-4" /> Archivieren
+                    <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => { try { await archiveForumMutation({ forumId: forum.id as any }); toast.success(language.match({ english: () => "Forum archived", german: () => "Forum archiviert" })); } catch { toast.error(language.match({ english: () => "Error", german: () => "Fehler" })); } }}>
+                      <Archive className="h-4 w-4" /> {language.match({ english: () => "Archive", german: () => "Archivieren" })}
                     </Button>
                   )
                 )}
                 {isAdmin && (
                   <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={async () => {
-                    if (!window.confirm(`Forum „${forum.name}" wirklich löschen?`)) return;
-                    try { await deleteForumMutation({ forumId: forum.id as any }); toast.success("Forum gelöscht"); navigate("/forum"); } catch { toast.error("Fehler"); }
+                    if (!window.confirm(language.match({ english: () => `Really delete forum "${forum.name}"?`, german: () => `Forum „${forum.name}" wirklich löschen?` }))) return;
+                    try { await deleteForumMutation({ forumId: forum.id as any }); toast.success(language.match({ english: () => "Forum deleted", german: () => "Forum gelöscht" })); navigate("/forum"); } catch { toast.error(language.match({ english: () => "Error", german: () => "Fehler" })); }
                   }}>
-                    <Trash2 className="h-4 w-4" /> Löschen
+                    <Trash2 className="h-4 w-4" /> {language.match({ english: () => "Delete", german: () => "Löschen" })}
                   </Button>
                 )}
               </div>
             </div>
             {forum.visibility === "private" && (
               <div className="rounded-lg border bg-primary/5 p-2 mt-4 max-w-xs">
-                <p className="text-[10px] text-muted-foreground mb-1">Einladungscode</p>
+                <p className="text-[10px] text-muted-foreground mb-1">{language.match({ english: () => "Invite code", german: () => "Einladungscode" })}</p>
                 <div className="flex items-center gap-1">
                   <code className="flex-1 font-mono text-sm tracking-widest text-center py-1 rounded bg-background border">
                     {forum.inviteCode}
@@ -568,7 +567,7 @@ function ForumDetailLayout({
                     className="h-7 w-7"
                     onClick={() => {
                       navigator.clipboard.writeText(forum.inviteCode);
-                      toast.success("Code kopiert");
+                      toast.success(language.match({ english: () => "Code copied", german: () => "Code kopiert" }));
                     }}
                   >
                     <Copy className="h-3 w-3" />
@@ -582,24 +581,24 @@ function ForumDetailLayout({
             {/* Posts */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-heading font-semibold">Beiträge ({posts.length})</h2>
+                <h2 className="font-heading font-semibold">{language.match({ english: () => "Posts", german: () => "Beiträge" })} ({posts.length})</h2>
                 {isMember ? (
                   <Button size="sm" className="gap-1.5" onClick={() => setShowPostForm((v) => !v)}>
-                    <Plus className="h-4 w-4" /> Neuer Beitrag
+                    <Plus className="h-4 w-4" /> {language.match({ english: () => "New Post", german: () => "Neuer Beitrag" })}
                   </Button>
                 ) : forum.visibility === "public" ? (
                   <Button size="sm" className="gap-1.5" onClick={handleJoin}>
-                    <Users className="h-4 w-4" /> Beitreten
+                    <Users className="h-4 w-4" /> {language.match({ english: () => "Join", german: () => "Beitreten" })}
                   </Button>
                 ) : null}
               </div>
 
               {showPostForm && isMember && (
                 <div className="glass-card p-4 space-y-3">
-                  <Input placeholder="Titel" value={title} onChange={(e) => setTitle(e.target.value)} />
+                  <Input placeholder={language.match({ english: () => "Title", german: () => "Titel" })} value={title} onChange={(e) => setTitle(e.target.value)} />
                   {titleError && <p className="text-xs text-destructive">{titleError}</p>}
                   <Textarea
-                    placeholder="Was möchtest du teilen?"
+                    placeholder={language.match({ english: () => "What would you like to share?", german: () => "Was möchtest du teilen?" })}
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     rows={4}
@@ -615,7 +614,7 @@ function ForumDetailLayout({
                           tag === t ? tagStyles[t] : "text-muted-foreground bg-secondary border-transparent"
                         }`}
                       >
-                        {tagLabels[t]}
+                        {tTagLabels[t]}
                       </button>
                     ))}
                   </div>
@@ -623,13 +622,13 @@ function ForumDetailLayout({
                   {/* Linked scripts */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-xs text-muted-foreground">Skripte verlinken</p>
+                      <p className="text-xs text-muted-foreground">{language.match({ english: () => "Link scripts", german: () => "Skripte verlinken" })}</p>
                       <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setScriptPickerOpen(true)}>
-                        <FileText className="h-3.5 w-3.5" /> Auswählen
+                        <FileText className="h-3.5 w-3.5" /> {language.match({ english: () => "Select", german: () => "Auswählen" })}
                       </Button>
                     </div>
                     {linkedScriptIds.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground">Keine Skripte verlinkt</p>
+                      <p className="text-[11px] text-muted-foreground">{language.match({ english: () => "No scripts linked", german: () => "Keine Skripte verlinkt" })}</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {linkedScriptIds.map((id) => {
@@ -652,13 +651,13 @@ function ForumDetailLayout({
                   {/* Linked deadlines */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-xs text-muted-foreground">Deadlines verlinken</p>
+                      <p className="text-xs text-muted-foreground">{language.match({ english: () => "Link deadlines", german: () => "Deadlines verlinken" })}</p>
                       <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setDeadlinePickerOpen(true)}>
-                        <CalendarDays className="h-3.5 w-3.5" /> Auswählen
+                        <CalendarDays className="h-3.5 w-3.5" /> {language.match({ english: () => "Select", german: () => "Auswählen" })}
                       </Button>
                     </div>
                     {linkedDeadlineIds.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground">Keine Deadlines verlinkt</p>
+                      <p className="text-[11px] text-muted-foreground">{language.match({ english: () => "No deadlines linked", german: () => "Keine Deadlines verlinkt" })}</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {linkedDeadlineIds.map((id) => {
@@ -680,10 +679,10 @@ function ForumDetailLayout({
 
                   <div className="flex justify-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => setShowPostForm(false)}>
-                      Abbrechen
+                      {language.match({ english: () => "Cancel", german: () => "Abbrechen" })}
                     </Button>
                     <Button size="sm" onClick={handlePost} className="gap-1.5">
-                      <Send className="h-4 w-4" /> Veröffentlichen
+                      <Send className="h-4 w-4" /> {language.match({ english: () => "Publish", german: () => "Veröffentlichen" })}
                     </Button>
                   </div>
                 </div>
@@ -692,7 +691,7 @@ function ForumDetailLayout({
               {posts.length === 0 ? (
                 <div className="glass-card p-10 text-center">
                   <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                  <p className="text-muted-foreground text-sm">Noch keine Beiträge.</p>
+                  <p className="text-muted-foreground text-sm">{language.match({ english: () => "No posts yet.", german: () => "Noch keine Beiträge." })}</p>
                 </div>
               ) : (
                 posts.map((p) => (
@@ -707,11 +706,11 @@ function ForumDetailLayout({
                       <span>
                         {formatDate(p._creationTime)}
                         {p.updatedAt && p.updatedAt > p._creationTime + 1000 && (
-                          <> · <span className="italic">bearbeitet</span></>
+                          <> · <span className="italic">{language.match({ english: () => "edited", german: () => "bearbeitet" })}</span></>
                         )}
                       </span>
                       <Badge variant="outline" className={`${tagStyles[p.tag]} text-[10px] py-0 h-5 ml-auto`}>
-                        {tagLabels[p.tag]}
+                        {tTagLabels[p.tag]}
                       </Badge>
                     </div>
                     <h3 className="font-heading font-semibold mb-1">{p.title}</h3>
@@ -769,9 +768,9 @@ function ForumDetailLayout({
                       <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {p.commentCount}</span>
                       {isAdmin && (
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (window.confirm(`Beitrag „${p.title}" wirklich löschen?`)) deletePostMutation({ postId: p.id as any }); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (window.confirm(language.match({ english: () => `Really delete post "${p.title}"?`, german: () => `Beitrag „${p.title}" wirklich löschen?` }))) deletePostMutation({ postId: p.id as any }); }}
                           className="ml-auto inline-flex items-center gap-1 text-destructive hover:text-destructive/80 transition-colors"
-                          title="Beitrag löschen (Admin)"
+                          title={language.match({ english: () => "Delete post (Admin)", german: () => "Beitrag löschen (Admin)" })}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -785,10 +784,10 @@ function ForumDetailLayout({
             {/* Sidebar: members + linked scripts overview */}
             <aside className="space-y-4">
               <div className="glass-card p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Mitglieder</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{language.match({ english: () => "Members", german: () => "Mitglieder" })}</p>
                 <div className="space-y-1">
                   {forum.members.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Keine Mitglieder</p>
+                    <p className="text-xs text-muted-foreground">{language.match({ english: () => "No members", german: () => "Keine Mitglieder" })}</p>
                   ) : (
                     forum.members.map((m) => (
                       <div key={m.userId} className="flex items-center gap-2 text-sm">
@@ -797,7 +796,7 @@ function ForumDetailLayout({
                         </div>
                         <span className="truncate">{m.displayName}</span>
                         {forum.ownerId && m.userId === forum.ownerId && (
-                          <span className="text-[9px] px-1.5 rounded bg-secondary text-muted-foreground ml-auto">Owner</span>
+                          <span className="text-[9px] px-1.5 rounded bg-secondary text-muted-foreground ml-auto">{language.match({ english: () => "Owner", german: () => "Owner" })}</span>
                         )}
                       </div>
                     ))
@@ -807,14 +806,14 @@ function ForumDetailLayout({
 
               <div className="glass-card p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                  Verlinkte Skripte
+                  {language.match({ english: () => "Linked Scripts", german: () => "Verlinkte Skripte" })}
                 </p>
                 {(() => {
                   const used = new Set<string>();
                   posts.forEach((p) => p.linkedScriptIds?.forEach((id) => used.add(id)));
                   const linked = scripts.filter((s) => used.has(s._id));
                   if (linked.length === 0)
-                    return <p className="text-xs text-muted-foreground">Noch keine Skripte verlinkt.</p>;
+                    return <p className="text-xs text-muted-foreground">{language.match({ english: () => "No scripts linked yet.", german: () => "Noch keine Skripte verlinkt." })}</p>;
                   return (
                     <div className="space-y-1.5">
                       {linked.map((s) => (
@@ -844,16 +843,16 @@ function ForumDetailLayout({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" /> Personen einladen
+              <UserPlus className="h-5 w-5 text-primary" /> {language.match({ english: () => "Invite People", german: () => "Personen einladen" })}
             </DialogTitle>
             <DialogDescription>
-              Eingeladene Personen erhalten eine Benachrichtigung und können annehmen oder ablehnen.
+              {language.match({ english: () => "Invited people will receive a notification and can accept or decline.", german: () => "Eingeladene Personen erhalten eine Benachrichtigung und können annehmen oder ablehnen." })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="relative">
               <Input
-                placeholder="Name suchen…"
+                placeholder={language.match({ english: () => "Search name…", german: () => "Name suchen…" })}
                 value={inviteSearch}
                 onChange={(e) => setInviteSearch(e.target.value)}
                 autoComplete="off"
@@ -895,8 +894,8 @@ function ForumDetailLayout({
             {inviteError && selectedInvitees.length === 0 && <p className="text-xs text-destructive">{inviteError}</p>}
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => setInviteOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleInvite} disabled={selectedInvitees.length === 0}>Einladungen senden</Button>
+            <Button variant="outline" onClick={() => setInviteOpen(false)}>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</Button>
+            <Button onClick={handleInvite} disabled={selectedInvitees.length === 0}>{language.match({ english: () => "Send Invitations", german: () => "Einladungen senden" })}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -906,16 +905,16 @@ function ForumDetailLayout({
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" /> Skripte verlinken
+              <FileText className="h-5 w-5 text-primary" /> {language.match({ english: () => "Link Scripts", german: () => "Skripte verlinken" })}
             </DialogTitle>
             <DialogDescription>
-              Nur öffentliche Skripte aus der Bibliothek können verlinkt werden.
+              {language.match({ english: () => "Only public scripts from the library can be linked.", german: () => "Nur öffentliche Skripte aus der Bibliothek können verlinkt werden." })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-1.5">
             {scripts.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Keine Skripte verfügbar
+                {language.match({ english: () => "No scripts available", german: () => "Keine Skripte verfügbar" })}
               </p>
             ) : (
               scripts.map((s) => {
@@ -937,14 +936,14 @@ function ForumDetailLayout({
                         {s.subject}
                       </p>
                     </div>
-                    {checked && <span className="text-xs text-primary font-medium">Verlinkt</span>}
+                    {checked && <span className="text-xs text-primary font-medium">{language.match({ english: () => "Linked", german: () => "Verlinkt" })}</span>}
                   </button>
                 );
               })
             )}
           </div>
           <div className="flex justify-end pt-2 border-t">
-            <Button onClick={() => setScriptPickerOpen(false)}>Fertig</Button>
+            <Button onClick={() => setScriptPickerOpen(false)}>{language.match({ english: () => "Done", german: () => "Fertig" })}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -954,16 +953,16 @@ function ForumDetailLayout({
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-warning" /> Deadlines verlinken
+              <CalendarDays className="h-5 w-5 text-warning" /> {language.match({ english: () => "Link Deadlines", german: () => "Deadlines verlinken" })}
             </DialogTitle>
             <DialogDescription>
-              Wähle Deadlines aus, die in diesem Beitrag verlinkt werden sollen.
+              {language.match({ english: () => "Select deadlines to link in this post.", german: () => "Wähle Deadlines aus, die in diesem Beitrag verlinkt werden sollen." })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-1.5">
             {deadlines.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Keine Deadlines verfügbar
+                {language.match({ english: () => "No deadlines available", german: () => "Keine Deadlines verfügbar" })}
               </p>
             ) : (
               deadlines.map((d) => {
@@ -985,14 +984,14 @@ function ForumDetailLayout({
                         {d.date} · {d.category}
                       </p>
                     </div>
-                    {checked && <span className="text-xs text-warning font-medium">Verlinkt</span>}
+                    {checked && <span className="text-xs text-warning font-medium">{language.match({ english: () => "Linked", german: () => "Verlinkt" })}</span>}
                   </button>
                 );
               })
             )}
           </div>
           <div className="flex justify-end pt-2 border-t">
-            <Button onClick={() => setDeadlinePickerOpen(false)}>Fertig</Button>
+            <Button onClick={() => setDeadlinePickerOpen(false)}>{language.match({ english: () => "Done", german: () => "Fertig" })}</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -71,25 +71,25 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
     setKurs(profile?.kurs ?? "");
   }, [open, profile]);
 
-  const displayNameError = !displayName.trim() ? "Erforderlich." : displayName.trim().length < 2 ? "Mindestens 2 Zeichen." : "";
-  const studienfachError = !studienfach ? "Erforderlich." : "";
-  const matrikelnummerError = !matrikelnummer ? "Erforderlich." : !/^\d{5,10}$/.test(matrikelnummer) ? "5–10 Ziffern." : "";
-  const hochschuleError = !hochschule ? "Bitte einen DHBW-Standort wählen." : "";
-  const kursError = !kurs ? "Erforderlich." : "";
-  const passwordError = newPw.length > 0 && newPw.length < 6 ? "Mindestens 6 Zeichen." : newPw && confirmPw && newPw !== confirmPw ? "Die Passwörter stimmen nicht überein." : "";
+  const displayNameError = !displayName.trim() ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : displayName.trim().length < 2 ? language.match({ english: () => "At least 2 characters.", german: () => "Mindestens 2 Zeichen." }) : "";
+  const studienfachError = !studienfach ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : "";
+  const matrikelnummerError = !matrikelnummer ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : !/^\d{5,10}$/.test(matrikelnummer) ? language.match({ english: () => "5–10 digits.", german: () => "5–10 Ziffern." }) : "";
+  const hochschuleError = !hochschule ? language.match({ english: () => "Please select a DHBW location.", german: () => "Bitte einen DHBW-Standort wählen." }) : "";
+  const kursError = !kurs ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : "";
+  const passwordError = newPw.length > 0 && newPw.length < 6 ? language.match({ english: () => "At least 6 characters.", german: () => "Mindestens 6 Zeichen." }) : newPw && confirmPw && newPw !== confirmPw ? language.match({ english: () => "Passwords do not match.", german: () => "Die Passwörter stimmen nicht überein." }) : "";
 
   const saveProfile = async () => {
     if (!user) return;
     const nextErrors: Record<string, string> = {};
-    if (!displayName.trim()) nextErrors.displayName = "Erforderlich.";
-    else if (displayName.trim().length < 2) nextErrors.displayName = "Mindestens 2 Zeichen.";
-    if (!studienfach) nextErrors.studienfach = "Erforderlich.";
-    if (!hochschule) nextErrors.hochschule = "Bitte einen DHBW-Standort wählen.";
-    if (!kurs) nextErrors.kurs = "Erforderlich.";
-    if (!matrikelnummer) nextErrors.matrikelnummer = "Erforderlich.";
-    else if (!/^\d{5,10}$/.test(matrikelnummer)) nextErrors.matrikelnummer = "5–10 Ziffern.";
+    if (!displayName.trim()) nextErrors.displayName = language.match({ english: () => "Required.", german: () => "Erforderlich." });
+    else if (displayName.trim().length < 2) nextErrors.displayName = language.match({ english: () => "At least 2 characters.", german: () => "Mindestens 2 Zeichen." });
+    if (!studienfach) nextErrors.studienfach = language.match({ english: () => "Required.", german: () => "Erforderlich." });
+    if (!hochschule) nextErrors.hochschule = language.match({ english: () => "Please select a DHBW location.", german: () => "Bitte einen DHBW-Standort wählen." });
+    if (!kurs) nextErrors.kurs = language.match({ english: () => "Required.", german: () => "Erforderlich." });
+    if (!matrikelnummer) nextErrors.matrikelnummer = language.match({ english: () => "Required.", german: () => "Erforderlich." });
+    else if (!/^\d{5,10}$/.test(matrikelnummer)) nextErrors.matrikelnummer = language.match({ english: () => "5–10 digits.", german: () => "5–10 Ziffern." });
     if (Object.keys(nextErrors).length > 0) {
-      toast({ title: "Eingaben prüfen", description: "Bitte markierte Felder korrigieren.", variant: "destructive" });
+      toast({ title: language.match({ english: () => "Check input", german: () => "Eingaben prüfen" }), description: language.match({ english: () => "Please correct the highlighted fields.", german: () => "Bitte markierte Felder korrigieren." }), variant: "destructive" });
       return;
     }
     setSavingProfile(true);
@@ -112,9 +112,9 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
           email: user.email ?? undefined,
         });
       }
-      toast({ title: "Gespeichert", description: "Dein Profil wurde aktualisiert." });
+      toast({ title: language.match({ english: () => "Saved", german: () => "Gespeichert" }), description: language.match({ english: () => "Your profile has been updated.", german: () => "Dein Profil wurde aktualisiert." }) });
     } catch (err: any) {
-      toast({ title: "Fehler", description: err?.message ?? "Speichern fehlgeschlagen", variant: "destructive" });
+      toast({ title: language.match({ english: () => "Error", german: () => "Fehler" }), description: err?.message ?? language.match({ english: () => "Save failed", german: () => "Speichern fehlgeschlagen" }), variant: "destructive" });
     } finally {
       setSavingProfile(false);
     }
@@ -122,28 +122,28 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
 
   const changePassword = async () => {
     if (IS_DEMO) {
-      toast({ title: "Demo-Modus", description: "Passwortänderung ist im Demo-Modus deaktiviert." });
+      toast({ title: language.match({ english: () => "Demo mode", german: () => "Demo-Modus" }), description: language.match({ english: () => "Password change is not available in demo mode.", german: () => "Passwortänderung ist im Demo-Modus deaktiviert." }) });
       return;
     }
     if (!clerkUser) return;
     if (newPw.length < 6) {
-      toast({ title: "Passwort zu kurz", description: "Mindestens 6 Zeichen.", variant: "destructive" });
+      toast({ title: language.match({ english: () => "Password too short", german: () => "Passwort zu kurz" }), description: language.match({ english: () => "At least 6 characters.", german: () => "Mindestens 6 Zeichen." }), variant: "destructive" });
       return;
     }
     if (newPw !== confirmPw) {
-      toast({ title: "Passwörter ungleich", description: "Bitte überprüfen.", variant: "destructive" });
+      toast({ title: language.match({ english: () => "Passwords do not match", german: () => "Passwörter ungleich" }), description: language.match({ english: () => "Please check.", german: () => "Bitte überprüfen." }), variant: "destructive" });
       return;
     }
     setSavingPw(true);
     try {
       await clerkUser.updatePassword({ newPassword: newPw });
-      toast({ title: "Passwort geändert", description: "Dein Passwort wurde aktualisiert." });
+      toast({ title: language.match({ english: () => "Password changed", german: () => "Passwort geändert" }), description: language.match({ english: () => "Your password has been updated.", german: () => "Dein Passwort wurde aktualisiert." }) });
       setNewPw("");
       setConfirmPw("");
     } catch (err: any) {
       toast({
-        title: "Fehler",
-        description: err?.errors?.[0]?.message ?? err?.message ?? "Konnte Passwort nicht ändern",
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
+        description: err?.errors?.[0]?.message ?? err?.message ?? language.match({ english: () => "Could not change password", german: () => "Konnte Passwort nicht ändern" }),
         variant: "destructive",
       });
     } finally {
@@ -155,32 +155,32 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Account-Einstellungen</DialogTitle>
-          <DialogDescription>Verwalte dein Profil und dein Passwort.</DialogDescription>
+          <DialogTitle>{language.match({ english: () => "Account settings", german: () => "Account-Einstellungen" })}</DialogTitle>
+          <DialogDescription>{language.match({ english: () => "Manage your profile and password.", german: () => "Verwalte dein Profil und dein Passwort." })}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-2">
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="profile" className="gap-2">
-              <UserIcon className="h-4 w-4" /> Profil
+              <UserIcon className="h-4 w-4" /> {language.match({ english: () => "Profile", german: () => "Profil" })}
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
-              <KeyRound className="h-4 w-4" /> Login
+              <KeyRound className="h-4 w-4" /> {language.match({ english: () => "Login", german: () => "Login" })}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label>E-Mail</Label>
+              <Label>{language.match({ english: () => "Email", german: () => "E-Mail" })}</Label>
               <Input value={user?.email ?? ""} disabled />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dn">Anzeigename *</Label>
+              <Label htmlFor="dn">{language.match({ english: () => "Display name *", german: () => "Anzeigename *" })}</Label>
               <Input id="dn" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               {displayNameError && <p className="text-xs text-destructive">{displayNameError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mn">Matrikelnummer *</Label>
+              <Label htmlFor="mn">{language.match({ english: () => "Matriculation number *", german: () => "Matrikelnummer *" })}</Label>
               <Input
                 id="mn"
                 inputMode="numeric"
@@ -192,7 +192,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
             </div>
 
             <div className="space-y-2">
-              <Label>Sprache</Label>
+              <Label>{language.match({ english: () => "Language", german: () => "Sprache" })}</Label>
 
               <Select value={
                 language.match({
@@ -204,20 +204,20 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
                 setLanguage(Enum.variant((v as any as "english" | "german" ), {}));
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Standort wählen" />
+                  <SelectValue placeholder={language.match({ english: () => "Select location", german: () => "Standort wählen" })} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem key={"Deutsch"} value={"german"} >Deutsch</SelectItem>
+                  <SelectItem key={"Deutsch"} value={"german"} >{language.match({ english: () => "German", german: () => "Deutsch" })}</SelectItem>
                   <SelectItem key={"English (US)"} value={"english"} >English (US)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>DHBW-Standort *</Label>
+              <Label>{language.match({ english: () => "DHBW location *", german: () => "DHBW-Standort *" })}</Label>
               <Select value={hochschule} onValueChange={setHochschule}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Standort wählen" />
+                  <SelectValue placeholder={language.match({ english: () => "Select location", german: () => "Standort wählen" })} />
                 </SelectTrigger>
                 <SelectContent>
                   {DHBW_STANDORTE.map((s) => (
@@ -230,50 +230,50 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
               {hochschuleError && <p className="text-xs text-destructive">{hochschuleError}</p>}
             </div>
             <div className="space-y-2">
-              <Label>Studiengang *</Label>
+              <Label>{language.match({ english: () => "Course of study *", german: () => "Studiengang *" })}</Label>
               <Combobox
                 value={studienfach}
                 onChange={setStudienfach}
                 options={STUDIENFAECHER}
-                placeholder="Studiengang wählen"
+                placeholder={language.match({ english: () => "Select course of study", german: () => "Studiengang wählen" })}
               />
               {studienfachError && <p className="text-xs text-destructive">{studienfachError}</p>}
             </div>
             <div className="space-y-2">
-              <Label>Kurs *</Label>
+              <Label>{language.match({ english: () => "Course *", german: () => "Kurs *" })}</Label>
               <Combobox
                 value={kurs}
                 onChange={setKurs}
                 options={KURSE}
-                placeholder="Kurs wählen"
+                placeholder={language.match({ english: () => "Select course", german: () => "Kurs wählen" })}
               />
               {kursError && <p className="text-xs text-destructive">{kursError}</p>}
             </div>
             <Button onClick={saveProfile} disabled={savingProfile} className="w-full gap-2">
               {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Profil speichern
+              {language.match({ english: () => "Save profile", german: () => "Profil speichern" })}
             </Button>
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4 mt-4">
             {IS_DEMO ? (
               <p className="text-sm text-muted-foreground">
-                Passwortänderung ist im Demo-Modus nicht verfügbar.
+                {language.match({ english: () => "Password change is not available in demo mode.", german: () => "Passwortänderung ist im Demo-Modus nicht verfügbar." })}
               </p>
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label>Neues Passwort</Label>
+                  <Label>{language.match({ english: () => "New password", german: () => "Neues Passwort" })}</Label>
                   <Input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Neues Passwort bestätigen</Label>
+                  <Label>{language.match({ english: () => "Confirm new password", german: () => "Neues Passwort bestätigen" })}</Label>
                   <Input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
                   {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
                 </div>
                 <Button onClick={changePassword} disabled={savingPw} className="w-full gap-2">
                   {savingPw ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                  Passwort ändern
+                  {language.match({ english: () => "Change password", german: () => "Passwort ändern" })}
                 </Button>
               </>
             )}

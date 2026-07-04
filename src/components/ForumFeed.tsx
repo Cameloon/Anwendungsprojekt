@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Hash, MessageSquare, ThumbsUp, MessageCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -19,6 +20,7 @@ const loadHidden = (): string[] => {
 const saveHidden = (h: string[]) => localStorage.setItem(HIDDEN_KEY, JSON.stringify(h));
 
 const ForumFeed = () => {
+  const { language } = useLanguage();
   const forumsQuery = useQuery(api.forums.getAllAccessible);
   const recentPostsQuery = useQuery(api.posts.listRecent);
 
@@ -55,10 +57,10 @@ const ForumFeed = () => {
   const formatDate = (ts: number) => {
     const diff = Date.now() - ts;
     const m = Math.floor(diff / 60000);
-    if (m < 1) return "gerade eben";
-    if (m < 60) return `vor ${m} Min`;
+    if (m < 1) return language.match({ english: () => "Just now", german: () => "gerade eben" });
+    if (m < 60) return language.match({ english: () => `${m} min ago`, german: () => `vor ${m} Min` });
     const h = Math.floor(m / 60);
-    if (h < 24) return `vor ${h} Std`;
+    if (h < 24) return language.match({ english: () => `${h} hr ago`, german: () => `vor ${h} Std` });
     return new Date(ts).toLocaleDateString("de-DE");
   };
 
@@ -67,16 +69,16 @@ const ForumFeed = () => {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-primary" />
-          <h2 className="font-heading font-semibold text-lg">Aktuelle Forum-Beiträge</h2>
+          <h2 className="font-heading font-semibold text-lg">{language.match({ english: () => "Recent Forum Posts", german: () => "Aktuelle Forum-Beiträge" })}</h2>
         </div>
         <Link to="/forum" className="text-sm text-primary hover:underline flex items-center gap-1">
-          Zum Forum <ArrowRight className="h-3 w-3" />
+          {language.match({ english: () => "Go to Forum", german: () => "Zum Forum" })} <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
       {visible.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6 text-center">
-          Alle Foren sind ausgeblendet. Aktiviere unten ein Forum, um Beiträge zu sehen.
+          {language.match({ english: () => "All forums are hidden. Enable a forum below to see posts.", german: () => "Alle Foren sind ausgeblendet. Aktiviere unten ein Forum, um Beiträge zu sehen." })}
         </p>
       ) : (
         <div className="space-y-6">
@@ -90,13 +92,13 @@ const ForumFeed = () => {
                 <button
                   onClick={() => toggleHidden(forum.id)}
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                  title="Forum im Dashboard ausblenden"
+                  title={language.match({ english: () => "Hide forum from dashboard", german: () => "Forum im Dashboard ausblenden" })}
                 >
-                  <EyeOff className="h-3.5 w-3.5" /> Ausblenden
+                  <EyeOff className="h-3.5 w-3.5" /> {language.match({ english: () => "Hide", german: () => "Ausblenden" })}
                 </button>
               </div>
               {forum.posts.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">Noch keine Beiträge.</p>
+                <p className="text-xs text-muted-foreground py-2">{language.match({ english: () => "No posts yet.", german: () => "Noch keine Beiträge." })}</p>
               ) : (
                 <ul className="divide-y divide-border/60">
                   {forum.posts.map((p) => (
@@ -128,7 +130,7 @@ const ForumFeed = () => {
 
       {hiddenForums.length > 0 && (
         <div className="mt-5 pt-4 border-t border-border/60">
-          <p className="text-xs text-muted-foreground mb-2">Ausgeblendet</p>
+          <p className="text-xs text-muted-foreground mb-2">{language.match({ english: () => "Hidden", german: () => "Ausgeblendet" })}</p>
           <div className="flex flex-wrap gap-2">
             {hiddenForums.map((f) => (
               <Button
@@ -138,7 +140,7 @@ const ForumFeed = () => {
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => toggleHidden(f.id)}
               >
-                <Eye className="h-3 w-3" /> {f.name} einblenden
+                <Eye className="h-3 w-3" /> {f.name} {language.match({ english: () => "show", german: () => "einblenden" })}
               </Button>
             ))}
           </div>

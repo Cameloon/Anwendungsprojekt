@@ -3,19 +3,10 @@ import { Bell, Check, X, CalendarDays, MessageSquare, Inbox } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-
-const formatTime = (ts: number) => {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "gerade eben";
-  if (m < 60) return `vor ${m} Min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `vor ${h} Std`;
-  return new Date(ts).toLocaleDateString("de-DE");
-};
 
 interface NotificationItem {
   id: string;
@@ -28,12 +19,23 @@ interface NotificationItem {
 }
 
 const NotificationsBell = () => {
+  const { language } = useLanguage();
   const notificationsQuery = useQuery(api.notifications.listForUser);
   const acceptMutation = useMutation(api.notifications.accept);
   const declineMutation = useMutation(api.notifications.decline);
   const removeMutation = useMutation(api.notifications.remove);
 
   const [open, setOpen] = useState(false);
+
+  const formatTime = (ts: number) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return language.match({ english: () => "Just now", german: () => "gerade eben" });
+    if (m < 60) return language.match({ english: () => `${m} min ago`, german: () => `vor ${m} Min` });
+    const h = Math.floor(m / 60);
+    if (h < 24) return language.match({ english: () => `${h} hr ago`, german: () => `vor ${h} Std` });
+    return new Date(ts).toLocaleDateString("de-DE");
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const raw: any[] = (notificationsQuery ?? []) as any[];
@@ -53,18 +55,18 @@ const NotificationsBell = () => {
   const acceptNotification = async (id: string) => {
     try {
       await acceptMutation({ notificationId: id as Id<"notifications"> });
-      toast.success("Einladung angenommen");
+      toast.success(language.match({ english: () => "Invitation accepted", german: () => "Einladung angenommen" }));
     } catch {
-      toast.error("Fehler");
+      toast.error(language.match({ english: () => "Error", german: () => "Fehler" }));
     }
   };
 
   const declineNotification = async (id: string) => {
     try {
       await declineMutation({ notificationId: id as Id<"notifications"> });
-      toast("Abgelehnt");
+      toast(language.match({ english: () => "Declined", german: () => "Abgelehnt" }));
     } catch {
-      toast.error("Fehler");
+      toast.error(language.match({ english: () => "Error", german: () => "Fehler" }));
     }
   };
 
@@ -72,7 +74,7 @@ const NotificationsBell = () => {
     try {
       await removeMutation({ notificationId: id as Id<"notifications"> });
     } catch {
-      toast.error("Fehler");
+      toast.error(language.match({ english: () => "Error", german: () => "Fehler" }));
     }
   };
 
@@ -90,16 +92,16 @@ const NotificationsBell = () => {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0 max-h-[28rem] overflow-hidden flex flex-col">
         <div className="px-4 py-3 border-b">
-          <p className="font-heading font-semibold text-sm">Benachrichtigungen</p>
+          <p className="font-heading font-semibold text-sm">{language.match({ english: () => "Notifications", german: () => "Benachrichtigungen" })}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Einladungen zu Foren und Terminen
+            {language.match({ english: () => "Invitations to forums and deadlines", german: () => "Einladungen zu Foren und Terminen" })}
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">Keine Benachrichtigungen</p>
+              <p className="text-xs">{language.match({ english: () => "No notifications", german: () => "Keine Benachrichtigungen" })}</p>
             </div>
           )}
           {items.map((n) => {
@@ -113,11 +115,16 @@ const NotificationsBell = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs leading-snug">
                       <span className="font-semibold">{n.fromName}</span>
-                      {" lädt "}
+                      {language.match({ english: () => " invites ", german: () => " lädt " })}
                       <span className="font-semibold">{n.recipientName}</span>
-                      {n.type === "forum_invite" ? " ins Forum " : " zum Termin "}
-                      <span className="font-semibold">„{n.title}"</span>
-                      {" ein."}
+                      {n.type === "forum_invite"
+                        ? language.match({ english: () => " to forum ", german: () => " ins Forum " })
+                        : language.match({ english: () => " to deadline ", german: () => " zum Termin " })}
+                      <span className="font-semibold">
+                        {language.match({ english: () => '"', german: () => '„' })}
+                        {n.title}"
+                      </span>
+                      {language.match({ english: () => ".", german: () => " ein." })}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {formatTime(n.createdAt)}
@@ -129,7 +136,7 @@ const NotificationsBell = () => {
                           className="h-7 text-xs gap-1 flex-1"
                           onClick={() => acceptNotification(n.id)}
                         >
-                          <Check className="h-3 w-3" /> Annehmen
+                          <Check className="h-3 w-3" /> {language.match({ english: () => "Accept", german: () => "Annehmen" })}
                         </Button>
                         <Button
                           size="sm"
@@ -137,7 +144,7 @@ const NotificationsBell = () => {
                           className="h-7 text-xs gap-1 flex-1"
                           onClick={() => declineNotification(n.id)}
                         >
-                          <X className="h-3 w-3" /> Ablehnen
+                          <X className="h-3 w-3" /> {language.match({ english: () => "Decline", german: () => "Ablehnen" })}
                         </Button>
                       </div>
                     ) : (
@@ -149,13 +156,15 @@ const NotificationsBell = () => {
                               : "bg-secondary text-muted-foreground"
                           }`}
                         >
-                          {n.status === "accepted" ? "Angenommen" : "Abgelehnt"}
+                          {n.status === "accepted"
+                            ? language.match({ english: () => "Accepted", german: () => "Angenommen" })
+                            : language.match({ english: () => "Declined", german: () => "Abgelehnt" })}
                         </span>
                         <button
                           onClick={() => removeNotification(n.id)}
                           className="text-[10px] text-muted-foreground hover:text-destructive"
                         >
-                          Entfernen
+                          {language.match({ english: () => "Remove", german: () => "Entfernen" })}
                         </button>
                       </div>
                     )}

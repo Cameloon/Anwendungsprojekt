@@ -16,23 +16,37 @@ import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-
-const QUOTES = [
-  "Der Weg ist das Ziel.",
-  "Kleine Schritte, grosse Wirkung.",
-  "Beginne - der Rest folgt.",
-  "Heute ist ein guter Tag zum Lernen.",
-];
-
-const greeting = () => {
-  const h = new Date().getHours();
-  if (h < 11) return "Guten Morgen";
-  if (h < 18) return "Hallo";
-  return "Guten Abend";
-};
+import { useLanguage } from "@/hooks/useLanguage";
 
 const DashboardPage = () => {
   const profile = useProfile();
+  const { language } = useLanguage();
+
+
+  const QUOTES = language.match({
+    english: () => {
+      return([
+        "Small steps lead to big results.",
+        "Today is a great day to learn something new.",
+        "One step at a time."
+      ]);
+    },
+    german: () => {
+      return([
+        "Der Weg ist das Ziel",
+        "Kleine Schritte, große Wirkung",
+        "Beginne - der Rest folgt.",
+        "Heute ist ein guter Tag zum Lernen.",
+      ]);
+    }
+  })
+  
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 11) return language.match({ english: () => "Good morning", german: () => "Guten Morgen" });
+    if (h < 18) return language.match({ english: () => "Hello", german: () => "Hallo" });
+    return language.match({ english: () => "Good evening", german: () => "Guten Abend" });
+  };
   const postsData = useQuery(api.posts.listRecent);
   const scriptsData = useQuery(api.scripts.listVisible);
   const deadlinesData = useQuery(api.deadlines.listForUser);
@@ -116,18 +130,18 @@ const DashboardPage = () => {
   const latestScriptsCount = latestScripts.length;
 
   const latestPostsHint =
-    latestPostsCount > 0 ? "Neueste Einträge im Forum" : "Keine aktuellen Beiträge";
+    latestPostsCount > 0 ? language.match({ english: () => "Latest forum posts", german: () => "Neueste Einträge im Forum" }) : language.match({ english: () => "No recent posts", german: () => "Keine aktuellen Beiträge" });
   const latestScriptsHint =
-    latestScriptsCount > 0 ? "Neueste Uploads in der Bibliothek" : "Keine aktuellen Skripte";
+    latestScriptsCount > 0 ? language.match({ english: () => "Latest library uploads", german: () => "Neueste Uploads in der Bibliothek" }) : language.match({ english: () => "No recent scripts", german: () => "Keine aktuellen Skripte" });
   const quote = useMemo(() => QUOTES[now.getDate() % QUOTES.length], [now]);
 
   const overviewBlocks = selectedSubject
     ? [
         {
-          title: "Termine",
+          title: language.match({ english: () => "Deadlines", german: () => "Termine" }),
           icon: <CalendarDays className="h-4 w-4" />,
           linkTo: "/planner",
-          linkLabel: "Planer",
+          linkLabel: language.match({ english: () => "Planner", german: () => "Planer" }),
           items: selectedDeadlines.map((deadline) => ({
             title: deadline.title,
             meta: new Date(deadline.date).toLocaleDateString("de-DE", {
@@ -140,46 +154,46 @@ const DashboardPage = () => {
             badgeClass: deadline.done
               ? "bg-success/15 text-success"
               : "bg-primary/10 text-primary",
-            badgeText: deadline.done ? "Erledigt" : "Offen",
+            badgeText: deadline.done ? language.match({ english: () => "Done", german: () => "Erledigt" }) : language.match({ english: () => "Open", german: () => "Offen" }),
           })),
-          emptyText: "Keine Termine.",
+          emptyText: language.match({ english: () => "No deadlines.", german: () => "Keine Termine." }),
         },
         {
-          title: "Forenbeiträge",
+          title: language.match({ english: () => "Forum Posts", german: () => "Forenbeiträge" }),
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
-          linkLabel: "Forum",
+          linkLabel: language.match({ english: () => "Forum", german: () => "Forum" }),
           items: selectedPosts.map((post) => ({
             title: post.title,
             meta: post.tag || "Forum",
             extra: post.content,
             itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
-          emptyText: "Keine Beiträge.",
+          emptyText: language.match({ english: () => "No posts.", german: () => "Keine Beiträge." }),
         },
         {
-          title: "Skripte",
+          title: language.match({ english: () => "Scripts", german: () => "Skripte" }),
           icon: <BookOpen className="h-4 w-4" />,
           linkTo: "/skripte",
-          linkLabel: "Bibliothek",
+          linkLabel: language.match({ english: () => "Library", german: () => "Bibliothek" }),
           items: selectedScripts.map((script) => ({
             title: script.title,
             meta: `${script.subject} - ${script.authorName}`,
             extra: script.description || "",
             itemLink: `/skripte?script=${script._id}`,
           })),
-          emptyText: "Keine Skripte.",
+          emptyText: language.match({ english: () => "No scripts.", german: () => "Keine Skripte." }),
         },
       ]
     : [
         {
-          title: "Alle Termine",
+          title: language.match({ english: () => "All Deadlines", german: () => "Alle Termine" }),
           icon: <CalendarDays className="h-4 w-4" />,
           linkTo: "/planner",
-          linkLabel: "Planer",
+          linkLabel: language.match({ english: () => "Planner", german: () => "Planer" }),
           items: latestDeadlines.map((deadline) => ({
             title: deadline.title,
-            meta: `${deadline.vorlesung || "Planer"} - ${new Date(deadline.date).toLocaleDateString("de-DE", {
+            meta: `${deadline.vorlesung || language.match({ english: () => "Planner", german: () => "Planer" })} - ${new Date(deadline.date).toLocaleDateString("de-DE", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -189,57 +203,57 @@ const DashboardPage = () => {
             badgeClass: deadline.done
               ? "bg-success/15 text-success"
               : "bg-primary/10 text-primary",
-            badgeText: deadline.done ? "Erledigt" : "Offen",
+            badgeText: deadline.done ? language.match({ english: () => "Done", german: () => "Erledigt" }) : language.match({ english: () => "Open", german: () => "Offen" }),
           })),
-          emptyText: "Keine Termine.",
+          emptyText: language.match({ english: () => "No deadlines.", german: () => "Keine Termine." }),
         },
         {
-          title: "Alle Forenbeiträge",
+          title: language.match({ english: () => "All Forum Posts", german: () => "Alle Forenbeiträge" }),
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
-          linkLabel: "Forum",
+          linkLabel: language.match({ english: () => "Forum", german: () => "Forum" }),
           items: latestPosts.map((post) => ({
             title: post.title,
             meta: post.tag || "Forum",
             extra: post.content,
             itemLink: `/forum/${post.forumId}/post/${post._id}`,
           })),
-          emptyText: "Keine Beiträge.",
+          emptyText: language.match({ english: () => "No posts.", german: () => "Keine Beiträge." }),
         },
         {
-          title: "Alle Skripte",
+          title: language.match({ english: () => "All Scripts", german: () => "Alle Skripte" }),
           icon: <BookOpen className="h-4 w-4" />,
           linkTo: "/skripte",
-          linkLabel: "Bibliothek",
+          linkLabel: language.match({ english: () => "Library", german: () => "Bibliothek" }),
           items: latestScripts.map((script) => ({
             title: script.title,
             meta: `${script.subject} - ${script.authorName}`,
             extra: script.description || "",
             itemLink: `/skripte?script=${script._id}`,
           })),
-          emptyText: "Keine Skripte.",
+          emptyText: language.match({ english: () => "No scripts.", german: () => "Keine Skripte." }),
         },
       ];
 
-  const activeSubject = selectedSubject ?? "Alle Vorlesungen";
+  const activeSubject = selectedSubject ?? language.match({ english: () => "All Lectures", german: () => "Alle Vorlesungen" });
   const activeSubjectDescription = selectedSubject
-    ? `Inhalte für ${selectedSubject}`
-    : "Gesamtansicht aller Vorlesungen";
+    ? language.match({ english: () => `Content for ${selectedSubject}`, german: () => `Inhalte für ${selectedSubject}` })
+    : language.match({ english: () => "Overview of all lectures", german: () => "Gesamtansicht aller Vorlesungen" });
 
   const nextDeadlineValue = nextDeadline
     ? new Date(nextDeadline.date).toLocaleDateString("de-DE", {
         day: "2-digit",
         month: "2-digit",
       })
-    : "Kein Termin";
-  const nextDeadlineHint = nextDeadline ? nextDeadline.title : "Nichts geplant";
+    : language.match({ english: () => "No deadline", german: () => "Kein Termin" });
+  const nextDeadlineHint = nextDeadline ? nextDeadline.title : language.match({ english: () => "Nothing planned", german: () => "Nichts geplant" });
   const openDeadlinesValue = openDeadlines.length;
   const openDeadlinesHint =
     openDeadlines.length === 0
-      ? "Alles erledigt"
+      ? language.match({ english: () => "All done", german: () => "Alles erledigt" })
       : urgentDeadlinesCount > 0
-        ? `${urgentDeadlinesCount} dringend`
-        : "Gut im Plan";
+        ? language.match({ english: () => `${urgentDeadlinesCount} urgent`, german: () => `${urgentDeadlinesCount} dringend` })
+        : language.match({ english: () => "On track", german: () => "Gut im Plan" });
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,7 +286,7 @@ const DashboardPage = () => {
               <div className="relative mt-6 flex flex-wrap gap-2">
                 <Link to="/planner">
                   <Button size="lg" variant="secondary" className="gap-2">
-                    <Plus className="h-4 w-4" /> Neue Aufgabe
+                    <Plus className="h-4 w-4" /> {language.match({ english: () => "New Task", german: () => "Neue Aufgabe" })}
                   </Button>
                 </Link>
               </div>
@@ -280,7 +294,7 @@ const DashboardPage = () => {
 
             <div className="grid grid-cols-2 gap-3 lg:col-span-2">
               <HeroStat
-                label="Nächster Termin"
+                label={language.match({ english: () => "Next Deadline", german: () => "Nächster Termin" })}
                 value={nextDeadlineValue}
                 icon={<CalendarDays className="h-5 w-5" />}
                 hint={nextDeadlineHint}
@@ -289,7 +303,7 @@ const DashboardPage = () => {
                 to="/planner"
               />
               <HeroStat
-                label="Offene Termine"
+                label={language.match({ english: () => "Open Deadlines", german: () => "Offene Termine" })}
                 value={openDeadlinesValue}
                 icon={<Clock3 className="h-5 w-5" />}
                 hint={openDeadlinesHint}
@@ -297,7 +311,7 @@ const DashboardPage = () => {
                 to="/planner"
               />
               <HeroStat
-                label="Letzte Beiträge"
+                label={language.match({ english: () => "Recent Posts", german: () => "Letzte Beiträge" })}
                 value={latestPostsCount}
                 icon={<MessageSquare className="h-5 w-5" />}
                 hint={latestPostsHint}
@@ -305,7 +319,7 @@ const DashboardPage = () => {
                 to="/forum"
               />
               <HeroStat
-                label="Letzte Skripte"
+                label={language.match({ english: () => "Recent Scripts", german: () => "Letzte Skripte" })}
                 value={latestScriptsCount}
                 icon={<Files className="h-5 w-5" />}
                 hint={latestScriptsHint}
@@ -320,7 +334,7 @@ const DashboardPage = () => {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {subjectsList.length === 0 ? (
                 <div className="rounded-3xl border border-border/60 bg-card p-8 text-sm text-muted-foreground sm:col-span-2 xl:col-span-4">
-                  Keine Inhalte für die gewählte Filtereinstellung.
+                  {language.match({ english: () => "No content for the selected filter.", german: () => "Keine Inhalte für die gewählte Filtereinstellung." })}
                 </div>
               ) : (
                 subjectsList.map((subject) => {
@@ -354,7 +368,7 @@ const DashboardPage = () => {
                     >
                       <div className="mb-4 flex items-center justify-end">
                         <span className="text-xs text-muted-foreground">
-                          {total} aktuell
+                          {total} {language.match({ english: () => "current", german: () => "aktuell" })}
                         </span>
                       </div>
                       <h3 className="text-center font-heading text-xl font-medium leading-tight text-muted-foreground">
@@ -365,19 +379,19 @@ const DashboardPage = () => {
                           <p className="font-semibold text-foreground">
                             {subjectDeadlines.length}
                           </p>
-                          <p>Termine</p>
+                          <p>{language.match({ english: () => "Deadlines", german: () => "Termine" })}</p>
                         </div>
                         <div className="rounded-2xl bg-background/80 py-2">
                           <p className="font-semibold text-foreground">
                             {subjectPosts.length}
                           </p>
-                          <p>Forum</p>
+                          <p>{language.match({ english: () => "Forum", german: () => "Forum" })}</p>
                         </div>
                         <div className="rounded-2xl bg-background/80 py-2">
                           <p className="font-semibold text-foreground">
                             {subjectScripts.length}
                           </p>
-                          <p>Skripte</p>
+                          <p>{language.match({ english: () => "Scripts", german: () => "Skripte" })}</p>
                         </div>
                       </div>
                     </button>
@@ -404,7 +418,7 @@ const DashboardPage = () => {
                   onClick={() => setSelectedSubject(null)}
                   disabled={!selectedSubject}
                 >
-                  Gesamtübersicht
+                  {language.match({ english: () => "Overall View", german: () => "Gesamtübersicht" })}
                 </Button>
               </div>
             </div>

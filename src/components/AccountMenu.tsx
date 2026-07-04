@@ -76,28 +76,28 @@ const AccountMenu = () => {
           {profile?.kurs && (
             <div className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5" />
-              <span className="truncate">Kurs {profile.kurs}</span>
+              <span className="truncate">{language.match({ english: () => "Course", german: () => "Kurs" })} {profile.kurs}</span>
             </div>
           )}
           {joined && (
             <div className="flex items-center gap-2">
               <Calendar className="h-3.5 w-3.5" />
-              <span>Mitglied seit {joined}</span>
+              <span>{language.match({ english: () => "Member since", german: () => "Mitglied seit" })} {joined}</span>
             </div>
           )}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
           <UserIcon className="h-4 w-4 mr-2" />
-          Profil ansehen
+          {language.match({ english: () => "View profile", german: () => "Profil ansehen" })}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="cursor-pointer">
           <Settings className="h-4 w-4 mr-2" />
-          Account-Einstellungen
+          {language.match({ english: () => "Account settings", german: () => "Account-Einstellungen" })}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
           <LogOut className="h-4 w-4 mr-2" />
-          Abmelden
+          {language.match({ english: () => "Sign out", german: () => "Abmelden" })}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
