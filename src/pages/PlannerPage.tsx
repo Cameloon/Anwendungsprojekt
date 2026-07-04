@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
   Plus,
@@ -233,6 +234,7 @@ function PlannerPage() {
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [showPastWarning, setShowPastWarning] = useState(false);
   const pastDateConfirmed = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const deadlines: DeadlineItem[] = rawDeadlines.map((d: any) => ({
     id: d._id,
@@ -569,6 +571,26 @@ function PlannerPage() {
 
   const openDeadline = openId ? deadlines.find((d) => d.id === openId) : null;
 
+  useEffect(() => {
+    const deadlineFromQuery = searchParams.get("deadline");
+    if (!deadlineFromQuery || deadlines.length === 0) return;
+
+    const matchingDeadline = deadlines.find((deadline) => deadline.id === deadlineFromQuery);
+    if (!matchingDeadline) return;
+
+    setOpenId((current) => (current === deadlineFromQuery ? current : deadlineFromQuery));
+  }, [deadlines, searchParams]);
+
+  const closeDeadlineDetails = () => {
+    setOpenId(null);
+
+    if (!searchParams.get("deadline")) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("deadline");
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return (
     <>
     <PlannerLayout
@@ -608,6 +630,7 @@ function PlannerPage() {
       setActivePriority={setActivePriority}
       openId={openId}
       setOpenId={setOpenId}
+      closeDeadlineDetails={closeDeadlineDetails}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       newMessage={newMessage}
@@ -716,6 +739,7 @@ function PlannerLayout({
   setActivePriority,
   openId,
   setOpenId,
+  closeDeadlineDetails,
   activeTab,
   setActiveTab,
   newMessage,
@@ -799,6 +823,9 @@ function PlannerLayout({
   setActivePriority: (v: string) => void;
   openId: string | null;
   setOpenId: (v: string | null) => void;
+  closeDeadlineDetails: () => void;
+  activeTab: "files" | "forum";
+  setActiveTab: (v: "files" | "forum") => void;
   activeTab: "files" | "forum" | "discussion";
   setActiveTab: (v: "files" | "forum" | "discussion") => void;
   newMessage: string;
@@ -1712,7 +1739,7 @@ function PlannerLayout({
       </div>
 
       {/* Detail dialog */}
-      <Dialog open={!!openId} onOpenChange={(o) => { if (!o) setOpenId(null); }}>
+      <Dialog open={!!openId} onOpenChange={(o) => { if (!o) closeDeadlineDetails(); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
