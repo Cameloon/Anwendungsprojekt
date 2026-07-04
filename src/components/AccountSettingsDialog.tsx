@@ -60,6 +60,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
   // Convex hooks are safe to call unconditionally (ConvexProvider is mounted
   // in demo mode too); it's simply unused there.
   const upsertProfile = useMutation(api.profiles.upsertMine);
+  const updateMyRole = useMutation(api.admin.updateMyRole);
   const [clerkUser, setClerkUser] = useState<ReturnType<typeof useUser>["user"]>(null);
 
   const [displayName, setDisplayName] = useState("");
@@ -67,6 +68,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
   const [matrikelnummer, setMatrikelnummer] = useState("");
   const [hochschule, setHochschule] = useState("");
   const [kurs, setKurs] = useState("");
+  const [role, setRole] = useState<"admin" | "user">("user");
   const [savingProfile, setSavingProfile] = useState(false);
   // derive profile field errors from current inputs so messages clear on correction
 
@@ -82,6 +84,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
     setMatrikelnummer(profile?.matrikelnummer ?? "");
     setHochschule(profile?.hochschule ?? "");
     setKurs(profile?.kurs ?? "");
+    setRole(profile?.role ?? "user");
   }, [open, profile]);
 
   const displayNameError = !displayName.trim() ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : displayName.trim().length < 2 ? language.match({ english: () => "At least 2 characters.", german: () => "Mindestens 2 Zeichen." }) : "";
@@ -224,6 +227,35 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
                 <SelectContent>
                   <SelectItem key={"Deutsch"} value={"german"} >{language.match({ english: () => "German", german: () => "Deutsch" })}</SelectItem>
                   <SelectItem key={"English (US)"} value={"english"} >English (US)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {language.match({
+                  
+                  english: () => "This option exists temporarily for demo purposes, to make the admin view visible. In a production environment this option would not exist",
+                  
+                  german: () => "Diese Option existiert vorübergehend zu Demo-Zwecken, um die Admin-Ansicht sichtbar zu machen. In einer Produktionsumgebung würde diese Option nicht existieren" 
+
+                })}
+              </p>
+              <Label>{language.match({ english: () => "Role", german: () => "Rolle" })}</Label>
+              <Select value={role} onValueChange={(v) => {
+                setRole(v as "admin" | "user");
+                if (IS_DEMO) {
+                  demoStore.updateProfile({ role: v as "admin" | "user" });
+                } else {
+                  updateMyRole!({ role: v as "admin" | "user" });
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">{language.match({ english: () => "User", german: () => "Benutzer" })}</SelectItem>
+                  <SelectItem value="admin">{language.match({ english: () => "Admin", german: () => "Administrator" })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

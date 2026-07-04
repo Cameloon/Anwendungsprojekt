@@ -129,6 +129,22 @@ export const unbanUser = mutation({
   },
 });
 
+export const updateMyRole = mutation({
+  args: {
+    role: v.union(v.literal("admin"), v.literal("user")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) throw new Error("Profile not found");
+    await ctx.db.patch(profile._id, { role: args.role, updatedAt: Date.now() });
+  },
+});
+
 export const deleteUser = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
