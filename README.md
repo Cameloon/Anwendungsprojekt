@@ -90,9 +90,7 @@ Die Anwendung ist danach unter [http://localhost:8080](http://localhost:8080) er
 
 ### Backend Dashboard
 
-<https://dashboard.convex.dev/t/niklas-e3afb/anwendungsprojekt/>
-
----
+<https://dashboard.convex.dev/t/daniel-beljaew/studentplanner/vivid-antelope-341>
 
 ## Projektmanagement Hinweise
 
