@@ -1,8 +1,10 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, ShieldOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { language } = useLanguage();
   const { user, isAdmin, loading } = useAuth();
 
   if (loading) {
@@ -22,10 +24,10 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
             <ShieldOff className="h-6 w-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
-            Zugriff verweigert
+            {language.match({ english: () => "Access denied", german: () => "Zugriff verweigert" })}
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Dieser Bereich ist nur für Administratoren zugänglich.
+            {language.match({ english: () => "This area is only accessible to administrators.", german: () => "Dieser Bereich ist nur für Administratoren zugänglich." })}
           </p>
         </div>
       </div>

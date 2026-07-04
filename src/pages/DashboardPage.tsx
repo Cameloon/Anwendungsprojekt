@@ -21,12 +21,26 @@ import { useLanguage } from "@/hooks/useLanguage";
 const DashboardPage = () => {
   const profile = useProfile();
   const { language } = useLanguage();
-  const QUOTES = [
-    language.match({ english: () => "The journey is the destination.", german: () => "Der Weg ist das Ziel." }),
-    language.match({ english: () => "Small steps, big impact.", german: () => "Kleine Schritte, grosse Wirkung." }),
-    language.match({ english: () => "Start — the rest follows.", german: () => "Beginne - der Rest folgt." }),
-    language.match({ english: () => "Today is a good day to learn.", german: () => "Heute ist ein guter Tag zum Lernen." }),
-  ];
+
+
+  const QUOTES = language.match({
+    english: () => {
+      return([
+        "Small steps lead to big results.",
+        "Today is a great day to learn something new.",
+        "One step at a time."
+      ]);
+    },
+    german: () => {
+      return([
+        "Der Weg ist das Ziel",
+        "Kleine Schritte, große Wirkung",
+        "Beginne - der Rest folgt.",
+        "Heute ist ein guter Tag zum Lernen.",
+      ]);
+    }
+  })
+  
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 11) return language.match({ english: () => "Good morning", german: () => "Guten Morgen" });

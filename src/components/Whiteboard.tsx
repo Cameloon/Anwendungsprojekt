@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pencil, Eraser, Trash2, Download, Square, Circle as CircleIcon, Type, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 type Tool = "pen" | "eraser" | "rect" | "circle" | "text";
 
@@ -24,7 +25,12 @@ interface WhiteboardProps {
 
 const COLORS = ["#0f172a", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7"];
 
-const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLabel = "Übernehmen", fillHeight = false }: WhiteboardProps) => {
+const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLabel, fillHeight = false }: WhiteboardProps) => {
+  const { language } = useLanguage();
+  const resolvedSaveLabel = saveLabel ?? language.match({
+    english: () => "Apply",
+    german: () => "Übernehmen",
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<Tool>("pen");
@@ -126,7 +132,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
     startRef.current = p;
 
     if (tool === "text") {
-      const text = window.prompt("Text:");
+      const text = window.prompt(language.match({ english: () => "Text:", german: () => "Text:" }));
       if (!text) return;
       setStrokes((s) => [...s, { tool: "text", color, size, points: [p], text }]);
       return;
@@ -152,7 +158,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
 
   const undo = () => setStrokes((s) => s.slice(0, -1));
   const clear = () => {
-    if (window.confirm("Whiteboard wirklich leeren?")) setStrokes([]);
+    if (window.confirm(language.match({ english: () => "Clear whiteboard?", german: () => "Whiteboard wirklich leeren?" }))) setStrokes([]);
   };
   const exportPng = () => {
     const cvs = canvasRef.current;
@@ -164,11 +170,11 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
   };
 
   const tools: { id: Tool; icon: typeof Pencil; label: string }[] = [
-    { id: "pen", icon: Pencil, label: "Stift" },
-    { id: "eraser", icon: Eraser, label: "Radierer" },
-    { id: "rect", icon: Square, label: "Rechteck" },
-    { id: "circle", icon: CircleIcon, label: "Kreis" },
-    { id: "text", icon: Type, label: "Text" },
+    { id: "pen", icon: Pencil, label: language.match({ english: () => "Pen", german: () => "Stift" }) },
+    { id: "eraser", icon: Eraser, label: language.match({ english: () => "Eraser", german: () => "Radierer" }) },
+    { id: "rect", icon: Square, label: language.match({ english: () => "Rectangle", german: () => "Rechteck" }) },
+    { id: "circle", icon: CircleIcon, label: language.match({ english: () => "Circle", german: () => "Kreis" }) },
+    { id: "text", icon: Type, label: language.match({ english: () => "Text", german: () => "Text" }) },
   ];
 
   return (
@@ -216,17 +222,17 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
           value={size}
           onChange={(e) => setSize(Number(e.target.value))}
           className="w-20 accent-primary"
-          title="Größe"
+          title={language.match({ english: () => "Size", german: () => "Größe" })}
         />
 
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={undo} title="Rückgängig">
+          <Button size="sm" variant="ghost" onClick={undo} title={language.match({ english: () => "Undo", german: () => "Rückgängig" })}>
             <Undo2 className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={exportPng} title="PNG laden">
+          <Button size="sm" variant="ghost" onClick={exportPng} title={language.match({ english: () => "Export PNG", german: () => "PNG laden" })}>
             <Download className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={clear} title="Leeren">
+          <Button size="sm" variant="ghost" onClick={clear} title={language.match({ english: () => "Clear", german: () => "Leeren" })}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
           {onSave && (
@@ -238,7 +244,7 @@ const Whiteboard = ({ storageKey, height = 480, compact = false, onSave, saveLab
                 onSave(cvs.toDataURL("image/png"));
               }}
             >
-              {saveLabel}
+              {resolvedSaveLabel}
             </Button>
           )}
         </div>

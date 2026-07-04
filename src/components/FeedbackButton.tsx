@@ -17,16 +17,27 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-
-const ratings = [
-  { emoji: "😞", label: "Schlecht", value: 1 },
-  { emoji: "😐", label: "Okay", value: 2 },
-  { emoji: "🙂", label: "Gut", value: 3 },
-  { emoji: "😍", label: "Super", value: 4 },
-];
+import { useLanguage } from "@/hooks/useLanguage";
 
 const FeedbackButton = () => {
+  const { language } = useLanguage();
+
   const [open, setOpen] = useState(false);
+
+  const ratings = language.match({
+    english: () => [
+      { emoji: "😞", label: "Bad", value: 1 },
+      { emoji: "😐", label: "Okay", value: 2 },
+      { emoji: "🙂", label: "Good", value: 3 },
+      { emoji: "😍", label: "Great", value: 4 },
+    ],
+    german: () => [
+      { emoji: "😞", label: "Schlecht", value: 1 },
+      { emoji: "😐", label: "Okay", value: 2 },
+      { emoji: "🙂", label: "Gut", value: 3 },
+      { emoji: "😍", label: "Super", value: 4 },
+    ],
+  });
 
   const [rating, setRating] = useState<number | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState("");
@@ -41,6 +52,108 @@ const FeedbackButton = () => {
   const existingFeedback = useQuery(api.feedback.getMyFeedback);
   const submitFeedback = useMutation(api.feedback.submit);
   const submitReport = useMutation(api.userReports.submit);
+
+  const strings = language.match({
+    english: () => ({
+      feedbackButtonAria: "Give feedback",
+      closeAria: "Close",
+      feedbackLabel: "Feedback",
+      feedbackSubtitle: "Idea, bug, or criticism",
+      heading: "What would you like to tell us?",
+      subheading: "Share your rating or report an issue.",
+      sectionTitle: "General Feedback",
+      feedbackPlaceholder: "Optional message\u2026",
+      saving: "Saving\u2026",
+      saved: "Saved",
+      update: "Update",
+      save: "Save",
+      bugLabel: "Bug",
+      featureLabel: "Feature Request",
+      bugPlaceholder: "What went wrong? How can it be reproduced?",
+      featurePlaceholder: "What would you like to see improved?",
+      validationText: "At least 10 characters.",
+      sending: "Sending\u2026",
+      send: "Send",
+      reportSection: "Report a bug or suggest an improvement",
+      errorSaving: "Error saving.",
+      errorNoType: "Please select a type.",
+      errorShortMsg: "Please write at least 10 characters.",
+      successReport: "Thank you for your feedback!",
+      errorSending: "Error sending.",
+    }),
+    german: () => ({
+      feedbackButtonAria: "Feedback geben",
+      closeAria: "Schlie\u00dfen",
+      feedbackLabel: "Feedback",
+      feedbackSubtitle: "Idee, Fehler oder Kritik",
+      heading: "Was m\u00f6chtest du uns sagen?",
+      subheading: "Teile deine Einsch\u00e4tzung oder melde einen Fehler.",
+      sectionTitle: "Allgemeines Feedback",
+      feedbackPlaceholder: "Optionale Nachricht\u2026",
+      saving: "Wird gespeichert\u2026",
+      saved: "Gespeichert",
+      update: "Aktualisieren",
+      save: "Speichern",
+      bugLabel: "Fehler",
+      featureLabel: "Optimierungsvorschlag",
+      bugPlaceholder:
+        "Was ist schiefgelaufen? Wie l\u00e4sst sich das reproduzieren?",
+      featurePlaceholder:
+        "Was w\u00fcrdest du dir w\u00fcnschen oder verbessern?",
+      validationText: "Mindestens 10 Zeichen.",
+      sending: "Wird gesendet\u2026",
+      send: "Senden",
+      reportSection: "Fehler oder Optimierungsvorschlag mitteilen",
+      errorSaving: "Fehler beim Speichern.",
+      errorNoType: "Bitte w\u00e4hle einen Typ aus.",
+      errorShortMsg: "Bitte schreibe mindestens 10 Zeichen.",
+      successReport: "Danke f\u00fcr deinen Hinweis!",
+      errorSending: "Fehler beim Senden.",
+    }),
+  });
+
+  const reportTypeOptions = language.match({
+    english: () =>
+      [
+        {
+          value: "bug",
+          label: "Bug",
+          icon: Bug,
+          activeClass:
+            "border-destructive/50 bg-destructive/10 text-destructive",
+          dotClass: "border-destructive",
+          fillClass: "bg-destructive",
+        },
+        {
+          value: "feature",
+          label: "Feature Request",
+          icon: Lightbulb,
+          activeClass: "border-primary/50 bg-primary/10 text-primary",
+          dotClass: "border-primary",
+          fillClass: "bg-primary",
+        },
+      ] as const,
+    german: () =>
+      [
+        {
+          value: "bug",
+          label: "Fehler",
+          icon: Bug,
+          activeClass:
+            "border-destructive/50 bg-destructive/10 text-destructive",
+          dotClass: "border-destructive",
+          fillClass: "bg-destructive",
+        },
+        {
+          value: "feature",
+          label: "Optimierungsvorschlag",
+          icon: Lightbulb,
+          activeClass: "border-primary/50 bg-primary/10 text-primary",
+          dotClass: "border-primary",
+          fillClass: "bg-primary",
+        },
+      ] as const,
+  });
 
   const hasExisting = existingFeedback != null;
 
@@ -78,7 +191,7 @@ const FeedbackButton = () => {
       setFeedbackSaved(true);
       setTimeout(() => setFeedbackSaved(false), 2000);
     } catch {
-      toast.error("Fehler beim Speichern.");
+      toast.error(strings.errorSaving);
     } finally {
       setSavingFeedback(false);
     }
@@ -86,20 +199,20 @@ const FeedbackButton = () => {
 
   const sendReport = async () => {
     if (!reportType) {
-      toast.error("Bitte wähle einen Typ aus.");
+      toast.error(strings.errorNoType);
       return;
     }
     if (reportMsg.trim().length < 10) {
-      toast.error("Bitte schreibe mindestens 10 Zeichen.");
+      toast.error(strings.errorShortMsg);
       return;
     }
     setSendingReport(true);
     try {
       await submitReport({ type: reportType, message: reportMsg.trim() });
-      toast.success("Danke für deinen Hinweis!");
+      toast.success(strings.successReport);
       handleClose(false);
     } catch {
-      toast.error("Fehler beim Senden.");
+      toast.error(strings.errorSending);
     } finally {
       setSendingReport(false);
     }
@@ -115,7 +228,7 @@ const FeedbackButton = () => {
         whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(true)}
         className={`fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-card/95 text-sm font-medium text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 hover:shadow-xl sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3 ${open ? "pointer-events-none opacity-0" : ""}`}
-        aria-label="Feedback geben"
+        aria-label={strings.feedbackButtonAria}
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
           {hasExisting ? (
@@ -125,9 +238,9 @@ const FeedbackButton = () => {
           )}
         </span>
         <span className="hidden sm:block text-left">
-          <span className="block leading-tight">Feedback</span>
+          <span className="block leading-tight">{strings.feedbackLabel}</span>
           <span className="block text-xs font-normal text-muted-foreground">
-            Idee, Fehler oder Kritik
+            {strings.feedbackSubtitle}
           </span>
         </span>
       </motion.button>
@@ -142,7 +255,7 @@ const FeedbackButton = () => {
             <button
               onClick={() => handleClose(false)}
               className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary"
-              aria-label="Schließen"
+              aria-label={strings.closeAria}
             >
               <X className="h-4 w-4" />
             </button>
@@ -151,14 +264,14 @@ const FeedbackButton = () => {
                 <MessageCircleHeart className="h-4 w-4 text-primary" />
               </div>
               <span className="text-xs font-medium text-muted-foreground">
-                Feedback
+                {strings.feedbackLabel}
               </span>
             </div>
             <h3 className="font-heading text-xl font-bold">
-              Was möchtest du uns sagen?
+              {strings.heading}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Teile deine Einschätzung oder melde einen Fehler.
+              {strings.subheading}
             </p>
           </div>
 
@@ -166,7 +279,7 @@ const FeedbackButton = () => {
             {/* Section 1: General Feedback */}
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Allgemeines Feedback
+                {strings.sectionTitle}
               </p>
               <div className="grid grid-cols-4 gap-2">
                 {ratings.map((item) => (
@@ -207,7 +320,7 @@ const FeedbackButton = () => {
                   >
                     <div className="mt-4 space-y-3">
                       <Textarea
-                        placeholder="Optionale Nachricht…"
+                        placeholder={strings.feedbackPlaceholder}
                         value={feedbackMsg}
                         onChange={(e) => {
                           setFeedbackMsg(e.target.value);
@@ -236,17 +349,17 @@ const FeedbackButton = () => {
                           {savingFeedback ? (
                             <>
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Wird gespeichert…
+                              {strings.saving}
                             </>
                           ) : feedbackSaved ? (
                             <>
                               <Check className="h-3.5 w-3.5" />
-                              Gespeichert
+                              {strings.saved}
                             </>
                           ) : hasExisting ? (
-                            "Aktualisieren"
+                            strings.update
                           ) : (
-                            "Speichern"
+                            strings.save
                           )}
                         </Button>
                       </div>
@@ -264,9 +377,7 @@ const FeedbackButton = () => {
               >
                 <span className="flex items-center gap-2">
                   <Bug className="h-4 w-4 shrink-0" />
-                  Fehler oder
-                  <Lightbulb className="h-4 w-4 shrink-0" />
-                  Optimierungsvorschlag mitteilen
+                  {strings.reportSection}
                 </span>
                 <motion.span
                   animate={{ rotate: reportExpanded ? 180 : 0 }}
@@ -287,28 +398,7 @@ const FeedbackButton = () => {
                   >
                     <div className="mt-4 space-y-4">
                       <div className="grid grid-cols-2 gap-2">
-                        {(
-                          [
-                            {
-                              value: "bug",
-                              label: "Fehler",
-                              icon: Bug,
-                              activeClass:
-                                "border-destructive/50 bg-destructive/10 text-destructive",
-                              dotClass: "border-destructive",
-                              fillClass: "bg-destructive",
-                            },
-                            {
-                              value: "feature",
-                              label: "Optimierungsvorschlag",
-                              icon: Lightbulb,
-                              activeClass:
-                                "border-primary/50 bg-primary/10 text-primary",
-                              dotClass: "border-primary",
-                              fillClass: "bg-primary",
-                            },
-                          ] as const
-                        ).map((opt) => (
+                        {reportTypeOptions.map((opt) => (
                           <button
                             key={opt.value}
                             onClick={() => setReportType(opt.value)}
@@ -341,8 +431,8 @@ const FeedbackButton = () => {
                         <Textarea
                           placeholder={
                             reportType === "bug"
-                              ? "Was ist schiefgelaufen? Wie lässt sich das reproduzieren?"
-                              : "Was würdest du dir wünschen oder verbessern?"
+                              ? strings.bugPlaceholder
+                              : strings.featurePlaceholder
                           }
                           value={reportMsg}
                           onChange={(e) => setReportMsg(e.target.value)}
@@ -355,7 +445,7 @@ const FeedbackButton = () => {
                           {reportMsg.trim().length > 0 &&
                           reportMsg.trim().length < 10 ? (
                             <p className="text-xs font-medium text-destructive">
-                              Mindestens 10 Zeichen.
+                              {strings.validationText}
                             </p>
                           ) : (
                             <span />
@@ -379,12 +469,12 @@ const FeedbackButton = () => {
                         {sendingReport ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Wird gesendet…
+                            {strings.sending}
                           </>
                         ) : (
                           <>
                             <Send className="h-4 w-4" />
-                            Senden
+                            {strings.send}
                           </>
                         )}
                       </Button>

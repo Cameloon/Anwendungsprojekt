@@ -1,81 +1,163 @@
 import { motion } from "framer-motion";
 import { Sparkles, ExternalLink } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Tool {
   name: string;
   description: string;
-  category: "KI" | "Lernen" | "Notizen" | "Produktivität";
+  category: string;
   url: string;
   emoji: string;
 }
 
-const tools: Tool[] = [
-  {
-    name: "ChatGPT",
-    description: "Erklärungen, Zusammenfassungen & Brainstorming",
-    category: "KI",
-    url: "https://chat.openai.com",
-    emoji: "🤖",
-  },
-  {
-    name: "NotebookLM",
-    description: "Skripte hochladen & gezielt Fragen stellen",
-    category: "KI",
-    url: "https://notebooklm.google.com",
-    emoji: "📓",
-  },
-  {
-    name: "Perplexity",
-    description: "Recherche mit Quellenangaben für Hausarbeiten",
-    category: "KI",
-    url: "https://perplexity.ai",
-    emoji: "🔍",
-  },
-  {
-    name: "Anki",
-    description: "Karteikarten mit Spaced-Repetition",
-    category: "Lernen",
-    url: "https://apps.ankiweb.net",
-    emoji: "🧠",
-  },
-  {
-    name: "Notion",
-    description: "Notizen, Wissensdatenbank & Projektplanung",
-    category: "Notizen",
-    url: "https://notion.so",
-    emoji: "📝",
-  },
-  {
-    name: "Obsidian",
-    description: "Vernetzte Markdown-Notizen für Wissen",
-    category: "Notizen",
-    url: "https://obsidian.md",
-    emoji: "🪨",
-  },
-  {
-    name: "Wolfram Alpha",
-    description: "Mathe, Physik & Statistik Schritt-für-Schritt",
-    category: "Lernen",
-    url: "https://wolframalpha.com",
-    emoji: "∑",
-  },
-  {
-    name: "Forest",
-    description: "Fokus halten, Pomodoro & weniger Handy",
-    category: "Produktivität",
-    url: "https://forestapp.cc",
-    emoji: "🌲",
-  },
-];
-
-const categoryStyles: Record<Tool["category"], string> = {
-  KI: "bg-primary/15 text-primary",
-  Lernen: "bg-info/15 text-info",
-  Notizen: "bg-success/15 text-success",
-  Produktivität: "bg-accent/15 text-accent",
-};
-
 const AiTipsCard = () => {
+  const { language } = useLanguage();
+
+  const tools = language.match({
+    english: () => [
+      {
+        name: "ChatGPT",
+        description: "Explanations, summaries & brainstorming",
+        category: "AI",
+        url: "https://chat.openai.com",
+        emoji: "🤖",
+      },
+      {
+        name: "NotebookLM",
+        description: "Upload scripts & ask targeted questions",
+        category: "AI",
+        url: "https://notebooklm.google.com",
+        emoji: "📓",
+      },
+      {
+        name: "Perplexity",
+        description: "Research with sources for papers",
+        category: "AI",
+        url: "https://perplexity.ai",
+        emoji: "🔍",
+      },
+      {
+        name: "Anki",
+        description: "Flashcards with spaced repetition",
+        category: "Learning",
+        url: "https://apps.ankiweb.net",
+        emoji: "🧠",
+      },
+      {
+        name: "Notion",
+        description: "Notes, knowledge base & project planning",
+        category: "Notes",
+        url: "https://notion.so",
+        emoji: "📝",
+      },
+      {
+        name: "Obsidian",
+        description: "Connected Markdown notes for knowledge",
+        category: "Notes",
+        url: "https://obsidian.md",
+        emoji: "🪨",
+      },
+      {
+        name: "Wolfram Alpha",
+        description: "Math, physics & statistics step-by-step",
+        category: "Learning",
+        url: "https://wolframalpha.com",
+        emoji: "∑",
+      },
+      {
+        name: "Forest",
+        description: "Stay focused, Pomodoro & less phone time",
+        category: "Productivity",
+        url: "https://forestapp.cc",
+        emoji: "🌲",
+      },
+    ],
+    german: () => [
+      {
+        name: "ChatGPT",
+        description: "Erklärungen, Zusammenfassungen & Brainstorming",
+        category: "KI",
+        url: "https://chat.openai.com",
+        emoji: "🤖",
+      },
+      {
+        name: "NotebookLM",
+        description: "Skripte hochladen & gezielt Fragen stellen",
+        category: "KI",
+        url: "https://notebooklm.google.com",
+        emoji: "📓",
+      },
+      {
+        name: "Perplexity",
+        description: "Recherche mit Quellenangaben für Hausarbeiten",
+        category: "KI",
+        url: "https://perplexity.ai",
+        emoji: "🔍",
+      },
+      {
+        name: "Anki",
+        description: "Karteikarten mit Spaced-Repetition",
+        category: "Lernen",
+        url: "https://apps.ankiweb.net",
+        emoji: "🧠",
+      },
+      {
+        name: "Notion",
+        description: "Notizen, Wissensdatenbank & Projektplanung",
+        category: "Notizen",
+        url: "https://notion.so",
+        emoji: "📝",
+      },
+      {
+        name: "Obsidian",
+        description: "Vernetzte Markdown-Notizen für Wissen",
+        category: "Notizen",
+        url: "https://obsidian.md",
+        emoji: "🪨",
+      },
+      {
+        name: "Wolfram Alpha",
+        description: "Mathe, Physik & Statistik Schritt-für-Schritt",
+        category: "Lernen",
+        url: "https://wolframalpha.com",
+        emoji: "∑",
+      },
+      {
+        name: "Forest",
+        description: "Fokus halten, Pomodoro & weniger Handy",
+        category: "Produktivität",
+        url: "https://forestapp.cc",
+        emoji: "🌲",
+      },
+    ],
+  });
+
+  const categoryStyles: Record<string, string> = language.match({
+    english: () => ({
+      AI: "bg-primary/15 text-primary",
+      Learning: "bg-info/15 text-info",
+      Notes: "bg-success/15 text-success",
+      Productivity: "bg-accent/15 text-accent",
+    }),
+    german: () => ({
+      KI: "bg-primary/15 text-primary",
+      Lernen: "bg-info/15 text-info",
+      Notizen: "bg-success/15 text-success",
+      Produktivität: "bg-accent/15 text-accent",
+    }),
+  });
+
+  const strings = language.match({
+    english: () => ({
+      heading: "Helpful tools for studying",
+      description: "Curated AI & productivity apps that truly help.",
+    }),
+    german: () => ({
+      heading: "Hilfreiche Tools fürs Studium",
+      description: "Kuratierte KI- & Produktivitäts-Apps, die wirklich helfen.",
+    }),
+  });
+
   return (
     <section className="glass-card rounded-2xl p-6 relative overflow-hidden">
       <div className="absolute -top-10 -right-10 h-32 w-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -84,10 +166,10 @@ const AiTipsCard = () => {
         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
           <Sparkles className="h-4 w-4 text-primary" />
         </div>
-        <h2 className="font-heading font-semibold text-lg">Hilfreiche Tools fürs Studium</h2>
+        <h2 className="font-heading font-semibold text-lg">{strings.heading}</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-5 relative">
-        Kuratierte KI- & Produktivitäts-Apps, die wirklich helfen.
+        {strings.description}
       </p>
 
       <div className="grid sm:grid-cols-2 gap-3 relative">

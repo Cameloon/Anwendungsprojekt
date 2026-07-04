@@ -230,7 +230,9 @@ const AdminDashboardPage = () => {
                   {language.match({ english: () => "Moderation, approvals and lecture management in one place", german: () => "Moderation, Freischaltungen und Vorlesungsverwaltung an einem Ort" })}
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm text-white/85 sm:text-base">
-                  {language.match({ english: () => "This view consolidates the tasks from the functional requirements: approve users, review reported posts, administer lectures and control upload rules.", german: () => "Diese Ansicht bündelt die Aufgaben aus den funktionalen Anforderungen: Nutzer freischalten, gemeldete Beiträge prüfen, Vorlesungen administrieren und Upload-Regeln steuern." })}
+                  {language.match({
+                    english: () => "approve users, review reported posts, administer lectures and control upload rules.",
+                    german: () => "Nutzer freischalten, gemeldete Beiträge prüfen, Vorlesungen administrieren und Upload-Regeln steuern." })}
                 </p>
               </div>
 

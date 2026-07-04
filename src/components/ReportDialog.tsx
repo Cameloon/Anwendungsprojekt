@@ -6,15 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-
-const REASONS = [
-  "Spam oder Werbung",
-  "Unangemessener Inhalt",
-  "Verstoß gegen Netiquette",
-  "Fehlinformationen",
-  "Doppelter Inhalt",
-  "Sonstiges",
-];
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ReportDialogProps {
   open: boolean;
@@ -33,6 +25,54 @@ export function ReportDialog({
   forumName,
   reportedBy,
 }: ReportDialogProps) {
+  const { language } = useLanguage();
+
+  const REASONS = language.match({
+    english: () => [
+      "Spam or advertising",
+      "Inappropriate content",
+      "Violation of netiquette",
+      "Misinformation",
+      "Duplicate content",
+      "Other",
+    ],
+    german: () => [
+      "Spam oder Werbung",
+      "Unangemessener Inhalt",
+      "Verstoß gegen Netiquette",
+      "Fehlinformationen",
+      "Doppelter Inhalt",
+      "Sonstiges",
+    ],
+  });
+
+  const strings = language.match({
+    english: () => ({
+      title: "Report Post",
+      description: "Select a reason and optionally describe the issue. The post will be reported to the admin for review.",
+      reasonLabel: "Reason for report",
+      placeholder: "Additional details (optional)\u2026",
+      cancel: "Cancel",
+      report: "Report",
+      toastSuccess: "Post reported",
+      toastSuccessDesc: "The post has been reported to the admin for review.",
+      toastError: "Error reporting",
+      toastErrorDesc: "Report failed.",
+    }),
+    german: () => ({
+      title: "Beitrag melden",
+      description: "Wähle einen Grund aus und beschreibe optional das Problem. Der Beitrag wird dem Admin zur Prüfung gemeldet.",
+      reasonLabel: "Grund der Meldung",
+      placeholder: "Weitere Details (optional)\u2026",
+      cancel: "Abbrechen",
+      report: "Melden",
+      toastSuccess: "Beitrag gemeldet",
+      toastSuccessDesc: "Der Beitrag wurde dem Admin zur Prüfung gemeldet.",
+      toastError: "Fehler beim Melden",
+      toastErrorDesc: "Meldung fehlgeschlagen.",
+    }),
+  });
+
   const [selectedReason, setSelectedReason] = useState("");
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -49,16 +89,16 @@ export function ReportDialog({
     try {
       await submitReport({ postId, postTitle, forumName, reason, reportedBy });
 
-      toast.success("Beitrag gemeldet", {
-        description: "Der Beitrag wurde dem Admin zur Prüfung gemeldet.",
+      toast.success(strings.toastSuccess, {
+        description: strings.toastSuccessDesc,
       });
 
       setSelectedReason("");
       setDetails("");
       onOpenChange(false);
     } catch (err) {
-      toast.error("Fehler beim Melden", {
-        description: err instanceof Error ? err.message : "Meldung fehlgeschlagen.",
+      toast.error(strings.toastError, {
+        description: err instanceof Error ? err.message : strings.toastErrorDesc,
       });
     } finally {
       setSubmitting(false);
@@ -71,15 +111,15 @@ export function ReportDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Flag className="h-4 w-4 text-destructive" />
-            Beitrag melden
+            {strings.title}
           </DialogTitle>
           <DialogDescription>
-            Wähle einen Grund aus und beschreibe optional das Problem. Der Beitrag wird dem Admin zur Prüfung gemeldet.
+            {strings.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 pt-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Grund der Meldung</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{strings.reasonLabel}</p>
           <div className="flex flex-col gap-1.5">
             {REASONS.map((reason) => (
               <button
@@ -97,7 +137,7 @@ export function ReportDialog({
           </div>
 
           <Textarea
-            placeholder="Weitere Details (optional)…"
+            placeholder={strings.placeholder}
             value={details}
             onChange={(e) => setDetails(e.target.value)}
             rows={3}
@@ -106,14 +146,14 @@ export function ReportDialog({
 
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Abbrechen
+              {strings.cancel}
             </Button>
             <Button
               variant="destructive"
               onClick={handleSubmit}
               disabled={!selectedReason || submitting}
             >
-              Melden
+              {strings.report}
             </Button>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { IS_DEMO } from "@/lib/demoMode";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import AuthDialog from "@/components/AuthDialog";
 import AccountMenu from "@/components/AccountMenu";
@@ -22,6 +23,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import NotificationsBell from "@/components/NotificationsBell";
 
 const Navbar = () => {
+  const { language } = useLanguage();
   const location = useLocation();
   const { user, isAdmin } = useAuth();
   const access = IS_DEMO ? "active" : useQuery(api.profiles.getAccessStatus, {});
@@ -30,15 +32,15 @@ const Navbar = () => {
   const navItems = isActive
     ? [
         ...(isAdmin
-          ? [{ label: "Admin-Dashboard", path: "/admin-dashboard", icon: ShieldCheck }]
+          ? [{ label: language.match({ english: () => "Admin Dashboard", german: () => "Admin-Dashboard" }), path: "/admin-dashboard", icon: ShieldCheck }]
           : []),
-        { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+        { label: language.match({ english: () => "Dashboard", german: () => "Dashboard" }), path: "/dashboard", icon: LayoutDashboard },
         { label: "Planner", path: "/planner", icon: CalendarDays },
         { label: "Forum", path: "/forum", icon: MessageSquare },
-        { label: "Skripte", path: "/skripte", icon: FileText },
+        { label: language.match({ english: () => "Scripts", german: () => "Skripte" }), path: "/skripte", icon: FileText },
       ]
     : user
-      ? [{ label: "Zugang freischalten", path: "/dashboard", icon: FileEdit }]
+      ? [{ label: language.match({ english: () => "Request Access", german: () => "Zugang freischalten" }), path: "/dashboard", icon: FileEdit }]
       : [];
 
   const [authOpen, setAuthOpen] = useState(false);
@@ -87,7 +89,7 @@ const Navbar = () => {
                 className="flex items-center gap-2"
               >
                 <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Login</span>
+                <span className="hidden sm:inline">{language.match({ english: () => "Login", german: () => "Login" })}</span>
               </Button>
             )}
           </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IS_DEMO, demoStore } from "@/lib/demoMode";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface AuthDialogProps {
   open: boolean;
@@ -12,16 +13,27 @@ interface AuthDialogProps {
 }
 
 const DemoAuthForm = ({ onDone }: { onDone: () => void }) => {
+  const { language } = useLanguage();
   const [email, setEmail] = useState("demo@dhbw.de");
   const [name, setName] = useState("Demo Student");
   return (
     <div className="space-y-4 p-2">
       <div className="space-y-2">
-        <Label htmlFor="demo-name">Anzeigename</Label>
+        <Label htmlFor="demo-name">
+          {language.match({
+            english: () => "Display name",
+            german: () => "Anzeigename",
+          })}
+        </Label>
         <Input id="demo-name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="demo-email">E-Mail</Label>
+        <Label htmlFor="demo-email">
+          {language.match({
+            english: () => "Email",
+            german: () => "E-Mail",
+          })}
+        </Label>
         <Input id="demo-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </div>
       <Button
@@ -31,16 +43,23 @@ const DemoAuthForm = ({ onDone }: { onDone: () => void }) => {
           onDone();
         }}
       >
-        Im Demo-Modus anmelden
+        {language.match({
+          english: () => "Sign in with Demo",
+          german: () => "Im Demo-Modus anmelden",
+        })}
       </Button>
       <p className="text-[11px] text-muted-foreground text-center">
-        Demo-Modus aktiv — Daten werden nur lokal im Browser gespeichert.
+        {language.match({
+          english: () => "Demo mode active — data is only stored locally in your browser.",
+          german: () => "Demo-Modus aktiv — Daten werden nur lokal im Browser gespeichert.",
+        })}
       </p>
     </div>
   );
 };
 
 const ClerkAuthForm = ({ onDone }: { onDone: () => void }) => {
+  const { language } = useLanguage();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const { isSignedIn } = useUser();
   useEffect(() => {
@@ -58,20 +77,32 @@ const ClerkAuthForm = ({ onDone }: { onDone: () => void }) => {
         onClick={() => setMode(mode === "login" ? "signup" : "login")}
         className="text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
       >
-        {mode === "login" ? "Noch kein Account? Registrieren" : "Schon registriert? Anmelden"}
+        {language.match({
+          english: () => mode === "login" ? "No account yet? Register" : "Already registered? Log in",
+          german: () => mode === "login" ? "Noch kein Account? Registrieren" : "Schon registriert? Anmelden",
+        })}
       </button>
     </div>
   );
 };
 
 const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
+  const { language } = useLanguage();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{IS_DEMO ? "Demo-Anmeldung" : "Anmelden"}</DialogTitle>
+          <DialogTitle>
+            {language.match({
+              english: () => IS_DEMO ? "Demo Login" : "Log In",
+              german: () => IS_DEMO ? "Demo-Anmeldung" : "Anmelden",
+            })}
+          </DialogTitle>
           <DialogDescription className="sr-only">
-            Melde dich an, um auf alle Funktionen zuzugreifen.
+            {language.match({
+              english: () => "Sign in to access all features.",
+              german: () => "Melde dich an, um auf alle Funktionen zuzugreifen.",
+            })}
           </DialogDescription>
         </DialogHeader>
         {IS_DEMO ? (

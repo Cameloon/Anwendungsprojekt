@@ -3,10 +3,12 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
 import { IS_DEMO } from "@/lib/demoMode";
 import { Loader2, Lock, Clock, XCircle } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import Navbar from "@/components/Navbar";
 import OnboardingDialog from "./OnboardingDialog";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { language } = useLanguage();
   const { user, loading } = useAuth();
   const access = IS_DEMO ? "active" : useQuery(api.profiles.getAccessStatus, {});
 
@@ -27,10 +29,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             <Lock className="h-6 w-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
-            Anmeldung erforderlich
+            {language.match({ english: () => "Login required", german: () => "Anmeldung erforderlich" })}
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Melde dich oben rechts an, um diesen Bereich zu sehen.
+            {language.match({ english: () => "Sign in at the top right to view this area.", german: () => "Melde dich oben rechts an, um diesen Bereich zu sehen." })}
           </p>
         </div>
       </div>
@@ -63,10 +65,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             <Clock className="h-6 w-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
-            Freischaltung ausstehend
+            {language.match({ english: () => "Activation pending", german: () => "Freischaltung ausstehend" })}
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Dein Konto wurde noch nicht freigegeben. Bitte habe etwas Geduld, ein Admin wird dich bald freischalten.
+            {language.match({ english: () => "Your account has not been activated yet. Please be patient, an admin will activate you soon.", german: () => "Dein Konto wurde noch nicht freigegeben. Bitte habe etwas Geduld, ein Admin wird dich bald freischalten." })}
           </p>
         </div>
       </div>
@@ -82,10 +84,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             <XCircle className="h-6 w-6 text-destructive" />
           </div>
           <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
-            Zugriff verweigert
+            {language.match({ english: () => "Access denied", german: () => "Zugriff verweigert" })}
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Dein Konto wurde leider nicht freigegeben. Bei Fragen wende dich bitte an einen Administrator.
+            {language.match({ english: () => "Your account could not be activated. If you have questions, please contact an administrator.", german: () => "Dein Konto wurde leider nicht freigegeben. Bei Fragen wende dich bitte an einen Administrator." })}
           </p>
         </div>
       </div>
