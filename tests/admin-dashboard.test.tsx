@@ -6,6 +6,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LanguageProvider } from "@/hooks/useLanguage";
 
 vi.mock("@clerk/clerk-react", () => ({
   useUser: () => ({ isLoaded: true, isSignedIn: false, user: null }),
@@ -24,9 +25,11 @@ describe("AdminDashboardPage", () => {
   it("renders the admin overview sections", () => {
     render(
       <ThemeProvider>
-        <MemoryRouter>
-          <AdminDashboardPage />
-        </MemoryRouter>
+        <LanguageProvider>
+          <MemoryRouter>
+            <AdminDashboardPage />
+          </MemoryRouter>
+        </LanguageProvider>
       </ThemeProvider>,
     );
 

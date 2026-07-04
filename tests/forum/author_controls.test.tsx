@@ -7,6 +7,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import PostDetailPage from "@/pages/PostDetailPage";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LanguageProvider } from "@/hooks/useLanguage";
 
 // ── Types ──
 
@@ -236,14 +237,16 @@ const makePost = (overrides: Partial<Post>): Post => ({
 const renderPostDetail = (postId: string) =>
   render(
     <ThemeProvider>
-      <MemoryRouter initialEntries={[`/forum/${FORUM_ID}/post/${postId}`]}>
-        <Routes>
-          <Route
-            path="/forum/:forumId/post/:postId"
-            element={<PostDetailPage />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <LanguageProvider>
+        <MemoryRouter initialEntries={[`/forum/${FORUM_ID}/post/${postId}`]}>
+          <Routes>
+            <Route
+              path="/forum/:forumId/post/:postId"
+              element={<PostDetailPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>
     </ThemeProvider>
   );
 

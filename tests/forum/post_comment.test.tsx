@@ -15,6 +15,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ForumPage from "@/pages/ForumPage";
 import PostDetailPage from "@/pages/PostDetailPage";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { LanguageProvider } from "@/hooks/useLanguage";
 
 // ── Types ──
 
@@ -310,23 +311,27 @@ const seedForum = () => {
 const renderForum = () =>
   render(
     <ThemeProvider>
-      <MemoryRouter initialEntries={["/forum"]}>
-        <ForumPage />
-      </MemoryRouter>
+      <LanguageProvider>
+        <MemoryRouter initialEntries={["/forum"]}>
+          <ForumPage />
+        </MemoryRouter>
+      </LanguageProvider>
     </ThemeProvider>,
   );
 
 const renderPostDetail = (postId: string) =>
   render(
     <ThemeProvider>
-      <MemoryRouter initialEntries={[`/forum/${FORUM_ID}/post/${postId}`]}>
-        <Routes>
-          <Route
-            path="/forum/:forumId/post/:postId"
-            element={<PostDetailPage />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <LanguageProvider>
+        <MemoryRouter initialEntries={[`/forum/${FORUM_ID}/post/${postId}`]}>
+          <Routes>
+            <Route
+              path="/forum/:forumId/post/:postId"
+              element={<PostDetailPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>
     </ThemeProvider>,
   );
 

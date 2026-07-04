@@ -8,12 +8,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SkriptePage from "../../src/pages/SkriptePage";
 import { validateFileSize, FILE_MAX_BYTES } from "../../src/lib/validation";
+import { LanguageProvider } from "@/hooks/useLanguage";
 
 function renderSkriptePage() {
   return render(
-    <MemoryRouter>
-      <SkriptePage />
-    </MemoryRouter>
+    <LanguageProvider>
+      <MemoryRouter>
+        <SkriptePage />
+      </MemoryRouter>
+    </LanguageProvider>
   );
 }
 
