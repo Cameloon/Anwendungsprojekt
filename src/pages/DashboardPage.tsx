@@ -358,9 +358,9 @@ const DashboardPage = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="grid gap-5 lg:grid-cols-5"
+            className="grid gap-5 lg:grid-cols-5 lg:items-start"
           >
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-accent p-8 text-primary-foreground lg:col-span-3">
+            <div className="relative self-start overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-accent px-8 pb-12 pt-7 text-primary-foreground lg:col-span-3">
               <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
               <div className="absolute -left-10 -bottom-14 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
               <p className="relative text-xs uppercase tracking-[0.3em] opacity-80">
@@ -370,14 +370,14 @@ const DashboardPage = () => {
                   month: "long",
                 })}
               </p>
-              <h1 className="relative mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">
+              <h1 className="relative mt-4 font-heading text-3xl font-bold leading-tight sm:text-4xl">
                 {greeting()}
                 {name ? `, ${name.split(" ")[0]}` : ""}
               </h1>
-              <p className="relative mt-4 max-w-2xl text-base opacity-90">
+              <p className="relative mt-5 max-w-2xl text-base opacity-90">
                 {quote}
               </p>
-              <div className="relative mt-6 flex flex-wrap gap-2">
+              <div className="relative mt-7 flex flex-wrap gap-2">
                 <Link to="/planner">
                   <Button size="lg" variant="secondary" className="gap-2">
                     <Plus className="h-4 w-4" />{" "}
@@ -387,41 +387,48 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-              <HeroStat
-                label={language.match({ english: () => "Next Deadline", german: () => "Naechster Termin" })}
+            <div className="lg:col-span-2">
+              <div>
+                <HeroStat
+                label={language.match({ english: () => "Next Deadline", german: () => "Nächster Termin" })}
                 value={nextDeadlineValue}
-                icon={<CalendarDays className="h-5 w-5" />}
+                icon={<CalendarDays className="h-4 w-4 text-[#E35D6A]" />}
                 hint={nextDeadlineHint}
-                valueClassName="text-destructive text-3xl sm:text-3xl"
-                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                valueClassName="text-[#E35D6A] text-[18px]"
+                labelClassName="text-[14px] font-semibold text-foreground"
                 to="/planner"
               />
-              <HeroStat
+                <HeroStat
                 label={language.match({ english: () => "Open Deadlines", german: () => "Offene Termine" })}
                 value={openDeadlinesValue}
-                icon={<Clock3 className="h-5 w-5" />}
+                icon={<Clock3 className="h-4 w-4" />}
                 hint={openDeadlinesHint}
-                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                tone="violet"
+                valueClassName="text-[18px]"
+                labelClassName="text-[14px] font-semibold text-foreground"
                 to="/planner"
               />
-              <HeroStat
+                <HeroStat
                 label={language.match({ english: () => "Recent Posts", german: () => "Letzte Beitraege" })}
                 value={latestPostsCount}
-                icon={<MessageSquare className="h-5 w-5" />}
+                icon={<MessageSquare className="h-4 w-4" />}
                 hint={latestPostsHint}
-                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                tone="blue"
+                valueClassName="text-[18px]"
+                labelClassName="text-[14px] font-semibold text-foreground"
                 to="/forum"
               />
-              <HeroStat
+                <HeroStat
                 label={language.match({ english: () => "Recent Scripts", german: () => "Letzte Skripte" })}
                 value={latestScriptsCount}
-                icon={<Files className="h-5 w-5" />}
+                icon={<Files className="h-4 w-4" />}
                 hint={latestScriptsHint}
                 tone="hot"
-                labelClassName="text-sm sm:text-base font-semibold text-foreground"
+                valueClassName="text-[18px]"
+                labelClassName="text-[14px] font-semibold text-foreground"
                 to="/skripte"
               />
+              </div>
             </div>
           </motion.section>
 
@@ -556,42 +563,49 @@ function HeroStat({
   value: number | string;
   hint?: string;
   icon: React.ReactNode;
-  tone?: "warn" | "ok" | "hot";
+  tone?: "warn" | "ok" | "hot" | "violet" | "blue";
   valueClassName?: string;
   labelClassName?: string;
   to?: string;
 }) {
   const toneClasses =
     tone === "warn"
-      ? "from-destructive/15 to-destructive/5 text-destructive"
+      ? "text-[#E35D6A]"
       : tone === "ok"
-        ? "from-success/15 to-success/5 text-success"
+        ? "text-success"
+        : tone === "violet"
+          ? "text-[#9B6BFF]"
+          : tone === "blue"
+            ? "text-[#6D8CFF]"
         : tone === "hot"
-          ? "from-accent/20 to-accent/5 text-accent"
-          : "from-primary/15 to-primary/5 text-primary";
+          ? "text-accent"
+          : "text-primary";
 
   const content = (
-    <div
-      className={`flex min-h-[156px] flex-col rounded-2xl border border-border bg-gradient-to-br p-4 transition hover:-translate-y-0.5 hover:shadow-md ${toneClasses}`}
-    >
-      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium opacity-80">
-        {icon}
+    <div className="px-0 py-0.5">
+      <div className="flex items-center justify-between gap-5 px-3 py-2.5 transition-colors hover:bg-muted/10">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className={`mt-0.5 shrink-0 ${toneClasses}`}>
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className={`${labelClassName ?? "text-[14px] font-semibold text-foreground"}`}>
+              {label}
+            </p>
+            {hint ? (
+              <p className="mt-px text-[12px] text-muted-foreground">
+                {hint}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <p
+          className={`shrink-0 text-right font-bold leading-none text-foreground ${valueClassName ?? "text-[18px]"}`}
+        >
+          {value}
+        </p>
       </div>
-      <p
-        className={`font-heading font-bold leading-none ${valueClassName ?? "text-3xl text-foreground"}`}
-      >
-        {value}
-      </p>
-      <p
-        className={`mt-1.5 text-xs font-medium text-muted-foreground ${labelClassName ?? ""}`}
-      >
-        {label}
-      </p>
-      <div className="mt-auto pt-2">
-        {hint ? (
-          <p className="text-[10px] text-muted-foreground">{hint}</p>
-        ) : null}
-      </div>
+      <div className="mx-3 mt-0.5 h-px bg-zinc-600/20 dark:bg-zinc-700/25" />
     </div>
   );
 
@@ -599,7 +613,7 @@ function HeroStat({
     return (
       <Link
         to={to}
-        className="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        className="-mx-3 block h-full rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
       >
         {content}
       </Link>
