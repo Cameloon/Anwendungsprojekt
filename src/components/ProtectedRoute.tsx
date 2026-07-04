@@ -10,7 +10,8 @@ import OnboardingDialog from "./OnboardingDialog";
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { language } = useLanguage();
   const { user, loading } = useAuth();
-  const access = IS_DEMO ? "active" : useQuery(api.profiles.getAccessStatus, {});
+  const accessQuery = useQuery(api.profiles.getAccessStatus, IS_DEMO ? "skip" : {});
+  const access = IS_DEMO ? "active" : accessQuery;
 
   if (loading) {
     return (

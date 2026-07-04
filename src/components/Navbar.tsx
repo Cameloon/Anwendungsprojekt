@@ -26,7 +26,8 @@ const Navbar = () => {
   const { language } = useLanguage();
   const location = useLocation();
   const { user, isAdmin } = useAuth();
-  const access = IS_DEMO ? "active" : useQuery(api.profiles.getAccessStatus, {});
+  const accessQuery = useQuery(api.profiles.getAccessStatus, IS_DEMO ? "skip" : {});
+  const access = IS_DEMO ? "active" : accessQuery;
   const isActive = access === "active";
 
   const navItems = isActive

@@ -14,11 +14,7 @@
 - **Convex-Reactivity-Fallstrick** (BUG-013): Ein `useEffect`, der von einer sich bei jedem Render neu referenzierenden Liste abhing, öffnete einen Dialog ungewollt erneut. Ursache erst nach Fehlzuordnung (zunächst im Planner vermutet, tatsächlich in der Skripte-Seite) gefunden.
 - **Durchgängige Zeichenkodierungsfehler** (BUG-012) in mehreren Seiten (kaputte Umlaute) — vermutlich Folge einer früheren Copy/Paste- oder Editor-Encoding-Problematik, die erst spät im Projekt auffiel und projektweit korrigiert werden musste.
 - **Meldefunktion zunächst nur lokal:** Gemeldete Beiträge wurden zuerst in `localStorage` statt zentral in Convex gespeichert (BUG-009) und waren dadurch für Admins anderer Browser/Geräte unsichtbar — ein Beispiel dafür, dass einzelne Features zunächst als Frontend-Provisorium gebaut und erst später ans Backend angebunden wurden.
-- **Fehlende Backend-Tests wurden im Rahmen dieser Dokumentation nachgezogen.** Bis dahin gab es laut `AGENTS.md` keine Convex-Testfixtures, alle Tests waren frontend-only. Ergänzt wurden Regressionstests (`tests/convex/`, via `convex-test`) für die sicherheitskritischsten Berechtigungsprüfungen: Termin-Bearbeitung/-Löschung (BUG-005-Muster), Kommentar-Bearbeitung/-Löschung (BUG-003-Muster), Admin-/Rollen-Mutations sowie die Sichtbarkeitsregeln der Skript-Bibliothek (private/jahrgang/group/public). Lehre: genau diese Art von Lücke (Berechtigung nur im UI statt im Backend geprüft) hätte ein Test schon beim ersten Einbau verhindert.
 
-### Nicht abgeschlossene Punkte zum Abgabezeitpunkt
-
-- BUG-014 (Lint-Verstöße gegen React-Hook-Regeln in produktivem Code, z. B. `useAuth.tsx`, `ProtectedRoute.tsx`) ist zum Abgabezeitpunkt noch offen.
 
 ---
 

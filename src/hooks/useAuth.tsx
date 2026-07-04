@@ -67,6 +67,7 @@ const useClerkBackedAuth = (): AuthContextValue => {
   }, [isLoaded, isSignedIn, user, signOut, profile]);
 };
 
-export const useAuth = (): AuthContextValue => {
-  return IS_DEMO ? useDemoAuth() : useClerkBackedAuth();
-};
+// IS_DEMO is fixed for the app's entire lifetime, so picking the
+// implementation once here (rather than branching on every call) keeps the
+// same hook called on every render and avoids a conditional hook call.
+export const useAuth: () => AuthContextValue = IS_DEMO ? useDemoAuth : useClerkBackedAuth;

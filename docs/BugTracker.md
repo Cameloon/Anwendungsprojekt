@@ -30,18 +30,6 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 Hinweis: Bearbeiter mit Kürzel ergänzen
 
-### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
-
-Datum erfasst: 03-07-2026
-Datum Bearbeitung: 04-07-2026
-Verfasser: CC
-Bearbeitet durch: DM (CC)
-Komponente/Bereich: Projektqualität / Frontend-Architektur
-Priorität: Mittel
-Beschreibung:
-Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verstöße gegen die React-Hook-Regeln wie konditionale Hook-Aufrufe. Das ist nicht nur ein Stilproblem, sondern kann zu instabilem Laufzeitverhalten führen und fällt bei einer technischen Prüfung des Projekts sofort auf.
-Fundort: z. B. src/hooks/useAuth.tsx, src/components/ProtectedRoute.tsx, src/components/EnsureProfile.tsx
-
 ---
 
 ## Erledigte Bugs
@@ -362,3 +350,18 @@ Der Löschen-Button für Termin-Anhänge wurde für jeden Betrachter des Termins
 `useDemoProfile` griff auf camelCase-Felder (`p.displayName`, `p.avatarUrl`, `p.createdAt`) zu, während `DemoProfile` diese Werte tatsächlich als snake_case speichert (`display_name`, `avatar_url`, `created_at`). Dadurch waren Anzeigename, Avatar und Beitrittsdatum im Demo-Modus immer leer, obwohl sie im Onboarding gesetzt wurden.
 **Fundort:** `src/hooks/useProfile.ts`, Zeilen 22-28
 **Fix:** Zugriff auf die korrekten snake_case-Feldnamen korrigiert.
+
+---
+
+### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
+
+**Datum erfasst:** 03-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** CC
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Projektqualität / Frontend-Architektur
+**Priorität:** Mittel
+**Beschreibung:**
+Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verstöße gegen die React-Hook-Regeln wie konditionale Hook-Aufrufe. Das ist nicht nur ein Stilproblem, sondern kann zu instabilem Laufzeitverhalten führen und fällt bei einer technischen Prüfung des Projekts sofort auf.
+**Fundort:** z. B. `src/hooks/useAuth.tsx`, `src/components/ProtectedRoute.tsx`, `src/components/EnsureProfile.tsx`
+**Fix:** 11 `react-hooks/rules-of-hooks`-Verstöße in 6 Dateien behoben (`src/hooks/useAuth.tsx`, `src/hooks/useProfile.ts`, `src/components/EnsureProfile.tsx`, `src/components/ProtectedRoute.tsx`, `src/components/Navbar.tsx`, `src/components/AccountSettingsDialog.tsx`), alle nach demselben Muster `IS_DEMO ? hookA() : hookB()`. Da `IS_DEMO` fest für die gesamte App-Laufzeit ist, aber nicht alle darunterliegenden Hooks in jedem Modus sicher aufrufbar sind (Clerk-Hooks wie `useUser`/`useClerk` brauchen einen `ClerkProvider`, der im Demo-Modus laut `src/main.tsx` gar nicht gemountet wird; `useConvexAuth` braucht speziell `ConvexProviderWithAuth`, nicht den einfachen `ConvexProvider` aus dem Demo-Modus), gab es zwei unterschiedliche Fixes: (1) `useAuth`/`useProfile` wählen die Implementierung jetzt einmalig beim Modul-Load (`export const useAuth = IS_DEMO ? useDemoAuth : useClerkBackedAuth`) statt bei jedem Aufruf zu verzweigen; (2) Convex-Hooks, die auch im Demo-Modus sicher sind (`useQuery`/`useMutation`), werden jetzt unconditional aufgerufen und nutzen im Demo-Modus Convex' `"skip"`-Argument; Clerk-Hooks bzw. `useConvexAuth`, die ihren Provider zwingend brauchen, wurden in eigene Bridge-Komponenten (`ClerkUserBridge`, `ConvexAuthBridge`) ausgelagert, die nur gerendert werden, wenn `!IS_DEMO`. Lint-Fehler insgesamt 156 → 145 (alle `rules-of-hooks`-Fehler behoben); Testsuite und TypeScript unverändert (21 vorbestehende, unabhängige Testfehler in `tests/skripte/upload_ui.test.tsx` bleiben bestehen, siehe fehlenden `LanguageProvider` im Test-Setup).

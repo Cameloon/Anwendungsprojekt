@@ -45,5 +45,7 @@ const useConvexProfile = (): AppProfile | null => {
   };
 };
 
-export const useProfile = (): AppProfile | null =>
-  IS_DEMO ? useDemoProfile() : useConvexProfile();
+// IS_DEMO is fixed for the app's entire lifetime, so picking the
+// implementation once here (rather than branching on every call) keeps the
+// same hook called on every render and avoids a conditional hook call.
+export const useProfile: () => AppProfile | null = IS_DEMO ? useDemoProfile : useConvexProfile;

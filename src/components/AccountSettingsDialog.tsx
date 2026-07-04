@@ -40,14 +40,27 @@ interface Props {
 
 }
 
+// useUser() requires a mounted ClerkProvider, which only exists when
+// !IS_DEMO (see src/main.tsx). Isolating the call in its own component that
+// is conditionally rendered (instead of conditionally calling the hook)
+// keeps the hook call unconditional within the component that owns it.
+const ClerkUserBridge = ({ onUser }: { onUser: (user: ReturnType<typeof useUser>["user"]) => void }) => {
+  const { user } = useUser();
+  useEffect(() => {
+    onUser(user);
+  }, [user, onUser]);
+  return null;
+};
+
 const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
 
   const { language, setLanguage } = useLanguage();
   const { user } = useAuth();
   const profile = useProfile();
-  // These are safe to call only when providers are mounted (i.e., !IS_DEMO).
-  const upsertProfile = IS_DEMO ? null : useMutation(api.profiles.upsertMine);
-  const clerkUser = IS_DEMO ? null : useUser().user;
+  // Convex hooks are safe to call unconditionally (ConvexProvider is mounted
+  // in demo mode too); it's simply unused there.
+  const upsertProfile = useMutation(api.profiles.upsertMine);
+  const [clerkUser, setClerkUser] = useState<ReturnType<typeof useUser>["user"]>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [studienfach, setStudienfach] = useState("");
@@ -152,7 +165,9 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      {!IS_DEMO && <ClerkUserBridge onUser={setClerkUser} />}
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{language.match({ english: () => "Account settings", german: () => "Account-Einstellungen" })}</DialogTitle>
@@ -280,7 +295,8 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
           </TabsContent>
         </Tabs>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 
