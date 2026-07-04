@@ -249,7 +249,8 @@ export const complete = mutation({
       hochschule: args.hochschule.trim(),
       kurs: args.kurs.trim().toUpperCase(),
       role: "user" as const,
-      status: "pending" as const,
+      /* status: "pending" as const, */
+      status: "active" as const,
       updatedAt: now,
     };
 
