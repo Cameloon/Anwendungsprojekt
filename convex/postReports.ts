@@ -40,12 +40,22 @@ export const getAdminReports = query({
     const reports = await ctx.db.query("postReports").order("desc").take(200);
     return await Promise.all(
       reports.map(async (report) => {
-        const postId = ctx.db.normalizeId("posts", report.postId);
-        const post = postId ? await ctx.db.get(postId) : null;
+        const normalizedPostId = ctx.db.normalizeId("posts", report.postId);
+        const post = normalizedPostId ? await ctx.db.get(normalizedPostId) : null;
+        let commentId = null;
+        if (report.reason.includes("Kommentar")) {
+          const match = report.reason.match(/\[ID: ([^\]]+)\]/);
+          if (match) {
+            const normalized = ctx.db.normalizeId("postComments", match[1]);
+            commentId = normalized;
+          }
+        }
         return {
           ...report,
           authorId: post?.authorId,
           authorName: post?.authorName,
+          normalizedPostId,
+          commentId,
         };
       })
     );

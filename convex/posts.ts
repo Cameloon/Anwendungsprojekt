@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { checkHateSpeech } from "./hateSpeech";
 
 async function enrichPost(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,6 +197,7 @@ export const create = mutation({
       profile?.displayName || identity.name || identity.email || "Unbekannt";
 
     const now = Date.now();
+    const { flagged, detectedWord } = checkHateSpeech(args.title + " " + args.content);
     const postId = await ctx.db.insert("posts", {
       forumId: args.forumId,
       authorId: identity.subject,
@@ -210,9 +212,24 @@ export const create = mutation({
       source: args.source,
       taskId: args.taskId,
       deadlineId: args.deadlineId,
+      flagged: flagged || undefined,
+      detectedWord: detectedWord || undefined,
       createdAt: now,
       updatedAt: now,
     });
+
+    if (flagged) {
+      await ctx.db.insert("postReports", {
+        postId: postId,
+        postTitle: args.title,
+        forumName: forum.name,
+        reason: "Automatische Erkennung: Hassrede — Wort: \"" + detectedWord + "\"",
+        reportedBy: "Automatische Erkennung",
+        reporterUserId: identity.tokenIdentifier,
+        status: "offen",
+        createdAt: Date.now(),
+      });
+    }
 
     return postId;
   },
@@ -252,9 +269,13 @@ export const update = mutation({
 
     const isModeration = post.authorId !== identity.subject && admin;
 
+    const newTitle = args.title !== undefined ? args.title.trim() : post.title;
+    const newContent = args.content !== undefined ? args.content.trim() : post.content;
+    const { flagged, detectedWord } = checkHateSpeech(newTitle + " " + newContent);
+
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.title !== undefined) patch.title = args.title.trim();
-    if (args.content !== undefined) patch.content = args.content.trim();
+    if (args.title !== undefined) patch.title = newTitle;
+    if (args.content !== undefined) patch.content = newContent;
     if (args.tag !== undefined) patch.tag = args.tag;
     if (args.visibility !== undefined) patch.visibility = args.visibility;
     if (args.sketch !== undefined) patch.sketch = args.sketch;
@@ -262,8 +283,26 @@ export const update = mutation({
       patch.linkedScriptIds = args.linkedScriptIds;
     if (args.linkedDeadlineIds !== undefined)
       patch.linkedDeadlineIds = args.linkedDeadlineIds;
+    if (flagged) {
+      patch.flagged = true;
+      patch.detectedWord = detectedWord;
+    }
 
     await ctx.db.patch(args.postId, patch);
+
+    if (flagged && !post.flagged) {
+      const forum = await ctx.db.get(post.forumId);
+      await ctx.db.insert("postReports", {
+        postId: args.postId,
+        postTitle: newTitle,
+        forumName: forum?.name || "Unbekannt",
+        reason: "Automatische Erkennung: Hassrede nach Bearbeitung — Wort: \"" + detectedWord + "\"",
+        reportedBy: "Automatische Erkennung",
+        reporterUserId: identity.tokenIdentifier,
+        status: "offen",
+        createdAt: Date.now(),
+      });
+    }
 
     if (isModeration) {
       await ctx.db.insert("moderationLog", {
@@ -369,14 +408,32 @@ export const addComment = mutation({
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
 
-    await ctx.db.insert("postComments", {
+    const { flagged, detectedWord } = checkHateSpeech(args.content);
+
+    const commentId = await ctx.db.insert("postComments", {
       postId: args.postId,
       authorId: identity.subject,
       authorName,
       content: args.content.trim(),
       parentId: args.parentId,
+      flagged: flagged || undefined,
+      detectedWord: detectedWord || undefined,
       createdAt: Date.now(),
     });
+
+    if (flagged) {
+      const forum = await ctx.db.get(post.forumId);
+      await ctx.db.insert("postReports", {
+        postId: args.postId,
+        postTitle: post.title,
+        forumName: forum?.name || "Unbekannt",
+        reason: "Automatische Erkennung: Hassrede in Kommentar [ID: " + commentId + "] — Wort: \"" + detectedWord + "\"",
+        reportedBy: "Automatische Erkennung",
+        reporterUserId: identity.tokenIdentifier,
+        status: "offen",
+        createdAt: Date.now(),
+      });
+    }
   },
 });
 
@@ -433,10 +490,31 @@ export const updateComment = mutation({
     if (comment.authorId !== identity.subject && !admin)
       throw new Error("Not authorized");
 
-    await ctx.db.patch(args.commentId, {
+    const { flagged, detectedWord } = checkHateSpeech(args.content);
+    const patch: Record<string, unknown> = {
       content: args.content.trim(),
       updatedAt: Date.now(),
-    });
+    };
+    if (flagged) {
+      patch.flagged = true;
+      patch.detectedWord = detectedWord;
+    }
+    await ctx.db.patch(args.commentId, patch);
+
+    if (flagged && !comment.flagged) {
+      const post = await ctx.db.get(comment.postId);
+      const forum = post ? await ctx.db.get(post.forumId) : null;
+      await ctx.db.insert("postReports", {
+        postId: comment.postId,
+        postTitle: post?.title || "Unbekannt",
+        forumName: forum?.name || "Unbekannt",
+        reason: "Automatische Erkennung: Hassrede in Kommentar nach Bearbeitung [ID: " + args.commentId + "] — Wort: \"" + detectedWord + "\"",
+        reportedBy: "Automatische Erkennung",
+        reporterUserId: identity.tokenIdentifier,
+        status: "offen",
+        createdAt: Date.now(),
+      });
+    }
   },
 });
 

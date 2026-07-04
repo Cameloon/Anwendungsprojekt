@@ -91,11 +91,14 @@ const AdminDashboardPage = () => {
   const markReportDone = useMutation(api.userReports.markDone);
   const postReports = useQuery(api.postReports.getAdminReports, {});
   const dismissPostReport = useMutation(api.postReports.markDone);
+  const deletePost = useMutation(api.posts.deletePost);
+  const deleteComment = useMutation(api.posts.deleteComment);
   const [expandedReportType, setExpandedReportType] = useState<
     "bug" | "feature" | null
   >(null);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [dismissingReport, setDismissingReport] = useState<string | null>(null);
+  const [deletingReport, setDeletingReport] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [banTarget, setBanTarget] = useState<{ userId: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -559,25 +562,92 @@ const AdminDashboardPage = () => {
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-2">
                             {report.status === "offen" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                  setDismissingReport(report._id);
-                                  try {
-                                    await dismissPostReport({ id: report._id });
-                                  } finally {
-                                    setDismissingReport(null);
-                                  }
-                                }}
-                                disabled={dismissingReport === report._id}
-                              >
-                                {dismissingReport === report._id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  language.match({ english: () => "Done", german: () => "Erledigt" })
-                                )}
-                              </Button>
+                              <>
+                                {report.commentId ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="gap-1"
+                                    disabled={deletingReport === report._id}
+                                    onClick={async () => {
+                                      setDeletingReport(report._id);
+                                      try {
+                                        await deleteComment({ commentId: report.commentId });
+                                        await dismissPostReport({ id: report._id });
+                                        toast({
+                                          title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+                                          description: language.match({ english: () => "Comment has been deleted.", german: () => "Kommentar wurde gelöscht." }),
+                                        });
+                                      } catch (err) {
+                                        toast({
+                                          title: language.match({ english: () => "Error", german: () => "Fehler" }),
+                                          description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
+                                          variant: "destructive",
+                                        });
+                                      } finally {
+                                        setDeletingReport(null);
+                                      }
+                                    }}
+                                  >
+                                    {deletingReport === report._id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <>{language.match({ english: () => "Delete comment", german: () => "Kommentar löschen" })}</>
+                                    )}
+                                  </Button>
+                                ) : report.normalizedPostId ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="gap-1"
+                                    disabled={deletingReport === report._id}
+                                    onClick={async () => {
+                                      setDeletingReport(report._id);
+                                      try {
+                                        await deletePost({ postId: report.normalizedPostId });
+                                        await dismissPostReport({ id: report._id });
+                                        toast({
+                                          title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+                                          description: language.match({ english: () => "Post has been deleted.", german: () => "Beitrag wurde gelöscht." }),
+                                        });
+                                      } catch (err) {
+                                        toast({
+                                          title: language.match({ english: () => "Error", german: () => "Fehler" }),
+                                          description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
+                                          variant: "destructive",
+                                        });
+                                      } finally {
+                                        setDeletingReport(null);
+                                      }
+                                    }}
+                                  >
+                                    {deletingReport === report._id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    )}
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    setDismissingReport(report._id);
+                                    try {
+                                      await dismissPostReport({ id: report._id });
+                                    } finally {
+                                      setDismissingReport(null);
+                                    }
+                                  }}
+                                  disabled={dismissingReport === report._id}
+                                >
+                                  {dismissingReport === report._id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    language.match({ english: () => "Done", german: () => "Erledigt" })
+                                  )}
+                                </Button>
+                              </>
                             )}
                             {report.authorId && (
                               <Button

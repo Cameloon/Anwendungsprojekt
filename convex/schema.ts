@@ -110,6 +110,9 @@ export default defineSchema({
     source: v.optional(v.string()),
     taskId: v.optional(v.string()),
     deadlineId: v.optional(v.id("deadlines")),
+    flagged: v.optional(v.boolean()),
+    reviewed: v.optional(v.boolean()),
+    detectedWord: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -133,6 +136,9 @@ export default defineSchema({
     authorName: v.string(),
     content: v.string(),
     parentId: v.optional(v.id("postComments")),
+    flagged: v.optional(v.boolean()),
+    reviewed: v.optional(v.boolean()),
+    detectedWord: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
