@@ -24,26 +24,8 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
-BUG-025: Dashboard-Deadline-Links öffnen keinen Eintrag im Planer
-Datum erfasst: 04-07-2026
-Verfasser: SA 
-Komponente/Bereich: Dashboard UI / Planner Navigation
-Priorität: Hoch
-Beschreibung:
-Im Dashboard werden Deadline-Einträge mit Links wie /planner?deadline=... erzeugt ([src/pages/DashboardPage.tsx (line 153)], [src/pages/DashboardPage.tsx (line 202)]
-Der Planer verarbeitet diesen Query-Parameter aber aktuell nicht; in [src/pages/PlannerPage.tsx (line 1)] gibt es keine useSearchParams-Logik für deadline. Dadurch wirkt der Klick aus dem Dashboard wie eine Detail-Navigation, landet aber nur auf der allgemeinen Planer-Seite ohne den gewünschten Eintrag zu öffnen oder hervorzuheben.
 
 ---
-
-BUG-026: Fehlerhafte Sonderzeichen in mehreren UI-Texten
-Datum erfasst: 04-07-2026
-Verfasser: SA
-Komponente/Bereich: Mehrere Frontend-Seiten / Textdarstellung
-Priorität: Mittel
-Beschreibung:
-Mehrere Benutzertexte enthalten weiterhin fehlerhaft dargestellte Sonderzeichen wie Ã¤, Ã¼, Ã¶, â€ž oder RÃ¼ckgÃ¤ngig. Sichtbar ist das u. a. im Dashboard bei Texten wie „Neueste EintrÃ¤ge“, „Letzte BeitrÃ¤ge“ oder „NÃ¤chster Termin“ sowie in der Forum-Detailansicht bei Texten wie „ZurÃ¼ck“, „VerÃ¶ffentlichen“ oder Bestätigungsdialogen ([src/pages/DashboardPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/DashboardPage.tsx:1), [src/pages/ForumDetailPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/ForumDetailPage.tsx:1)).
-Dadurch wirkt die Oberfläche technisch beschädigt und teilweise schwer lesbar. Dieser Fehler scheint bereits sinngleich im BugTracker bekannt zu sein, tritt im aktuellen Code aber weiterhin sichtbar auf.
-
 
 
 ## Bugs in Bearbeitung
@@ -400,3 +382,27 @@ Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verst�
 21 Tests in vier Dateien (`tests/admin-dashboard.test.tsx`, `tests/forum/author_controls.test.tsx`, `tests/forum/post_comment.test.tsx`, `tests/skripte/upload_ui.test.tsx`) crashten mit `useLanguage must be used within LanguageProvider` (`src/hooks/useLanguage.tsx`, Zeile 25). Die gerenderten Seiten (`AdminDashboardPage`, `PostDetailPage`, `ForumPage`, `SkriptePage`) nutzen seit der Übersetzungs-Arbeit (Commits „completing app translation"/„translating more pages") intern `useLanguage()`, die betroffenen Tests wrappten ihr `render(...)` aber nur mit `ThemeProvider`/`MemoryRouter`, nicht mit `LanguageProvider` — anders als `tests/planner/crud.test.tsx`, `tests/dashboard/render.test.tsx` und `tests/dashboard/filter.test.tsx`, die das bereits korrekt taten. Reproduziert auch auf unverändertem `main`-Branch, also unabhängig von [[BUG-014]].
 **Fundort:** `tests/admin-dashboard.test.tsx`, `tests/forum/author_controls.test.tsx`, `tests/forum/post_comment.test.tsx`, `tests/skripte/upload_ui.test.tsx`
 **Fix:** Alle vier Dateien importieren jetzt `LanguageProvider` aus `@/hooks/useLanguage` und wrappen ihre Render-Helfer damit (analog zum bestehenden Muster in `tests/dashboard/render.test.tsx`). Testsuite danach 105/105 grün (vorher 84/105).
+
+---
+
+BUG-025: Dashboard-Deadline-Links öffnen keinen Eintrag im Planer
+Datum erfasst: 04-07-2026
+Verfasser: SA 
+Komponente/Bereich: Dashboard UI / Planner Navigation
+Priorität: Hoch
+Beschreibung:
+Im Dashboard werden Deadline-Einträge mit Links wie /planner?deadline=... erzeugt ([src/pages/DashboardPage.tsx (line 153)], [src/pages/DashboardPage.tsx (line 202)]
+Der Planer verarbeitet diesen Query-Parameter aber aktuell nicht; in [src/pages/PlannerPage.tsx (line 1)] gibt es keine useSearchParams-Logik für deadline. Dadurch wirkt der Klick aus dem Dashboard wie eine Detail-Navigation, landet aber nur auf der allgemeinen Planer-Seite ohne den gewünschten Eintrag zu öffnen oder hervorzuheben.
+
+---
+
+BUG-026: Fehlerhafte Sonderzeichen in mehreren UI-Texten
+Datum erfasst: 04-07-2026
+Verfasser: SA
+Komponente/Bereich: Mehrere Frontend-Seiten / Textdarstellung
+Priorität: Mittel
+Beschreibung:
+Mehrere Benutzertexte enthalten weiterhin fehlerhaft dargestellte Sonderzeichen wie Ã¤, Ã¼, Ã¶, â€ž oder RÃ¼ckgÃ¤ngig. Sichtbar ist das u. a. im Dashboard bei Texten wie „Neueste EintrÃ¤ge“, „Letzte BeitrÃ¤ge“ oder „NÃ¤chster Termin“ sowie in der Forum-Detailansicht bei Texten wie „ZurÃ¼ck“, „VerÃ¶ffentlichen“ oder Bestätigungsdialogen ([src/pages/DashboardPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/DashboardPage.tsx:1), [src/pages/ForumDetailPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/ForumDetailPage.tsx:1)).
+Dadurch wirkt die Oberfläche technisch beschädigt und teilweise schwer lesbar. Dieser Fehler scheint bereits sinngleich im BugTracker bekannt zu sein, tritt im aktuellen Code aber weiterhin sichtbar auf.
+
+
