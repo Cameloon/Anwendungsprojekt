@@ -214,10 +214,13 @@ describe("SkriptePage – Upload-Dialog", () => {
     expect(screen.getByPlaceholderText("Titel des Skripts")).toBeInTheDocument();
   });
 
-  // FA fordert Datei-Pflicht, aktuelle Implementierung erlaubt bewusst Submission
-  // ohne Datei ("Als Notiz speichern") — Klärung mit Product Owner nötig, bevor
-  // dieser Test geschrieben werden kann (siehe Issue #47 / Funktionale_Anforderungen.md)
-  it.todo("Submit-Button ist deaktiviert solange keine Datei ausgewählt ist");
+  it("Submit-Button bleibt ohne ausgewählte Datei aktiv (Speichern als Notiz)", () => {
+    renderSkriptePage();
+    fireEvent.click(screen.getByRole("button", { name: /^Hochladen$/i }));
+    const submitButton = screen.getByRole("button", { name: /Als Notiz speichern/i });
+    expect(submitButton).toBeInTheDocument();
+    expect(submitButton).not.toBeDisabled();
+  });
 
   it("verhindert Submission bei ungültigen Eingaben — Formular bleibt offen", () => {
     renderSkriptePage();

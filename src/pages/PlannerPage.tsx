@@ -67,6 +67,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { TITLE_MAX } from "@/lib/validation";
 
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -299,7 +300,7 @@ function PlannerPage() {
       else toast.error(language.match({ english: () => "Please enter a title", german: () => "Bitte einen Titel eingeben" }));
       return;
     }
-    if (title.trim().length > 50) {
+    if (title.trim().length > TITLE_MAX) {
       return;
     }
     let inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
@@ -874,7 +875,7 @@ function PlannerLayout({
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Input placeholder={language.match({ english: () => "Title (e.g. Math assignment)", german: () => "Titel (z. B. Hausarbeit Mathe)" })} value={title} onChange={(e) => setTitle(e.target.value)} />
-                      {title.trim().length > 50 && (
+                      {title.trim().length > TITLE_MAX && (
                         <p className="text-xs text-destructive">{language.match({ english: () => "Title must not exceed 50 characters.", german: () => "Titel darf maximal 50 Zeichen lang sein." })}</p>
                       )}
                     </div>

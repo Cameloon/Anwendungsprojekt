@@ -1,11 +1,11 @@
 export const TITLE_MIN = 3;
-export const TITLE_MAX = 200;
+export const TITLE_MAX = 50;
 export const MESSAGE_MIN = 5;
 
 export function validateTitle(title: string): string {
   const trimmed = title.trim();
   if (trimmed.length > 0 && trimmed.length < TITLE_MIN) return "Mindestens 3 Zeichen.";
-  if (trimmed.length > TITLE_MAX) return "Maximal 200 Zeichen.";
+  if (trimmed.length > TITLE_MAX) return "Maximal 50 Zeichen.";
   return "";
 }
 

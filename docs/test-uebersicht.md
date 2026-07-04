@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-07-04 07:26 UTC -->
+<!-- Letzte Aktualisierung: 2026-07-04 08:02 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 76 | 0 | 1 | 0 |
+| 77 | 0 | 0 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -43,29 +43,13 @@
 
 - ✅ creates, edits, toggles and deletes an appointment
 
-## tests/forum/author_controls.test.tsx
-
-### Forum – Autor-Kontrolle: Edit/Delete-Buttons
-
-- ✅ Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag
-- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
-- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
-- ✅ Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
-
-## tests/forum/post_comment.test.tsx
-
-### Forum post and comment flow
-
-- ✅ creates a post and shows it with author and tag in the forum list
-- ✅ shows post detail with author, tag and content; adds comments in chronological order
-
 ## tests/skripte/upload_ui.test.tsx
 
 ### SkriptePage – Upload-Dialog
 
 - ✅ Upload-Formular ist initial ausgeblendet
 - ✅ öffnet das Formular beim Klick auf Hochladen
-- 🔜 Submit-Button ist deaktiviert solange keine Datei ausgewählt ist
+- ✅ Submit-Button bleibt ohne ausgewählte Datei aktiv (Speichern als Notiz)
 - ✅ verhindert Submission bei ungültigen Eingaben — Formular bleibt offen
 - ✅ zeigt Fehlermeldung bei ungültigem Dateityp
 - ✅ fügt neues Skript zur Liste hinzu nach erfolgreichem Upload
@@ -87,6 +71,22 @@
 - ✅ validateFileSize(26214400 Bytes) → ""
 - ✅ validateFileSize(26214401 Bytes) → "Datei darf maximal 25 MB groß sein."
 - ✅ validateFileSize(52428800 Bytes) → "Datei darf maximal 25 MB groß sein."
+
+## tests/forum/author_controls.test.tsx
+
+### Forum – Autor-Kontrolle: Edit/Delete-Buttons
+
+- ✅ Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag
+- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
+- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
+- ✅ Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
+
+## tests/forum/post_comment.test.tsx
+
+### Forum post and comment flow
+
+- ✅ creates a post and shows it with author and tag in the forum list
+- ✅ shows post detail with author, tag and content; adds comments in chronological order
 
 ## tests/unit/demoStore.test.ts
 
@@ -119,8 +119,8 @@
 - ✅ validateTitle("") → ""
 - ✅ validateTitle("ab") → "Mindestens 3 Zeichen."
 - ✅ validateTitle("abc") → ""
-- ✅ validateTitle("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") → ""
-- ✅ validateTitle("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") → "Maximal 200 Zeichen."
+- ✅ validateTitle("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") → ""
+- ✅ validateTitle("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") → "Maximal 50 Zeichen."
 - ✅ validateTitle("  a  ") → "Mindestens 3 Zeichen."
 - ✅ validateTitle("  abc  ") → ""
 

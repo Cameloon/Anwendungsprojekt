@@ -25,7 +25,7 @@ describe("validateTitle", () => {
     ["ab", "Mindestens 3 Zeichen."],
     ["abc", ""],
     ["a".repeat(TITLE_MAX), ""],
-    ["a".repeat(TITLE_MAX + 1), "Maximal 200 Zeichen."],
+    ["a".repeat(TITLE_MAX + 1), "Maximal 50 Zeichen."],
     ["  a  ", "Mindestens 3 Zeichen."],  // trim: length 1
     ["  abc  ", ""],                      // trim: length 3
   ])("validateTitle(%j) → %j", (input, expected) => {
