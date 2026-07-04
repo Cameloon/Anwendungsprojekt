@@ -24,21 +24,23 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
-### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
-
-Datum erfasst: 03-07-2026
-Verfasser: CC
-Komponente/Bereich: Projektqualität / Frontend-Architektur
-Priorität: Mittel
-Beschreibung:
-Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verstöße gegen die React-Hook-Regeln wie konditionale Hook-Aufrufe. Das ist nicht nur ein Stilproblem, sondern kann zu instabilem Laufzeitverhalten führen und fällt bei einer technischen Prüfung des Projekts sofort auf.
-Fundort: z. B. src/hooks/useAuth.tsx, src/components/ProtectedRoute.tsx, src/components/EnsureProfile.tsx
-
 ---
 
 ## Bugs in Bearbeitung
 
 Hinweis: Bearbeiter mit Kürzel ergänzen
+
+### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
+
+Datum erfasst: 03-07-2026
+Datum Bearbeitung: 04-07-2026
+Verfasser: CC
+Bearbeitet durch: DM (CC)
+Komponente/Bereich: Projektqualität / Frontend-Architektur
+Priorität: Mittel
+Beschreibung:
+Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verstöße gegen die React-Hook-Regeln wie konditionale Hook-Aufrufe. Das ist nicht nur ein Stilproblem, sondern kann zu instabilem Laufzeitverhalten führen und fällt bei einer technischen Prüfung des Projekts sofort auf.
+Fundort: z. B. src/hooks/useAuth.tsx, src/components/ProtectedRoute.tsx, src/components/EnsureProfile.tsx
 
 ---
 
