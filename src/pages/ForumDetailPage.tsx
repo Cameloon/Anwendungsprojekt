@@ -354,6 +354,8 @@ const ForumDetailPage = () => {
       inviteError={inviteError}
       handleInvite={handleInvite}
       isAdmin={isAdmin}
+      archiveForumMutation={archiveForumMutation}
+      unarchiveForumMutation={unarchiveForumMutation}
       deleteForumMutation={deleteForumMutation}
       deletePostMutation={deletePostMutation}
       deleteCommentMutation={deleteCommentMutation}
@@ -406,6 +408,8 @@ function ForumDetailLayout({
   inviteError,
   handleInvite,
   isAdmin,
+  archiveForumMutation,
+  unarchiveForumMutation,
   deleteForumMutation,
   deletePostMutation,
   deleteCommentMutation,
@@ -450,6 +454,8 @@ function ForumDetailLayout({
   inviteError: string;
   handleInvite: () => void;
   isAdmin: boolean;
+  archiveForumMutation: (args: any) => any;
+  unarchiveForumMutation: (args: any) => any;
   deleteForumMutation: (args: any) => any;
   deletePostMutation: (args: any) => any;
   deleteCommentMutation: (args: any) => any;

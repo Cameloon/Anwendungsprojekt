@@ -24,8 +24,8 @@ Beschreibung des Fehlers (ggf. ergänzend Screenshots in die WhatsApp Gruppe)
 
 ## Aktive Bugs
 
-
 ### BUG-014: Lint-Status des Projekts – produktive Dateien verletzen React-Hook-Regeln
+
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Projektqualität / Frontend-Architektur
@@ -34,15 +34,11 @@ Beschreibung:
 Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verstöße gegen die React-Hook-Regeln wie konditionale Hook-Aufrufe. Das ist nicht nur ein Stilproblem, sondern kann zu instabilem Laufzeitverhalten führen und fällt bei einer technischen Prüfung des Projekts sofort auf.
 Fundort: z. B. src/hooks/useAuth.tsx, src/components/ProtectedRoute.tsx, src/components/EnsureProfile.tsx
 
-
-
 ---
 
 ## Bugs in Bearbeitung
 
 Hinweis: Bearbeiter mit Kürzel ergänzen
-
-
 
 ---
 
@@ -54,7 +50,7 @@ Hinweis: "Datum erledigt" ergänzen
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch:** DM
 **Komponente/Bereich:** Dashboard UI
 **Priorität:** Hoch
@@ -68,7 +64,7 @@ Die Variable `visible` (gefilterte Forum-Liste ohne ausgeblendete Foren) wird in
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch:** DM
 **Komponente/Bereich:** Dashboard UI
 **Priorität:** Hoch
@@ -82,7 +78,7 @@ Klickt ein Nutzer im Dashboard-Forum-Feed auf den Titel eines Beitrags, landet e
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch:** DM
 **Komponente/Bereich:** Forum – Einladungsdialog
 **Priorität:** Mittel
@@ -96,7 +92,7 @@ Im Einladungsdialog (sowohl in ForumDetailPage als auch ForumPage) werden die ei
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch:** DM
 **Komponente/Bereich:** Forum – Sidebar
 **Priorität:** Niedrig
@@ -110,7 +106,7 @@ Die Komponente `ForumItem` ist innerhalb von `ForumPageLayout` definiert und wir
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 26-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Forum – Melden-Funktion
 **Priorität:** Mittel
@@ -124,7 +120,7 @@ Der „Melden"-Button in `PostDetailPage` und `ForumPage` öffnet einen `ReportD
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 25-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Bearbeitet durch** DM (CC)
 **Komponente/Bereich:** Forum – Beitragsdetail
 **Priorität:** Hoch
@@ -134,10 +130,10 @@ Der Löschen-Button für Kommentare wird nur Admins angezeigt (`{isAdmin && …}
 
 ---
 
-### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge  
+### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge
 
 **Datum erfasst:** 25-06-2026
-**Verfasser:** CC
+**Verfasser:** DM (CC)
 **Komponente/Bereich:** Dashboard UI
 **Priorität:** Niedrig
 **Beschreibung:**
@@ -147,6 +143,7 @@ Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), u
 ---
 
 ### BUG-010: Dashboard – Skriptbereich zeigt nur öffentliche Skripte
+
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Dashboard UI
@@ -155,11 +152,10 @@ Beschreibung:
 Im Dashboard werden Skripte über api.scripts.listPublic bzw. nur aus der öffentlichen Sicht geladen. Dadurch fehlen im Dashboard Skripte mit Sichtbarkeit jahrgang, group oder private eigene Skripte, obwohl diese in der Skript-Bibliothek sichtbar sind. Die Anzeige im Dashboard ist damit unvollständig und weicht vom tatsächlichen Datenbestand der Bibliothek ab.
 Fundort: src/pages/DashboardPage.tsx, Query für Skripte
 
-
 ---
 
-
 ### BUG-011: Dashboard – Zeitabhängige Kennzahlen können ohne Re-Render veralten
+
 Datum erfasst: 03-07-2026
 Verfasser: CC
 Komponente/Bereich: Dashboard UI
@@ -174,8 +170,8 @@ Fundort: src/pages/DashboardPage.tsx, Berechnung von nextDeadline und urgentDead
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 04-07-2026
-**Verfasser:** CC
-**Bearbeitet durch:** DM
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Planer
 **Priorität:** Mittel
 **Beschreibung:**
@@ -189,8 +185,8 @@ Im Detail-Dialog eines Termins existiert ein Datei-Upload-Element, dessen `onCha
 
 **Datum erfasst:** 03-07-2026
 **Datum erledigt:** 04-07-2026
-**Verfasser:** CC
-**Bearbeitet durch:** DM
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** UI / Frontend-Texte
 **Priorität:** Mittel
 **Beschreibung:**
@@ -204,8 +200,8 @@ Mehrere Benutzertexte enthalten fehlerhaft dargestellte Sonderzeichen wie Ã¼, 
 
 **Datum erfasst:** 03-07-2026
 **Datum erledigt:** 04-07-2026
-**Verfasser:** CC
-**Bearbeitet durch:** DM
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** ~~Planer~~ **Skripte** (siehe Hinweis unten)
 **Priorität:** Hoch
 **Beschreibung:**
@@ -220,8 +216,8 @@ Der Detail-Dialog eines Termins zeigt instabiles Verhalten beim Schließen. In V
 
 **Datum erfasst:** 25-06-2026
 **Datum erledigt:** 04-07-2026
-**Verfasser:** CC
-**Bearbeitet durch:** DM
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Planer
 **Priorität:** Mittel
 **Beschreibung:**
@@ -230,3 +226,137 @@ Die Bedingung `isOwn || d.visibility === "public"` zeigt Bearbeiten- und Lösche
 **Hinweis:** Die ursprüngliche Annahme "Das Backend lehnt solche Aktionen ab" traf nicht zu – `update` und `deleteDeadline` in `convex/deadlines.ts` prüften die Berechtigung bisher nur bei `visibility === "private"`; bei öffentlichen Terminen gab es serverseitig gar keine Eigentümer-Prüfung.
 **Fix:** Backend: Berechtigungsprüfung in `update` (Besitzer oder Eingeladene) und `deleteDeadline` (nur Besitzer) gilt jetzt unabhängig von `visibility`, nicht mehr nur für private Termine. Frontend: Bearbeiten-Button an allen 6 Stellen zeigt sich jetzt nur noch für Besitzer oder Eingeladene, Löschen-Button nur noch für den Besitzer.
 
+---
+
+### BUG-015: ForumDetailPage – Archivieren/Rückgängig wirft ReferenceError
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum – Detailansicht
+**Priorität:** Hoch
+**Beschreibung:**
+`archiveForumMutation`/`unarchiveForumMutation` wurden nur in `ForumDetailPage` erzeugt, aber innerhalb der separaten Funktion `ForumDetailLayout` referenziert, in der sie nicht im Scope sind. Klick auf „Archivieren"/„Rückgängig" wirft einen `ReferenceError`, der vom umgebenden `try/catch` verschluckt wird – der Nutzer sieht nur einen generischen Fehler-Toast, das Forum wird nie archiviert. In `ForumPage.tsx` war das gleiche Feature korrekt verdrahtet, hier ein isolierter Regressions-Bug.
+**Fundort:** `src/pages/ForumDetailPage.tsx`, Zeilen 539, 543
+**Fix:** `archiveForumMutation`/`unarchiveForumMutation` werden jetzt als Props von `ForumDetailPage` an `ForumDetailLayout` durchgereicht (analog zu `deleteForumMutation`).
+
+---
+
+### BUG-016: PlannerPage – Nachrichten-Tab eines Termins zeigt nie Nachrichten an
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Hoch
+**Beschreibung:**
+`listForUser` liefert Termine ohne eingebettetes `messages`-Feld (Nachrichten liegen in der separaten Tabelle `deadlineMessages`), die dafür vorgesehene Query `getMessages` wurde im Frontend nirgends aufgerufen. Nachrichten wurden zwar über `addMessage` gespeichert, aber nie angezeigt – der Nachrichten-Tab zeigte immer „Keine Nachrichten." und die Badge-Zahl blieb bei 0.
+**Fundort:** `convex/deadlines.ts`, `getMessages` (Zeile 118); `src/pages/PlannerPage.tsx`
+**Fix:** Neue Query `openMessagesQuery` (`api.deadlines.getMessages`) für den geöffneten Termin ergänzt, analog zum bereits bestehenden Muster für Anhänge. `listForUser` liefert zusätzlich `messageCount` pro Termin mit, damit auch die Badge-Zahlen in der Terminliste korrekt sind (vorher immer 0).
+
+---
+
+### BUG-017: convex/deadlines.ts – getById, getMessages und addMessage ohne Berechtigungsprüfung
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer Backend
+**Priorität:** Hoch
+**Beschreibung:**
+Anders als `getAttachments`/`attachFile` (die `canAccessDeadline` prüfen) hatten `getById`, `getMessages` und `addMessage` keine Zugriffsprüfung. Jeder eingeloggte Nutzer konnte per direktem API-Aufruf private Termine fremder Nutzer auslesen, alle Nachrichten fremder Termine lesen oder Nachrichten in fremde private Termine schreiben.
+**Fundort:** `convex/deadlines.ts`, `getById` (Zeile 79), `getMessages` (Zeile 118), `addMessage` (Zeile 578)
+**Fix:** Alle drei Funktionen prüfen jetzt `canAccessDeadline` vor dem Zugriff, analog zu `getAttachments`/`attachFile`.
+
+---
+
+### BUG-018: PlannerPage – Öffentlich-Schalten eines Termins lädt den Kurs nicht wirklich ein
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Hoch
+**Beschreibung:**
+Beim Bearbeiten eines Termins wurden beim Wechsel auf „Öffentlich" die zuvor gesetzten Einzel-Invitees mit übernommen (`inviteeIds` blieb dadurch nicht leer). Da das Backend seinen Auto-Invite-Zweig (ganzer Kurs) nur auslöst, wenn `invitees` beim Update `undefined` ist, wurde bei diesem Übergang nur die alte Einzelliste gespeichert – trotz UI-Hinweis „Alle Personen deines Kurses werden automatisch eingeladen." Zusätzlich verschickte selbst der Auto-Invite-Zweig im Backend (anders als bei `create`) nie Benachrichtigungen an neu hinzugekommene Kurs-Mitglieder.
+**Fundort:** `src/pages/PlannerPage.tsx`, Invitee-Merge-Logik in `submitDeadline`; `convex/deadlines.ts`, `update`-Mutation
+**Fix:** Die Übernahme bestehender Invitees beim Bearbeiten greift jetzt nur noch, wenn die Sichtbarkeit „Privat" bleibt. Zusätzlich verschickt der Auto-Invite-Zweig in `update` jetzt Benachrichtigungen an neu hinzugekommene Kurs-Mitglieder, analog zu `create`.
+
+---
+
+### BUG-019: convex/posts.ts – listRecent kann eigene zugängliche Beiträge verschlucken
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Dashboard UI / Forum Backend
+**Priorität:** Mittel
+**Beschreibung:**
+Die Query holte zunächst die 50 neuesten Beiträge über alle Foren hinweg und filterte erst danach auf für den Nutzer zugängliche Foren. Bei mehr Aktivität in fremden Kurs-Foren konnten dadurch alle 50 Plätze durch nicht-zugängliche Beiträge belegt werden, wodurch die Dashboard-Beitragsliste leer oder unvollständig wirkte, obwohl ältere eigene Beiträge existierten.
+**Fundort:** `convex/posts.ts`, `listRecent`, Zeilen 540-559
+**Fix:** Reihenfolge vertauscht – es wird zuerst auf zugängliche Foren gefiltert und danach auf die neuesten 20 begrenzt.
+
+---
+
+### BUG-020: GroupsPanel – Archivierte Gruppe öffnen zeigt leeren Dialog
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Lerngruppen
+**Priorität:** Mittel
+**Beschreibung:**
+`active` wurde nur aus der nicht-archivierten Gruppenliste berechnet. Klick auf eine Gruppe unter „Archivierte Gruppen" setzte `activeId`, aber `active` blieb `null`, da die Gruppe dort nicht gefunden wurde – die Detailansicht rendert nur bei `view === "detail" && active`, der Nutzer sah einen leeren Dialog ohne Zurück-Button. Die „Rückgängig"-Funktion (Reaktivieren) war dadurch unerreichbar.
+**Fundort:** `src/components/GroupsPanel.tsx`, Zeile 54
+**Fix:** `active` sucht jetzt zusätzlich in der archivierten Gruppenliste.
+
+---
+
+### BUG-021: GroupsPanel – Löschen-Button für Gruppen-Dateien anderer Mitglieder vom Backend abgelehnt
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Lerngruppen
+**Priorität:** Mittel
+**Beschreibung:**
+Das Frontend zeigt den Löschen-Button für Dateien, wenn `f.uploadedBy === user.id || active.ownerId === user.id` gilt – impliziert also, dass der Gruppen-Owner auch Dateien anderer Mitglieder löschen kann. Das Backend (`deleteGroupFile`) prüfte aber nur `uploadedBy`, wodurch der Klick für den Owner bei fremden Dateien immer mit „Fehler beim Löschen" fehlschlug.
+**Fundort:** `src/components/GroupsPanel.tsx`, Zeile 397; `convex/groups.ts`, `deleteGroupFile`
+**Fix:** `deleteGroupFile` erlaubt jetzt zusätzlich den Gruppen-Owner, passend zur bestehenden UI.
+
+---
+
+### BUG-022: PlannerPage – Löschen-Button für Termin-Anhänge allen Betrachtern sichtbar
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Mittel
+**Beschreibung:**
+Der Löschen-Button für Termin-Anhänge wurde für jeden Betrachter des Termins angezeigt, nicht nur für den Uploader. Das Backend (`deleteAttachment`) erlaubte nur dem Uploader das Löschen, wodurch der Klick bei fremden Anhängen fehlschlug. Analoges Problem wie BUG-021, nur beim Planer statt bei Lerngruppen.
+**Fundort:** `src/pages/PlannerPage.tsx`, Anhänge-Rendering; `convex/deadlines.ts`, `deleteAttachment`
+**Fix:** Backend erlaubt jetzt zusätzlich den Termin-Owner. Frontend zeigt den Löschen-Button jetzt nur noch für Uploader oder Termin-Owner (`uploadedBy` wird dafür jetzt mit ausgeliefert).
+
+---
+
+### BUG-023: useProfile – Demo-Modus liest falsche Feldnamen aus dem Profil
+
+**Datum erfasst:** 04-07-2026
+**Datum erledigt:** 04-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Account / Demo-Modus
+**Priorität:** Mittel
+**Beschreibung:**
+`useDemoProfile` griff auf camelCase-Felder (`p.displayName`, `p.avatarUrl`, `p.createdAt`) zu, während `DemoProfile` diese Werte tatsächlich als snake_case speichert (`display_name`, `avatar_url`, `created_at`). Dadurch waren Anzeigename, Avatar und Beitrittsdatum im Demo-Modus immer leer, obwohl sie im Onboarding gesetzt wurden.
+**Fundort:** `src/hooks/useProfile.ts`, Zeilen 22-28
+**Fix:** Zugriff auf die korrekten snake_case-Feldnamen korrigiert.

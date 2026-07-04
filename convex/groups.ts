@@ -290,8 +290,12 @@ export const deleteGroupFile = mutation({
 
     const file = await ctx.db.get(args.fileId);
     if (!file) throw new Error("File not found");
-    if (file.uploadedBy !== identity.subject)
-      throw new Error("Not authorized");
+    if (file.uploadedBy !== identity.subject) {
+      const group = await ctx.db.get(file.groupId);
+      if (!group || group.ownerId !== identity.subject) {
+        throw new Error("Not authorized");
+      }
+    }
 
     await ctx.storage.delete(file.storageId);
     await ctx.db.delete(args.fileId);

@@ -2,8 +2,6 @@
 
 ## Rückblick
 
-> **Hinweis:** Die folgenden Punkte sind ein Entwurf auf Basis der vorhandenen Projektdokumente und des aktuellen Codestands. Bitte im Team prüfen, ergänzen (insb. um Prozess-/Teamaspekte, die sich nicht aus Code/Docs ableiten lassen) und wo nötig korrigieren, bevor das Dokument final abgegeben wird.
-
 ### Fachliche Abweichungen von der ursprünglichen Planung
 
 - **Mehrsprachigkeit (DE/EN) nur teilweise umgesetzt.** Als Must-Have in `Funktionale_Anforderungen.md` definiert, aber `useLanguage()` ist aktuell nur in Planner und Account-Bereich verdrahtet. Dashboard, Forum und Skripte-Seite sind weiterhin fest auf Deutsch. Sollte entweder nachgezogen oder der Anforderungsstatus bewusst auf "teilweise" korrigiert werden.
@@ -21,7 +19,6 @@
 ### Nicht abgeschlossene Punkte zum Abgabezeitpunkt
 
 - BUG-014 (Lint-Verstöße gegen React-Hook-Regeln in produktivem Code, z. B. `useAuth.tsx`, `ProtectedRoute.tsx`) ist zum Abgabezeitpunkt noch offen.
-- Es existiert kein Seed-Skript für Beispieldaten in einem frischen Convex-Deployment — vorhandene Testdaten sind ausschließlich der "gewachsene" Stand im geteilten Dev-Deployment (`dev:vivid-antelope-341`), nicht reproduzierbar für ein neues Deployment.
 
 ---
 
@@ -33,6 +30,7 @@
 - **Studierende hochschulübergreifend vernetzen.** Foren und Vorlesungen sind bisher an Kurs und Standort gebunden. Ein Austausch über die eigene DHBW-Hochschule hinaus, etwa gemeinsame Foren pro Studiengang standortübergreifend. Das bestehende Datenmodell der DHBW-Standorte (`src/lib/dhbw.ts`) bietet sich als Grundlage an, um Sichtbarkeits- und Mitgliedschaftsregeln für Foren um eine hochschulübergreifende Ebene zu erweitern. Außerdem kann das Konzept auch für andere Hochschulen/Universitäten ausgeweitet werden.
 - **Skript-Bibliothek weiter ausbauen.** Mehrere bereits als Should-/Could-Have vorgesehene Funktionen rund um Skripte sind noch offen, u. a. erweiterte Upload-Regeln und Quota-Management pro Nutzer/Kurs, Kategorisierung nach Metadaten (Jahr, Dozent, Modul) sowie Bewertungsmöglichkeiten für Material (siehe `Funktionale_Anforderungen.md`). Bietet sich als klar abgrenzbares nächstes Arbeitspaket für eine Folgegruppe an.
 - **Erweiterte Forenfunktionen nachziehen.** Kategorie-Tags pro Beitrag existieren bereits (`tag`-Feld in `convex/posts.ts`), die als Should-Have vorgesehenen Funktionen "Pinnen"/"Als wichtig markieren" und "Sortierung nach Aktivität" sind im Code aber nicht vorhanden (siehe `Funktionale_Anforderungen.md`). Guter, klar abgegrenzter nächster Schritt für die Forenfunktionalität.
+- **Jahrgangsübergreifendes Q&A-Forum pro Studienfach.** Als Should-Have vorgesehen (siehe `Funktionale_Anforderungen.md`), aber noch nicht umgesetzt: Foren sind aktuell an Kurs (und damit Jahrgang) gebunden. Ein zusätzliches Forum, das Studierende desselben Studienfachs unabhängig vom Jahrgang zusammenbringt, würde den Austausch über Kursgrenzen hinweg ermöglichen — losgelöst von der oben genannten hochschulübergreifenden Vernetzung, die auf den Standort statt den Jahrgang zielt.
 
 ### Design / UX
 
