@@ -1,6 +1,6 @@
 // Render-Test für AdminDashboardPage.
 // Prüft, dass alle zentralen Admin-Bereiche (Nutzerfreischaltungen, Moderationsprotokoll,
-// Vorlesungsverwaltung, Upload-Regeln) im gerenderten HTML sichtbar sind.
+// Vorlesungsverwaltung, Nutzerzufriedenheit) im gerenderten HTML sichtbar sind.
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -43,8 +43,6 @@ describe("AdminDashboardPage", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: /Vorlesungsverwaltung/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Material- und Upload-Regeln/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Nutzerzufriedenheit/i)).toBeInTheDocument();
   });
 });

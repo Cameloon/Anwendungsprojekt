@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, X, CalendarDays, MessageSquare, Inbox } from "lucide-react";
+import { Bell, Check, X, CalendarDays, MessageSquare, Inbox, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
@@ -10,10 +10,11 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 interface NotificationItem {
   id: string;
-  type: "forum_invite" | "deadline_invite";
+  type: "forum_invite" | "deadline_invite" | "account_banned";
   fromName: string;
   recipientName: string;
   title: string;
+  message?: string;
   status: "pending" | "accepted" | "declined";
   createdAt: number;
 }
@@ -46,6 +47,7 @@ const NotificationsBell = () => {
     fromName: n.fromName,
     recipientName: n.recipientName,
     title: n.title,
+    message: n.message,
     status: n.status,
     createdAt: n.createdAt,
   }));
@@ -105,6 +107,32 @@ const NotificationsBell = () => {
             </div>
           )}
           {items.map((n) => {
+            if (n.type === "account_banned") {
+              return (
+                <div key={n.id} className="px-3 py-3 border-b last:border-b-0 hover:bg-secondary/40">
+                  <div className="flex items-start gap-2">
+                    <div className="h-7 w-7 rounded-md bg-destructive/10 flex items-center justify-center shrink-0">
+                      <Ban className="h-3.5 w-3.5 text-destructive" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs leading-snug font-semibold">{n.title}</p>
+                      {n.message && (
+                        <p className="text-xs leading-snug mt-0.5 text-muted-foreground">{n.message}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-1.5">
+                        <p className="text-[10px] text-muted-foreground">{formatTime(n.createdAt)}</p>
+                        <button
+                          onClick={() => removeNotification(n.id)}
+                          className="text-[10px] text-muted-foreground hover:text-destructive"
+                        >
+                          {language.match({ english: () => "Remove", german: () => "Entfernen" })}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             const Icon = n.type === "forum_invite" ? MessageSquare : CalendarDays;
             return (
               <div key={n.id} className="px-3 py-3 border-b last:border-b-0 hover:bg-secondary/40">

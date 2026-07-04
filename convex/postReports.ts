@@ -37,7 +37,18 @@ export const getAdminReports = query({
       .unique();
     if (caller?.role !== "admin") throw new Error("Nicht autorisiert");
 
-    return await ctx.db.query("postReports").order("desc").take(200);
+    const reports = await ctx.db.query("postReports").order("desc").take(200);
+    return await Promise.all(
+      reports.map(async (report) => {
+        const postId = ctx.db.normalizeId("posts", report.postId);
+        const post = postId ? await ctx.db.get(postId) : null;
+        return {
+          ...report,
+          authorId: post?.authorId,
+          authorName: post?.authorName,
+        };
+      })
+    );
   },
 });
 

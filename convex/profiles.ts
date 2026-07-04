@@ -119,6 +119,7 @@ export const getAccessStatus = query({
       profile.hochschule &&
       profile.kurs
     );
+    if (profile.status === "banned") return "banned";
     if (!hasFields) return "incomplete";
     if (profile.status === "active") return "active";
     if (profile.status === "pending") return "pending";

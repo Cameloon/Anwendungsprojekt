@@ -23,7 +23,12 @@ export default defineSchema({
     kurs: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
     status: v.optional(
-      v.union(v.literal("pending"), v.literal("active"), v.literal("rejected"))
+      v.union(
+        v.literal("pending"),
+        v.literal("active"),
+        v.literal("rejected"),
+        v.literal("banned")
+      )
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -341,7 +346,8 @@ export default defineSchema({
   notifications: defineTable({
     type: v.union(
       v.literal("forum_invite"),
-      v.literal("deadline_invite")
+      v.literal("deadline_invite"),
+      v.literal("account_banned")
     ),
     recipientId: v.string(),
     recipientName: v.string(),

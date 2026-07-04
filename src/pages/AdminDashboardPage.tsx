@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
-  AlertTriangle,
+  Ban,
   BookMarked,
   CheckCircle2,
   ChevronDown,
@@ -16,11 +16,10 @@ import {
   Plus,
   Shield,
   ShieldCheck,
+  ShieldOff,
   Trash2,
   Users,
   FileWarning,
-  Settings2,
-  FolderUp,
   MessageCircleHeart,
 } from "lucide-react";
 import {
@@ -29,6 +28,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   BarChart,
   Bar,
@@ -49,6 +58,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Combobox from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -69,6 +79,9 @@ const AdminDashboardPage = () => {
   const profiles = useQuery(api.admin.getAll, {});
   const approveUser = useMutation(api.admin.approveUser);
   const rejectUser = useMutation(api.admin.rejectUser);
+  const banUser = useMutation(api.admin.banUser);
+  const unbanUser = useMutation(api.admin.unbanUser);
+  const deleteUser = useMutation(api.admin.deleteUser);
   const lectures = useQuery(api.semesterLectures.list, {});
   const saveLecture = useMutation(api.semesterLectures.manage);
   const deleteLecture = useMutation(api.semesterLectures.deleteLecture);
@@ -84,6 +97,9 @@ const AdminDashboardPage = () => {
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [dismissingReport, setDismissingReport] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [banTarget, setBanTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [moderationUserId, setModerationUserId] = useState("");
   const [newKurs, setNewKurs] = useState("");
   const [newSemester, setNewSemester] = useState("1");
   const [newLectureName, setNewLectureName] = useState("");
@@ -105,11 +121,6 @@ const AdminDashboardPage = () => {
       title: language.match({ english: () => "Lectures", german: () => "Vorlesungen" }),
       text: language.match({ english: () => "Import, edit and provide lectures as options in forms.", german: () => "Vorlesungen importieren, bearbeiten und als Auswahl in Formularen bereitstellen." }),
       icon: <BookMarked className="h-4 w-4" />,
-    },
-    {
-      title: language.match({ english: () => "Material Rules", german: () => "Materialregeln" }),
-      text: language.match({ english: () => "Centrally control formats, max file size and visibility for uploads.", german: () => "Formate, Maximalgröße und Sichtbarkeit für Uploads zentral steuern." }),
-      icon: <FolderUp className="h-4 w-4" />,
     },
   ];
 
@@ -161,7 +172,80 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const handleBan = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await banUser({ userId });
+      toast({
+        title: language.match({ english: () => "Banned", german: () => "Gesperrt" }),
+        description: language.match({ english: () => "The user has been banned.", german: () => "Der Nutzer wurde gesperrt." }),
+      });
+    } catch (err) {
+      toast({
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
+        description:
+          err instanceof Error ? err.message : language.match({ english: () => "Ban failed", german: () => "Sperren fehlgeschlagen" }),
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+      setBanTarget(null);
+    }
+  };
+
+  const handleUnban = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await unbanUser({ userId });
+      toast({
+        title: language.match({ english: () => "Unbanned", german: () => "Entsperrt" }),
+        description: language.match({ english: () => "The user has been unbanned.", german: () => "Der Nutzer wurde entsperrt." }),
+      });
+    } catch (err) {
+      toast({
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
+        description:
+          err instanceof Error ? err.message : language.match({ english: () => "Unban failed", german: () => "Entsperren fehlgeschlagen" }),
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleDelete = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await deleteUser({ userId });
+      toast({
+        title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+        description: language.match({ english: () => "The account has been deleted.", german: () => "Der Account wurde gelöscht." }),
+      });
+    } catch (err) {
+      toast({
+        title: language.match({ english: () => "Error", german: () => "Fehler" }),
+        description:
+          err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+      setDeleteTarget(null);
+    }
+  };
+
   const pendingProfiles = profiles?.filter((p) => p.status === "pending") ?? [];
+  const moderatableProfiles =
+    profiles?.filter((p) => p.role !== "admin" && p.status !== "pending") ?? [];
+  const moderationUser = moderatableProfiles.find((p) => p.userId === moderationUserId);
+  const moderationUserOptions = moderatableProfiles.map((p) => ({
+    value: p.userId,
+    label: `${p.displayName || p.email || p.userId}${
+      p.status === "banned"
+        ? ` (${language.match({ english: () => "banned", german: () => "gesperrt" })})`
+        : ""
+    }`,
+  }));
 
   const ratingMeta = [
     {
@@ -231,12 +315,12 @@ const AdminDashboardPage = () => {
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm text-white/85 sm:text-base">
                   {language.match({
-                    english: () => "approve users, review reported posts, administer lectures and control upload rules.",
-                    german: () => "Nutzer freischalten, gemeldete Beiträge prüfen, Vorlesungen administrieren und Upload-Regeln steuern." })}
+                    english: () => "approve users, review reported posts and administer lectures.",
+                    german: () => "Nutzer freischalten, gemeldete Beiträge prüfen und Vorlesungen administrieren." })}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem] lg:flex-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:min-w-[34rem] lg:flex-1">
                 <MetricCard
                   label={language.match({ english: () => "Pending Approvals", german: () => "Offene Freigaben" })}
                   value={String(pendingProfiles.length)}
@@ -254,16 +338,11 @@ const AdminDashboardPage = () => {
                   value={String(lectures?.length ?? "—")}
                   hint={language.match({ english: () => "stored entries", german: () => "hinterlegte Einträge" })}
                 />
-                <MetricCard
-                  label={language.match({ english: () => "Upload Rules", german: () => "Upload-Regeln" })}
-                  value="4"
-                  hint={language.match({ english: () => "configurable", german: () => "konfigurierbar" })}
-                />
               </div>
             </div>
           </motion.section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {ruleCards.map((card) => (
               <div
                 key={card.title}
@@ -283,6 +362,7 @@ const AdminDashboardPage = () => {
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="flex flex-col gap-6">
             <Panel
               title={language.match({ english: () => "User Approvals", german: () => "Nutzerfreischaltungen" })}
               icon={<Users className="h-4 w-4" />}
@@ -357,6 +437,77 @@ const AdminDashboardPage = () => {
             </Panel>
 
             <Panel
+              title={language.match({ english: () => "User Management", german: () => "Nutzerverwaltung" })}
+              icon={<Ban className="h-4 w-4" />}
+              description={language.match({ english: () => "Search for a user to ban or delete their account.", german: () => "Nutzer suchen, um dessen Account zu bannen oder zu löschen." })}
+            >
+              <div className="space-y-2">
+                <Combobox
+                  value={moderationUserId}
+                  onChange={setModerationUserId}
+                  options={moderationUserOptions}
+                  placeholder={language.match({ english: () => "Search user…", german: () => "Nutzer suchen…" })}
+                  searchPlaceholder={language.match({ english: () => "Search by name…", german: () => "Nach Namen suchen…" })}
+                  emptyMessage={language.match({ english: () => "No user found.", german: () => "Kein Nutzer gefunden." })}
+                />
+                {moderationUser && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {moderationUser.status === "banned" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        disabled={updating === moderationUser.userId}
+                        onClick={() => handleUnban(moderationUser.userId)}
+                      >
+                        {updating === moderationUser.userId ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <ShieldOff className="h-3.5 w-3.5" />
+                            {language.match({ english: () => "Unban", german: () => "Entsperren" })}
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-destructive hover:text-destructive"
+                        disabled={updating === moderationUser.userId}
+                        onClick={() =>
+                          setBanTarget({
+                            userId: moderationUser.userId,
+                            name: moderationUser.displayName || moderationUser.email || moderationUser.userId,
+                          })
+                        }
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        {language.match({ english: () => "Ban", german: () => "Bannen" })}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="gap-1"
+                      disabled={updating === moderationUser.userId}
+                      onClick={() =>
+                        setDeleteTarget({
+                          userId: moderationUser.userId,
+                          name: moderationUser.displayName || moderationUser.email || moderationUser.userId,
+                        })
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {language.match({ english: () => "Delete", german: () => "Löschen" })}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Panel>
+            </div>
+
+            <Panel
               title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
               icon={<FileWarning className="h-4 w-4" />}
               description={language.match({ english: () => "Reported forum posts and moderation actions must be documented traceably.", german: () => "Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden." })}
@@ -371,54 +522,106 @@ const AdminDashboardPage = () => {
                     {language.match({ english: () => "No open reports.", german: () => "Keine offenen Meldungen." })}
                   </p>
                 ) : (
-                  postReports.map((report) => (
-                    <div
-                      key={report._id}
-                      className="rounded-2xl border border-border/60 bg-background/80 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{report.postTitle}</p>
-                            <Badge
-                              variant="secondary"
-                              className={statusTone(report.status)}
-                            >
-                              {report.status}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {report.forumName} · {language.match({ english: () => "reported by", german: () => "gemeldet von" })} {report.reportedBy}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {report.reason}
-                          </p>
-                        </div>
-                        {report.status === "offen" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                            disabled={dismissingReport === report._id}
-                            onClick={async () => {
-                              setDismissingReport(report._id);
-                              try {
-                                await dismissPostReport({ id: report._id });
-                              } finally {
-                                setDismissingReport(null);
-                              }
-                            }}
-                          >
-                            {dismissingReport === report._id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              language.match({ english: () => "Done", german: () => "Erledigt" })
+                  (() => {
+                    const openReports = postReports.filter((r) => r.status === "offen");
+                    const doneReports = postReports.filter((r) => r.status !== "offen");
+                    const renderReport = (report: (typeof postReports)[number]) => (
+                      <div
+                        key={report._id}
+                        className={
+                          report.status === "offen"
+                            ? "rounded-2xl border border-border/60 bg-background/80 p-4"
+                            : "rounded-2xl border border-border/40 bg-background/40 p-4 opacity-60"
+                        }
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{report.postTitle}</p>
+                              <Badge
+                                variant="secondary"
+                                className={statusTone(report.status)}
+                              >
+                                {report.status}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {report.forumName} · {language.match({ english: () => "reported by", german: () => "gemeldet von" })} {report.reportedBy}
+                            </p>
+                            {report.authorName && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {language.match({ english: () => "Author", german: () => "Autor" })}: {report.authorName}
+                              </p>
                             )}
-                          </Button>
-                        )}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {report.reason}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-2">
+                            {report.status === "offen" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  setDismissingReport(report._id);
+                                  try {
+                                    await dismissPostReport({ id: report._id });
+                                  } finally {
+                                    setDismissingReport(null);
+                                  }
+                                }}
+                                disabled={dismissingReport === report._id}
+                              >
+                                {dismissingReport === report._id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  language.match({ english: () => "Done", german: () => "Erledigt" })
+                                )}
+                              </Button>
+                            )}
+                            {report.authorId && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1 text-destructive hover:text-destructive"
+                                onClick={() =>
+                                  setBanTarget({
+                                    userId: report.authorId as string,
+                                    name: report.authorName || (report.authorId as string),
+                                  })
+                                }
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                                {language.match({ english: () => "Ban author", german: () => "Autor bannen" })}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                    return (
+                      <>
+                        {openReports.length === 0 && (
+                          <p className="text-sm text-muted-foreground py-4 text-center">
+                            {language.match({ english: () => "No open reports.", german: () => "Keine offenen Meldungen." })}
+                          </p>
+                        )}
+                        {openReports.map(renderReport)}
+                        {doneReports.length > 0 && (
+                          <>
+                            <div className="flex items-center gap-3 py-1">
+                              <div className="h-px flex-1 bg-border/60" />
+                              <span className="text-[11px] text-muted-foreground">
+                                {language.match({ english: () => "Done", german: () => "Erledigt" })}
+                              </span>
+                              <div className="h-px flex-1 bg-border/60" />
+                            </div>
+                            {doneReports.map(renderReport)}
+                          </>
+                        )}
+                      </>
+                    );
+                  })()
                 )}
               </div>
             </Panel>
@@ -619,43 +822,6 @@ const AdminDashboardPage = () => {
             </Panel>
 
             <div className="flex flex-col gap-6">
-              <Panel
-                title={language.match({ english: () => "Material & Upload Rules", german: () => "Material- und Upload-Regeln" })}
-                icon={<Settings2 className="h-4 w-4" />}
-                description={language.match({ english: () => "Formats, size limits and visibility can be centrally defined for tasks and posts.", german: () => "Formate, Größenlimits und Sichtbarkeit können zentral für Aufgaben und Beiträge definiert werden." })}
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <SettingTile
-                    label={language.match({ english: () => "Allowed Formats", german: () => "Erlaubte Formate" })}
-                    value="PDF, DOCX, PPTX, PNG, JPG"
-                  />
-                  <SettingTile
-                    label={language.match({ english: () => "Max Upload Size", german: () => "Max. Upload-Größe" })}
-                    value={language.match({ english: () => "10 MB Standard", german: () => "10 MB Standard" })}
-                  />
-                  <SettingTile
-                    label={language.match({ english: () => "Visibility", german: () => "Sichtbarkeit" })}
-                    value="private · course · group · public"
-                  />
-                  <SettingTile
-                    label={language.match({ english: () => "Quotas", german: () => "Quoten" })}
-                    value={language.match({ english: () => "configurable per user / course", german: () => "pro Nutzer / Kurs konfigurierbar" })}
-                  />
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 text-accent" />
-                    <div>
-                      <p className="font-medium">{language.match({ english: () => "Logging Requirement", german: () => "Protokollpflicht" })}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {language.match({ english: () => "Moderation actions, upload approvals and deletions should be documented with timestamps.", german: () => "Moderationsaktionen, Upload-Freigaben und Löschungen sollten mit Zeitstempel dokumentiert werden." })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Panel>
-
               <Panel
                 title={language.match({ english: () => "User Satisfaction", german: () => "Nutzerzufriedenheit" })}
                 icon={<MessageCircleHeart className="h-4 w-4" />}
@@ -989,6 +1155,56 @@ const AdminDashboardPage = () => {
           </section>
         </div>
       </main>
+
+      <AlertDialog open={!!banTarget} onOpenChange={(open) => !open && setBanTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language.match({ english: () => "Ban user?", german: () => "Nutzer bannen?" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language.match({
+                english: () => `${banTarget?.name} will lose access immediately and be notified. This can be reversed at any time.`,
+                german: () => `${banTarget?.name} verliert sofort den Zugriff und wird benachrichtigt. Dies kann jederzeit rückgängig gemacht werden.`,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => banTarget && handleBan(banTarget.userId)}
+            >
+              {language.match({ english: () => "Ban", german: () => "Bannen" })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language.match({ english: () => "Delete account?", german: () => "Account löschen?" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language.match({
+                english: () => `The account of ${deleteTarget?.name} will be permanently deleted. This cannot be undone.`,
+                german: () => `Der Account von ${deleteTarget?.name} wird endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.`,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && handleDelete(deleteTarget.userId)}
+            >
+              {language.match({ english: () => "Delete", german: () => "Löschen" })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -1043,17 +1259,6 @@ function Panel({
         </div>
       </div>
       {children}
-    </div>
-  );
-}
-
-function SettingTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-2 font-medium text-foreground">{value}</p>
     </div>
   );
 }

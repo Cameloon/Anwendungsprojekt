@@ -339,6 +339,134 @@ export const debugSectionForums = internalMutation({
 });
 
 /**
+ * One-time: add sample feedback ratings + bug/feature reports for real users
+ * in Kurs TIF25B (DHBW Lörrach, Studienfach Informatik) — for demo/testing
+ * purposes. Only touches matching profiles; skips users who already submitted
+ * real feedback so nothing genuine gets overwritten. Not idempotent for
+ * reports — meant to be run exactly once.
+ *
+ * Run: npx convex run migrations:addSampleFeedbackTif25bLoerrach
+ */
+export const addSampleFeedbackTif25bLoerrach = internalMutation({
+  handler: async (ctx) => {
+    const profiles = (
+      await ctx.db
+        .query("profiles")
+        .withIndex("by_kurs", (q) => q.eq("kurs", "TIF25B"))
+        .collect()
+    ).filter(
+      (p) => p.hochschule === "DHBW Lörrach" && p.studienfach === "Informatik",
+    );
+
+    if (profiles.length === 0) {
+      return {
+        error:
+          "Keine Profile in Kurs TIF25B / DHBW Lörrach / Informatik gefunden",
+      };
+    }
+
+    const now = Date.now();
+
+    const sampleFeedback: { rating: number; message?: string }[] = [
+      { rating: 4, message: "Die neue Terminübersicht für Deadlines ist super übersichtlich!" },
+      { rating: 4, message: "Endlich finde ich alle Skripte meines Kurses an einem Ort." },
+      { rating: 3, message: "Insgesamt gut, aber die Suche in den Foren könnte schneller sein." },
+      { rating: 4 },
+      { rating: 2, message: "Die App stürzt bei mir manchmal beim Hochladen von Dateien ab." },
+      { rating: 3, message: "Benachrichtigungen kommen teilweise mit Verzögerung an." },
+      { rating: 4, message: "Sehr gutes Design, macht Spaß die App zu nutzen." },
+      { rating: 1, message: "Login über Clerk hat bei mir mehrmals nicht funktioniert." },
+      { rating: 3 },
+      { rating: 4, message: "Die Lerngruppen-Funktion hat mir sehr geholfen, Mitstudierende zu finden." },
+      { rating: 2, message: "Auf dem Handy ist die Navigation etwas fummelig." },
+      { rating: 3, message: "Gute Idee, aber es fehlen noch ein paar Kurse in der Auswahl." },
+    ];
+
+    const sampleReports: { type: "bug" | "feature"; message: string }[] = [
+      {
+        type: "bug",
+        message:
+          "Beim Hochladen eines PDFs in einem Forumsbeitrag bricht der Upload nach ca. 10 Sekunden ab, ohne Fehlermeldung.",
+      },
+      {
+        type: "bug",
+        message:
+          "Wenn ich eine Deadline bearbeite und den Titel ändere, wird die alte Erinnerung nicht aktualisiert.",
+      },
+      {
+        type: "bug",
+        message:
+          "Auf dem iPhone (Safari) überlappt die Navbar den Seiteninhalt auf der Gruppen-Seite.",
+      },
+      {
+        type: "bug",
+        message:
+          "Kommentare in einem Forenpost werden manchmal doppelt angezeigt, nachdem ich die Seite neu geladen habe.",
+      },
+      {
+        type: "feature",
+        message:
+          "Es wäre super, wenn man Deadlines direkt in den Kalender exportieren könnte (ICS-Datei).",
+      },
+      {
+        type: "feature",
+        message:
+          "Ein Dark-Mode-Umschalter direkt in der Navbar wäre praktisch, statt nur in den Einstellungen.",
+      },
+      {
+        type: "feature",
+        message:
+          "Bitte eine Suchfunktion über alle Skripte hinweg, nicht nur innerhalb eines Kurses.",
+      },
+      {
+        type: "feature",
+        message:
+          "Push-Benachrichtigungen für neue Antworten in abonnierten Themen wären hilfreich.",
+      },
+      {
+        type: "feature",
+        message:
+          "Man könnte Lerngruppen taggen (z. B. 'Prüfungsvorbereitung', 'Projekt'), um sie leichter zu finden.",
+      },
+    ];
+
+    let feedbackCreated = 0;
+    for (let i = 0; i < profiles.length; i++) {
+      const profile = profiles[i];
+      const existing = await ctx.db
+        .query("feedback")
+        .withIndex("by_user", (q) => q.eq("userId", profile.userId))
+        .unique();
+      if (existing) continue;
+      const sample = sampleFeedback[i % sampleFeedback.length];
+      await ctx.db.insert("feedback", {
+        userId: profile.userId,
+        rating: sample.rating,
+        message: sample.message,
+        updatedAt: now - i * 3_600_000,
+      });
+      feedbackCreated++;
+    }
+
+    let reportsCreated = 0;
+    for (let i = 0; i < sampleReports.length; i++) {
+      const profile = profiles[i % profiles.length];
+      const sample = sampleReports[i];
+      await ctx.db.insert("userReports", {
+        userId: profile.userId,
+        type: sample.type,
+        message: sample.message,
+        status: "open",
+        createdAt: now - i * 7_200_000,
+      });
+      reportsCreated++;
+    }
+
+    return { profilesFound: profiles.length, feedbackCreated, reportsCreated };
+  },
+});
+
+/**
  * Debug: show forum+section grouping.
  * Run: npx convex run migrations:debugSectionMapping
  */

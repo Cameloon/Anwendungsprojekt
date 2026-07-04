@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
 import { IS_DEMO } from "@/lib/demoMode";
-import { Loader2, Lock, Clock, XCircle } from "lucide-react";
+import { Loader2, Lock, Clock, XCircle, Ban } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import Navbar from "@/components/Navbar";
 import OnboardingDialog from "./OnboardingDialog";
@@ -70,6 +70,25 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
             {language.match({ english: () => "Your account has not been activated yet. Please be patient, an admin will activate you soon.", german: () => "Dein Konto wurde noch nicht freigegeben. Bitte habe etwas Geduld, ein Admin wird dich bald freischalten." })}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (access === "banned") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-32 flex flex-col items-center justify-center text-center px-6">
+          <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center mb-5">
+            <Ban className="h-6 w-6 text-destructive" />
+          </div>
+          <h2 className="text-lg font-heading font-semibold text-foreground mb-1">
+            {language.match({ english: () => "Account suspended", german: () => "Konto gesperrt" })}
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            {language.match({ english: () => "Your account has been suspended by an administrator. If you have questions, please contact an administrator.", german: () => "Dein Konto wurde von einem Administrator gesperrt. Bei Fragen wende dich bitte an einen Administrator." })}
           </p>
         </div>
       </div>
