@@ -209,6 +209,30 @@ export const getMemberCount = query({
   },
 });
 
+export const getForDeadline = query({
+  args: { deadlineId: v.id("deadlines") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return await ctx.db
+      .query("forums")
+      .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
+      .unique();
+  },
+});
+
+export const listByDeadlineIds = query({
+  args: { deadlineIds: v.array(v.id("deadlines")) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    if (args.deadlineIds.length === 0) return [];
+    const all = await ctx.db.query("forums").collect();
+    const idSet = new Set(args.deadlineIds.map((id) => id));
+    return all.filter((f) => f.deadlineId && idSet.has(f.deadlineId));
+  },
+});
+
 // ─── Mutations ───
 
 export const create = mutation({
@@ -260,6 +284,89 @@ export const create = mutation({
       displayName,
       joinedAt: now,
     });
+
+    return { forumId, inviteCode: code };
+  },
+});
+
+export const createForDeadline = mutation({
+  args: {
+    deadlineId: v.id("deadlines"),
+    name: v.string(),
+    description: v.string(),
+    visibility: v.union(v.literal("public"), v.literal("private")),
+    kurs: v.optional(v.string()),
+    vorlesung: v.optional(v.string()),
+    sectionId: v.optional(v.id("sections")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("forums")
+      .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
+      .unique();
+    if (existing) throw new Error("Für diesen Termin existiert bereits ein Forum");
+
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Termin nicht gefunden");
+    if (deadline.ownerId !== identity.subject) {
+      const caller = await ctx.db
+        .query("profiles")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .unique();
+      if (caller?.role !== "admin") throw new Error("Nicht berechtigt");
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    const displayName = profile?.displayName || identity.name || identity.email || "Unbekannt";
+
+    const now = Date.now();
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    const forumId = await ctx.db.insert("forums", {
+      name: args.name.trim(),
+      description: args.description.trim(),
+      visibility: args.visibility,
+      kurs: args.kurs?.trim() || undefined,
+      vorlesung: args.vorlesung?.trim() || undefined,
+      inviteCode: code,
+      deadlineId: args.deadlineId,
+      ownerId: identity.subject,
+      sectionId: args.sectionId,
+      createdAt: now,
+    });
+
+    await ctx.db.insert("forumMembers", {
+      forumId,
+      userId: identity.subject,
+      displayName,
+      joinedAt: now,
+    });
+
+    const allParticipantIds = [...new Set([
+      ...(deadline.invitees || []),
+      deadline.ownerId,
+    ])].filter((uid) => uid !== identity.subject);
+
+    for (const uid of allParticipantIds) {
+      const p = await ctx.db
+        .query("profiles")
+        .withIndex("by_user", (q) => q.eq("userId", uid))
+        .unique();
+      if (p) {
+        await ctx.db.insert("forumMembers", {
+          forumId,
+          userId: uid,
+          displayName: p.displayName || uid,
+          joinedAt: now,
+        });
+      }
+    }
 
     return { forumId, inviteCode: code };
   },

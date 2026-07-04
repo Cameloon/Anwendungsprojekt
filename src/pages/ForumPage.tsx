@@ -174,6 +174,35 @@ function ForumPage() {
   const myLecturesQuery = useQuery(api.semesterLectures.getLecturesForMyKurs);
   const kursPeopleQuery = useQuery(api.profiles.listSameKurs);
 
+  const myDeadlineIds = useMemo(() => {
+    if (!allDeadlinesQuery) return [];
+    return allDeadlinesQuery.map((d: any) => d._id as Id<"deadlines">);
+  }, [allDeadlinesQuery]);
+
+  const deadlineForumsQuery = useQuery(
+    api.forums.listByDeadlineIds,
+    myDeadlineIds.length > 0 ? { deadlineIds: myDeadlineIds } : "skip"
+  );
+  const deadlineForums: FForumItem[] = useMemo(() => {
+    if (!deadlineForumsQuery) return [];
+    return deadlineForumsQuery.map((f: any) => ({
+      id: f._id,
+      name: f.name,
+      visibility: f.visibility,
+      description: f.description,
+      members: [],
+      ownerId: f.ownerId,
+      inviteCode: f.inviteCode,
+      kurs: f.kurs,
+      vorlesung: f.vorlesung,
+      professor: f.professor,
+      standort: f.standort,
+      sectionId: f.sectionId,
+      archivedByMe: false,
+      deadlineId: f.deadlineId,
+    }));
+  }, [deadlineForumsQuery]);
+
   const [adminViewKurs, setAdminViewKurs] = useState<string>("");
 
   // Seed sections, default forums, ALL kurs lecture forums, and auto-archive old ones
@@ -575,6 +604,7 @@ function ForumPage() {
       isMember={isMember}
       isOwner={isOwner}
       me={me}
+      deadlineForums={deadlineForums}
       navigate={navigate}
       createOpen={createOpen}
       setCreateOpen={setCreateOpen}
@@ -713,6 +743,7 @@ function ForumPageLayout({
   isMember,
   isOwner,
   me,
+  deadlineForums,
   navigate,
   createOpen,
   setCreateOpen,
@@ -1086,6 +1117,15 @@ function ForumPageLayout({
                         <SectionCard title={s.title} icon={s.icon} forums={[...(s.sectionId ? sectionMap.get(s.sectionId) || [] : []), ...(s.extra || [])]} activeForumId={activeForumId} setActiveForumId={setActiveForumId} me={me} />
                       </div>
                     ))}
+                    {deadlineForums.length > 0 && (
+                      <div>
+                        <hr className="border-t border-border my-3" />
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 px-1">{language.match({ english: () => "Your deadlines", german: () => "Deine Termine" })}</p>
+                        <div className="space-y-0.5">
+                          {deadlineForums.map((f) => (<ForumItem key={f.id} f={f} activeForumId={activeForumId} setActiveForumId={setActiveForumId} />))}
+                        </div>
+                      </div>
+                    )}
                     {noSection.length > 0 && (
                       <div>
                         <hr className="border-t border-border my-3" />

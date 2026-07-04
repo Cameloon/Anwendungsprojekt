@@ -32,6 +32,7 @@ import {
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -146,6 +147,7 @@ function PlannerPage() {
   const profile = useProfile();
   const me = user?.id || "";
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const displayName = profile?.display_name || language.match({ english: () => "Unknown", german: () => "Unbekannt" });
 
   const deadlinesQuery = useQuery(api.deadlines.listForUser);
@@ -206,7 +208,19 @@ function PlannerPage() {
   }));
   const [doneOpen, setDoneOpen] = useState(true);
   const [archiveOpen, setArchiveOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"files" | "forum">("files");
+  const [activeTab, setActiveTab] = useState<"files" | "forum" | "discussion">("files");
+  const deadlineForumQuery = useQuery(
+    api.forums.getForDeadline,
+    openId ? { deadlineId: openId as Id<"deadlines"> } : "skip"
+  );
+  const deadlineForum = deadlineForumQuery ?? null;
+  const deadlineForumPostsQuery = useQuery(
+    api.posts.listByForum,
+    deadlineForum ? { forumId: deadlineForum._id } : "skip"
+  );
+  const deadlineForumPosts = deadlineForumPostsQuery ?? [];
+  const [showCreateForum, setShowCreateForum] = useState(false);
+  const createForumForDeadline = useMutation(api.forums.createForDeadline);
   const [newMessage, setNewMessage] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [linkedScriptIds, setLinkedScriptIds] = useState<string[]>([]);
@@ -634,6 +648,12 @@ function PlannerPage() {
       setDoneOpen={setDoneOpen}
       archiveOpen={archiveOpen}
       setArchiveOpen={setArchiveOpen}
+      deadlineForum={deadlineForum}
+      deadlineForumPosts={deadlineForumPosts}
+      showCreateForum={showCreateForum}
+      setShowCreateForum={setShowCreateForum}
+      createForumForDeadline={createForumForDeadline}
+      navigate={navigate}
     />
       <AlertDialog open={showPastWarning} onOpenChange={setShowPastWarning}>
         <AlertDialogContent className="max-w-sm border-destructive/20 bg-destructive/5">
@@ -734,10 +754,16 @@ function PlannerLayout({
   setLinkedGroupIds,
   doneOpen,
   setDoneOpen,
-  archiveOpen,
-  setArchiveOpen,
+   archiveOpen,
+   setArchiveOpen,
+   deadlineForum,
+   deadlineForumPosts,
+   showCreateForum,
+   setShowCreateForum,
+   createForumForDeadline,
+   navigate,
 }: {
-  deadlines: DeadlineItem[];
+   deadlines: DeadlineItem[];
   filtered: DeadlineItem[];
   stats: { offen: number; dringend: number; ueberfaellig: number; erledigt: number };
   title: string;
@@ -773,8 +799,8 @@ function PlannerLayout({
   setActivePriority: (v: string) => void;
   openId: string | null;
   setOpenId: (v: string | null) => void;
-  activeTab: "files" | "forum";
-  setActiveTab: (v: "files" | "forum") => void;
+  activeTab: "files" | "forum" | "discussion";
+  setActiveTab: (v: "files" | "forum" | "discussion") => void;
   newMessage: string;
   setNewMessage: (v: string) => void;
   addMessage: () => void;
@@ -817,6 +843,12 @@ function PlannerLayout({
   setDoneOpen: (v: boolean) => void;
   archiveOpen: boolean;
   setArchiveOpen: (v: boolean) => void;
+  deadlineForum: any;
+  deadlineForumPosts: any[];
+  showCreateForum: boolean;
+  setShowCreateForum: (v: boolean) => void;
+  createForumForDeadline: any;
+  navigate: (path: string) => void;
 }) {
   const { language} = useLanguage();
   const tCategoryLabels: Record<string, string> = {
@@ -1703,13 +1735,16 @@ function PlannerLayout({
               )}
             </DialogDescription>
           </DialogHeader>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum")} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "files" | "forum" | "discussion")} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="mb-3">
               <TabsTrigger value="files" className="gap-1.5">
                 <Paperclip className="h-4 w-4" /> {language.match({ english: () => "Files", german: () => "Dateien" })} ({openAttachments.length})
               </TabsTrigger>
+              <TabsTrigger value="discussion" className="gap-1.5">
+                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Discussion", german: () => "Diskussion" })}
+              </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1.5">
-                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Forum", german: () => "Forum" })} ({openMessages.length})
+                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Chat", german: () => "Chat" })} ({openMessages.length})
               </TabsTrigger>
             </TabsList>
 
@@ -1751,6 +1786,66 @@ function PlannerLayout({
                   />
                 </label>
               </div>
+            </TabsContent>
+
+            <TabsContent value="discussion" className="flex-1 overflow-y-auto space-y-3">
+              {deadlineForum ? (
+                <>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="text-sm font-medium">{deadlineForum.name}</p>
+                      <p className="text-xs text-muted-foreground">{deadlineForum.description}</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => navigate("/forum/" + deadlineForum._id)}>
+                      {language.match({ english: () => "Open", german: () => "Öffnen" })}
+                    </Button>
+                  </div>
+                  {deadlineForumPosts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">{language.match({ english: () => "No posts yet.", german: () => "Noch keine Beiträge." })}</p>
+                  ) : (
+                    deadlineForumPosts.slice(0, 5).map((post: any) => (
+                      <div key={post._id} className="p-3 rounded-lg border cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => navigate("/forum/" + deadlineForum._id)}>
+                        <p className="text-sm font-medium">{post.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{post.authorName} · {new Date(post._creationTime).toLocaleDateString("de-DE")}</p>
+                      </div>
+                    ))
+                  )}
+                  {deadlineForumPosts.length > 5 && (
+                    <p className="text-xs text-center text-muted-foreground">
+                      {language.match({ english: () => "and", german: () => "und" })} {deadlineForumPosts.length - 5} {language.match({ english: () => "more...", german: () => "weitere…" })}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground text-center">{language.match({ english: () => "No forum linked to this deadline.", german: () => "Kein Forum mit diesem Termin verknüpft." })}</p>
+                  <Button onClick={() => setShowCreateForum(true)}>
+                    {language.match({ english: () => "Create forum", german: () => "Forum erstellen" })}
+                  </Button>
+                  {showCreateForum && (
+                    <div className="w-full space-y-3 p-4 rounded-lg border">
+                      <p className="text-sm font-medium">{language.match({ english: () => "New forum for this deadline", german: () => "Neues Forum für diesen Termin" })}</p>
+                      <Button size="sm" onClick={async () => {
+                        try {
+                          await createForumForDeadline({
+                            deadlineId: openId as Id<"deadlines">,
+                            name: openDeadline?.title || "Forum",
+                            description: `Diskussionsforum zu "${openDeadline?.title || "Termin"}"`,
+                            visibility: "public",
+                          });
+                          toast.success(language.match({ english: () => "Forum created!", german: () => "Forum erstellt!" }));
+                          setShowCreateForum(false);
+                        } catch {
+                          toast.error(language.match({ english: () => "Failed to create forum", german: () => "Fehler beim Erstellen" }));
+                        }
+                      }}>
+                        {language.match({ english: () => "Create", german: () => "Erstellen" })}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="forum" className="flex-1 flex flex-col overflow-hidden">

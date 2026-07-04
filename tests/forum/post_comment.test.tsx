@@ -140,6 +140,9 @@ vi.mock("../../convex/_generated/api", () => ({
       ensureAllgemeinForum: "forums.ensureAllgemeinForum",
       archiveForum: "forums.archiveForum",
       unarchiveForum: "forums.unarchiveForum",
+      getForDeadline: "forums.getForDeadline",
+      createForDeadline: "forums.createForDeadline",
+      listByDeadlineIds: "forums.listByDeadlineIds",
     },
     posts: {
       listByForum: "posts.listByForum",
@@ -207,6 +210,8 @@ vi.mock("convex/react", async () => {
       if (query === "profiles.getMine") return null;
       if (query === "sections.list") return [];
       if (query === "deadlines.listForUser") return [];
+      if (query === "forums.getForDeadline") return null;
+      if (query === "forums.listByDeadlineIds") return [];
 
       return undefined;
     },
@@ -278,6 +283,10 @@ vi.mock("convex/react", async () => {
           );
           emit();
         };
+      }
+
+      if (mutation === "forums.createForDeadline") {
+        return async () => "new-forum-id";
       }
 
       return async () => {};

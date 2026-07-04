@@ -143,11 +143,17 @@ vi.mock("../../convex/_generated/api", () => ({
     scripts: {
       listVisible: "scripts.listVisible",
     },
+    posts: {
+      listByForum: "posts.listByForum",
+    },
     groups: {
       listForUser: "groups.listForUser",
     },
     forums: {
       getPrivateForumsForUser: "forums.getPrivateForumsForUser",
+      getForDeadline: "forums.getForDeadline",
+      createForDeadline: "forums.createForDeadline",
+      listByDeadlineIds: "forums.listByDeadlineIds",
     },
   },
 }));
@@ -170,6 +176,8 @@ vi.mock("convex/react", async () => {
       if (query === "semesterLectures.getLecturesForMyKurs") return snapshot.lectures;
       if (query === "profiles.listSameKurs") return snapshot.people;
       if (query === "sections.list") return [];
+      if (query === "forums.getForDeadline") return null;
+      if (query === "forums.listByDeadlineIds") return [];
       return [];
     },
     useMutation: (mutation: string) => {
@@ -226,6 +234,11 @@ vi.mock("convex/react", async () => {
         };
       }
 
+      if (mutation === "forums.createForDeadline") {
+        return async (args: any) => {
+          emit();
+        };
+      }
       return async () => {};
     },
     ConvexProviderWithClerk: ({ children }: { children: ReactModule.ReactNode }) => children,
