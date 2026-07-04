@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useLanguage } from "@/hooks/useLanguage";
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -35,12 +36,6 @@ const tagStyles: Record<string, string> = {
   material: "bg-success/15 text-success border-success/20",
   diskussion: "bg-accent/15 text-accent border-accent/20",
 };
-const tagLabels: Record<string, string> = {
-  frage: "Frage",
-  material: "Material",
-  diskussion: "Diskussion",
-};
-
 const avatarColors = [
   "bg-primary/15 text-primary",
   "bg-info/15 text-info",
@@ -48,16 +43,6 @@ const avatarColors = [
   "bg-accent/15 text-accent",
   "bg-destructive/15 text-destructive",
 ];
-
-function formatDate(ts: number) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "gerade eben";
-  if (m < 60) return `vor ${m} Min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `vor ${h} Std`;
-  return new Date(ts).toLocaleDateString("de-DE");
-}
 
 interface PostComment {
   _id: string;
@@ -103,8 +88,9 @@ function PostDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const profile = useProfile();
+  const { language } = useLanguage();
   const me = user?.id || "";
-  const displayName = profile?.display_name || "Unbekannt";
+  const displayName = profile?.display_name || language.match({ english: () => "Unknown", german: () => "Unbekannt" });
   const isAdmin = profile?.role === "admin";
 
   const post = useQuery(
@@ -153,9 +139,9 @@ function PostDetailPage() {
         content: editContent.trim(),
       });
       setEditingPost(false);
-      toast.success("Beitrag bearbeitet");
+      toast.success(language.match({ english: () => "Post edited", german: () => "Beitrag bearbeitet" }));
     } catch {
-      toast.error("Fehler beim Bearbeiten");
+      toast.error(language.match({ english: () => "Error editing", german: () => "Fehler beim Bearbeiten" }));
     }
   };
 
@@ -175,9 +161,9 @@ function PostDetailPage() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="pt-32 md:pt-24 pb-16 px-6 container mx-auto max-w-3xl text-center">
-          <p className="text-muted-foreground mb-4">Beitrag nicht gefunden.</p>
+          <p className="text-muted-foreground mb-4">{language.match({ english: () => "Post not found.", german: () => "Beitrag nicht gefunden." })}</p>
           <Button onClick={() => navigate(-1)} className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Zurück
+            <ArrowLeft className="h-4 w-4" /> {language.match({ english: () => "Back", german: () => "Zurück" })}
           </Button>
         </div>
       </div>
@@ -202,7 +188,7 @@ function PostDetailPage() {
     try {
       await toggleCommentLikeMutation({ commentId: commentId as Id<"postComments"> });
     } catch (e) {
-      toast.error("Fehler beim Liken des Kommentars");
+      toast.error(language.match({ english: () => "Error liking comment", german: () => "Fehler beim Liken des Kommentars" }));
     }
   };
 
@@ -217,9 +203,9 @@ function PostDetailPage() {
       });
       setComment("");
       setReplyTo(null);
-      toast.success("Kommentar gepostet");
+      toast.success(language.match({ english: () => "Comment posted", german: () => "Kommentar gepostet" }));
     } catch {
-      toast.error("Fehler beim Posten");
+      toast.error(language.match({ english: () => "Error posting", german: () => "Fehler beim Posten" }));
     }
   };
 
@@ -234,12 +220,12 @@ function PostDetailPage() {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!window.confirm("Kommentar wirklich löschen?")) return;
+    if (!window.confirm(language.match({ english: () => "Really delete comment?", german: () => "Kommentar wirklich löschen?" }))) return;
     try {
       await deleteCommentMutation({ commentId: commentId as Id<"postComments"> });
-      toast.success("Kommentar gelöscht");
+      toast.success(language.match({ english: () => "Comment deleted", german: () => "Kommentar gelöscht" }));
     } catch {
-      toast.error("Fehler beim Löschen");
+      toast.error(language.match({ english: () => "Error deleting", german: () => "Fehler beim Löschen" }));
     }
   };
 
@@ -257,9 +243,9 @@ function PostDetailPage() {
       });
       setEditingCommentId(null);
       setEditingContent("");
-      toast.success("Kommentar bearbeitet");
+      toast.success(language.match({ english: () => "Comment edited", german: () => "Kommentar bearbeitet" }));
     } catch {
-      toast.error("Fehler beim Bearbeiten");
+      toast.error(language.match({ english: () => "Error editing", german: () => "Fehler beim Bearbeiten" }));
     }
   };
 
@@ -386,6 +372,21 @@ function PostDetailLayout({
   handleCancelEditPost: () => void;
   handleSaveEditPost: () => void;
 }) {
+  const { language } = useLanguage();
+  const tTagLabels: Record<string, string> = {
+    frage: language.match({ english: () => "Question", german: () => "Frage" }),
+    material: language.match({ english: () => "Material", german: () => "Material" }),
+    diskussion: language.match({ english: () => "Discussion", german: () => "Diskussion" }),
+  };
+  const formatDate = (ts: number) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return language.match({ english: () => "just now", german: () => "gerade eben" });
+    if (m < 60) return language.match({ english: () => `${m} min ago`, german: () => `vor ${m} Min` });
+    const h = Math.floor(m / 60);
+    if (h < 24) return language.match({ english: () => `${h} hr ago`, german: () => `vor ${h} Std` });
+    return new Date(ts).toLocaleDateString("de-DE");
+  };
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -398,7 +399,7 @@ function PostDetailLayout({
             className="gap-1.5 mb-4 -ml-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            {forumName ? `Zurück zu ${forumName}` : "Zurück"}
+            {forumName ? language.match({ english: () => `Back to ${forumName}`, german: () => `Zurück zu ${forumName}` }) : language.match({ english: () => "Back", german: () => "Zurück" })}
           </Button>
 
           <motion.article
@@ -419,18 +420,18 @@ function PostDetailLayout({
                 <p className="text-xs text-muted-foreground">
                   {formatDate(post._creationTime)}
                   {post.updatedAt && post.updatedAt > post._creationTime + 1000 && (
-                    <> · <span className="italic">bearbeitet</span></>
+                    <> · <span className="italic">{language.match({ english: () => "edited", german: () => "bearbeitet" })}</span></>
                   )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {post.authorId === me && !editingPost && (
-                  <button onClick={handleStartEditPost} className="text-muted-foreground hover:text-foreground transition-colors" title="Beitrag bearbeiten">
+                  <button onClick={handleStartEditPost} className="text-muted-foreground hover:text-foreground transition-colors" title={language.match({ english: () => "Edit post", german: () => "Beitrag bearbeiten" })}>
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 )}
                 <Badge variant="outline" className={`${tagStyles[post.tag] || ""} text-[10px] py-0 h-5`}>
-                  {tagLabels[post.tag as keyof typeof tagLabels] || post.tag}
+                  {tTagLabels[post.tag] || post.tag}
                 </Badge>
               </div>
             </div>
@@ -439,7 +440,7 @@ function PostDetailLayout({
                 <Input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Titel"
+                  placeholder={language.match({ english: () => "Title", german: () => "Titel" })}
                   className="font-heading text-lg font-bold"
                 />
                 <Textarea
@@ -450,10 +451,10 @@ function PostDetailLayout({
                 />
                 <div className="flex items-center gap-2">
                   <Button size="sm" onClick={handleSaveEditPost} disabled={!editTitle.trim() || !editContent.trim()} className="gap-1.5">
-                    <Check className="h-3.5 w-3.5" /> Speichern
+                    <Check className="h-3.5 w-3.5" /> {language.match({ english: () => "Save", german: () => "Speichern" })}
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleCancelEditPost} className="gap-1.5">
-                    <X className="h-3.5 w-3.5" /> Abbrechen
+                    <X className="h-3.5 w-3.5" /> {language.match({ english: () => "Cancel", german: () => "Abbrechen" })}
                   </Button>
                 </div>
               </div>
@@ -469,7 +470,7 @@ function PostDetailLayout({
             {post.sketch && (
               <img
                 src={post.sketch}
-                alt="Whiteboard-Skizze"
+                alt={language.match({ english: () => "Whiteboard sketch", german: () => "Whiteboard-Skizze" })}
                 className="mt-4 max-h-96 rounded-lg border border-border bg-white"
               />
             )}
@@ -477,7 +478,7 @@ function PostDetailLayout({
             {linkedScripts.length > 0 && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                  Verlinkte Skripte
+                  {language.match({ english: () => "Linked Scripts", german: () => "Verlinkte Skripte" })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {linkedScripts.map((s) => (
@@ -498,7 +499,7 @@ function PostDetailLayout({
             {linkedDeadlines.length > 0 && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                  Verlinkte Deadlines
+                  {language.match({ english: () => "Linked Deadlines", german: () => "Verlinkte Deadlines" })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {linkedDeadlines.map((d: any) => (
@@ -530,15 +531,15 @@ function PostDetailLayout({
               </button>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground">
                 <MessageSquare className="h-3.5 w-3.5" />
-                {comments.length} {comments.length === 1 ? "Kommentar" : "Kommentare"}
+                {comments.length} {comments.length === 1 ? language.match({ english: () => "Comment", german: () => "Kommentar" }) : language.match({ english: () => "Comments", german: () => "Kommentare" })}
               </span>
               <button
                 onClick={() => setReportOpen(true)}
-                title="Beitrag melden"
+                title={language.match({ english: () => "Report post", german: () => "Beitrag melden" })}
                 className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
                 <Flag className="h-3.5 w-3.5" />
-                Melden
+                {language.match({ english: () => "Report", german: () => "Melden" })}
               </button>
             </div>
           </motion.article>
@@ -546,7 +547,7 @@ function PostDetailLayout({
           <div className="glass-card p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">
-                {replyTo ? `Antwort an @${replyTo.name}` : "Kommentar schreiben"}
+                {replyTo ? language.match({ english: () => `Reply to @${replyTo.name}`, german: () => `Antwort an @${replyTo.name}` }) : language.match({ english: () => "Write a comment", german: () => "Kommentar schreiben" })}
               </p>
               {replyTo && (
                 <button onClick={cancelReply} className="text-muted-foreground hover:text-foreground">
@@ -555,7 +556,7 @@ function PostDetailLayout({
               )}
             </div>
             <Textarea
-              placeholder="Schreibe einen Kommentar…"
+              placeholder={language.match({ english: () => "Write a comment…", german: () => "Schreibe einen Kommentar…" })}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
@@ -565,9 +566,9 @@ function PostDetailLayout({
               }}
             />
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] text-muted-foreground">Tipp: ⌘/Ctrl + Enter zum Senden</p>
+              <p className="text-[10px] text-muted-foreground">{language.match({ english: () => "Tip: ⌘/Ctrl + Enter to send", german: () => "Tipp: ⌘/Ctrl + Enter zum Senden" })}</p>
               <Button size="sm" onClick={submitComment} disabled={!comment.trim()} className="gap-1.5">
-                <Send className="h-4 w-4" /> Posten
+                <Send className="h-4 w-4" /> {language.match({ english: () => "Post", german: () => "Posten" })}
               </Button>
             </div>
           </div>
@@ -576,7 +577,7 @@ function PostDetailLayout({
             {comments.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Noch keine Kommentare. Sei der/die Erste!</p>
+                <p className="text-sm">{language.match({ english: () => "No comments yet. Be the first!", german: () => "Noch keine Kommentare. Sei der/die Erste!" })}</p>
               </div>
             ) : (
               (() => {
@@ -613,7 +614,7 @@ function PostDetailLayout({
                           <span className="text-[10px] text-muted-foreground">
                             {formatDate(comment._creationTime)}
                             {comment.updatedAt && comment.updatedAt > comment._creationTime + 1000 && (
-                              <> · <span className="italic">bearbeitet</span></>
+                              <> · <span className="italic">{language.match({ english: () => "edited", german: () => "bearbeitet" })}</span></>
                             )}
                           </span>
                         </div>
@@ -634,16 +635,16 @@ function PostDetailLayout({
                               <button
                                 onClick={handleSaveEdit}
                                 disabled={!editingContent.trim()}
-                                className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-40"
-                              >
-                                <Check className="h-3 w-3" /> Speichern
+                              className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-40"
+                            >
+                              <Check className="h-3 w-3" /> {language.match({ english: () => "Save", german: () => "Speichern" })}
                               </button>
                               <button
                                 onClick={handleCancelEdit}
                                 className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                               >
-                                <X className="h-3 w-3" /> Abbrechen
-                              </button>
+                              <X className="h-3 w-3" /> {language.match({ english: () => "Cancel", german: () => "Abbrechen" })}
+                            </button>
                             </div>
                           </div>
                         ) : (
@@ -665,13 +666,13 @@ function PostDetailLayout({
                             onClick={() => startReply(comment)}
                             className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                           >
-                            <Reply className="h-3 w-3" /> Antworten
+                            <Reply className="h-3 w-3" /> {language.match({ english: () => "Reply", german: () => "Antworten" })}
                           </button>
                           {comment.authorId === me && editingCommentId !== comment._id && (
                             <button
                               onClick={() => handleStartEdit(comment)}
                               className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                              title="Kommentar bearbeiten"
+                              title={language.match({ english: () => "Edit comment", german: () => "Kommentar bearbeiten" })}
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
@@ -680,7 +681,7 @@ function PostDetailLayout({
                             <button
                               onClick={() => handleDeleteComment(comment._id)}
                               className="inline-flex items-center gap-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors"
-                              title={isAdmin && comment.authorId !== me ? "Kommentar löschen (Admin)" : "Kommentar löschen"}
+                              title={isAdmin && comment.authorId !== me ? language.match({ english: () => "Delete comment (Admin)", german: () => "Kommentar löschen (Admin)" }) : language.match({ english: () => "Delete comment", german: () => "Kommentar löschen" })}
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
@@ -716,7 +717,7 @@ function PostDetailLayout({
         onOpenChange={setReportOpen}
         postId={post._id}
         postTitle={post.title}
-        forumName={forumName ?? "Forum"}
+        forumName={forumName ?? language.match({ english: () => "Forum", german: () => "Forum" })}
         reportedBy={reportedBy}
       />
     </div>

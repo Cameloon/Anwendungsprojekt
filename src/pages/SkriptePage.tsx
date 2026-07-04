@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { validateScriptDescription, validateFileSize } from "@/lib/validation";
 import Combobox from "@/components/ui/combobox";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -103,6 +104,7 @@ interface ScriptItem {
 const SkriptePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const me = user?.id || "";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -171,7 +173,7 @@ const SkriptePage = () => {
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       setFileError(
-        "Nur PDF, DOCX, PPTX und Bilder (PNG, JPG, WebP) sind erlaubt.",
+        language.match({ english: () => "Only PDF, DOCX, PPTX and images (PNG, JPG, WebP) are allowed.", german: () => "Nur PDF, DOCX, PPTX und Bilder (PNG, JPG, WebP) sind erlaubt." }),
       );
       return;
     }
@@ -212,12 +214,12 @@ const SkriptePage = () => {
 
   const addScript = async () => {
     const nextTitleError =
-      title.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
+      title.trim().length < 3 ? language.match({ english: () => "At least 3 characters.", german: () => "Mindestens 3 Zeichen." }) : "";
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextDescriptionError) return;
 
     if (visibility === "group" && !forumId) {
-      toast.error("Bitte ein Forum auswählen.");
+      toast.error(language.match({ english: () => "Please select a forum.", german: () => "Bitte ein Forum auswählen." }));
       return;
     }
 
@@ -235,9 +237,9 @@ const SkriptePage = () => {
           visibility,
           forumId: forumArg,
         });
-        toast.success("Skript erstellt");
+        toast.success(language.match({ english: () => "Script created", german: () => "Skript erstellt" }));
       } catch (e: any) {
-        toast.error(e?.message ?? "Fehler beim Erstellen");
+        toast.error(e?.message ?? language.match({ english: () => "Error creating script", german: () => "Fehler beim Erstellen" }));
       }
       resetForm();
       return;
@@ -251,7 +253,7 @@ const SkriptePage = () => {
         headers: { "Content-Type": selectedFile.type },
         body: selectedFile,
       });
-      if (!result.ok) throw new Error("Upload fehlgeschlagen");
+      if (!result.ok) throw new Error(language.match({ english: () => "Upload failed", german: () => "Upload fehlgeschlagen" }));
       const { storageId } = (await result.json()) as {
         storageId: Id<"_storage">;
       };
@@ -269,9 +271,9 @@ const SkriptePage = () => {
         fileSize: selectedFile.size,
         forumId: forumArg,
       });
-      toast.success("Skript hochgeladen");
+      toast.success(language.match({ english: () => "Script uploaded", german: () => "Skript hochgeladen" }));
     } catch (e: any) {
-      toast.error(e?.message ?? "Fehler beim Hochladen");
+      toast.error(e?.message ?? language.match({ english: () => "Error uploading", german: () => "Fehler beim Hochladen" }));
     }
     setUploading(false);
     resetForm();
@@ -289,12 +291,12 @@ const SkriptePage = () => {
   };
 
   const removeScript = async (id: string) => {
-    if (!window.confirm("Skript wirklich löschen?")) return;
+    if (!window.confirm(language.match({ english: () => "Really delete script?", german: () => "Skript wirklich löschen?" }))) return;
     try {
       await deleteMutation({ scriptId: id as Id<"scripts"> });
-      toast.success("Skript gelöscht");
+      toast.success(language.match({ english: () => "Script deleted", german: () => "Skript gelöscht" }));
     } catch {
-      toast.error("Fehler beim Löschen");
+      toast.error(language.match({ english: () => "Error deleting", german: () => "Fehler beim Löschen" }));
     }
   };
 
@@ -332,14 +334,14 @@ const SkriptePage = () => {
 
   const stats = [
     {
-      label: "Skripte",
+      label: language.match({ english: () => "Scripts", german: () => "Skripte" }),
       value: scripts.length,
       icon: FileText,
       bg: "bg-primary/10",
       color: "text-primary",
     },
     {
-      label: "Fächer",
+      label: language.match({ english: () => "Subjects", german: () => "Fächer" }),
       value: new Set(scripts.map((s) => s.subject)).size,
       icon: BookOpen,
       bg: "bg-info/10",
@@ -350,7 +352,7 @@ const SkriptePage = () => {
   // derived validation messages (live) so they update/clear automatically
   const titleError =
     title.trim().length > 0 && title.trim().length < 3
-      ? "Mindestens 3 Zeichen."
+      ? language.match({ english: () => "At least 3 characters.", german: () => "Mindestens 3 Zeichen." })
       : "";
   const descriptionError =
     description.trim().length > 0 ? validateScriptDescription(description) : "";
@@ -372,21 +374,21 @@ const SkriptePage = () => {
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  Lernmaterial
+                  {language.match({ english: () => "Study Material", german: () => "Lernmaterial" })}
                 </span>
               </div>
               <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
-                Skript-<span className="text-gradient">Bibliothek</span>
+                {language.match({ english: () => "Script ", german: () => "Skript-" })}<span className="text-gradient">{language.match({ english: () => "Library", german: () => "Bibliothek" })}</span>
               </h1>
               <p className="text-muted-foreground mt-1">
-                Alle Skripte und Notizen an einem Ort
+                {language.match({ english: () => "All scripts and notes in one place", german: () => "Alle Skripte und Notizen an einem Ort" })}
               </p>
             </div>
             <Button
               onClick={() => setShowUpload(!showUpload)}
               className="gap-2"
             >
-              <Upload className="h-4 w-4" /> Hochladen
+              <Upload className="h-4 w-4" /> {language.match({ english: () => "Upload", german: () => "Hochladen" })}
             </Button>
           </motion.div>
 
@@ -430,7 +432,7 @@ const SkriptePage = () => {
                   <div className="grid md:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Input
-                        placeholder="Titel des Skripts"
+                        placeholder={language.match({ english: () => "Script Title", german: () => "Titel des Skripts" })}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                       />
@@ -443,13 +445,13 @@ const SkriptePage = () => {
                         value={lectureId}
                         onChange={setLectureId}
                         options={lectureOptions}
-                        placeholder="Fach / Modul auswählen"
+                        placeholder={language.match({ english: () => "Select subject / module", german: () => "Fach / Modul auswählen" })}
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <Textarea
-                      placeholder="Kurze Beschreibung zum Inhalt"
+                      placeholder={language.match({ english: () => "Brief description of the content", german: () => "Kurze Beschreibung zum Inhalt" })}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
@@ -515,10 +517,10 @@ const SkriptePage = () => {
                       <>
                         <Upload className="h-8 w-8 mx-auto mb-2 opacity-60" />
                         <p className="font-medium text-foreground">
-                          Datei hierher ziehen
+                          {language.match({ english: () => "Drag file here", german: () => "Datei hierher ziehen" })}
                         </p>
                         <p className="text-xs mt-1">
-                          PDF, DOCX, PPTX oder Bilder · max. 25 MB
+                          {language.match({ english: () => "PDF, DOCX, PPTX or images · max 25 MB", german: () => "PDF, DOCX, PPTX oder Bilder · max. 25 MB" })}
                         </p>
                       </>
                     )}
@@ -529,14 +531,14 @@ const SkriptePage = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {(
                       [
-                        { value: "public", label: "Öffentlich", icon: Globe },
-                        { value: "private", label: "Privat", icon: Lock },
+                        { value: "public", label: language.match({ english: () => "Public", german: () => "Öffentlich" }), icon: Globe },
+                        { value: "private", label: language.match({ english: () => "Private", german: () => "Privat" }), icon: Lock },
                         {
                           value: "jahrgang",
-                          label: "Kurs",
+                          label: language.match({ english: () => "Course", german: () => "Kurs" }),
                           icon: GraduationCap,
                         },
-                        { value: "group", label: "Gruppe", icon: Users },
+                        { value: "group", label: language.match({ english: () => "Group", german: () => "Gruppe" }), icon: Users },
                       ] as const
                     ).map(({ value, label, icon: Icon }) => (
                       <button
@@ -557,7 +559,7 @@ const SkriptePage = () => {
                       value={forumId}
                       onChange={setForumId}
                       options={forumOptions}
-                      placeholder="Gruppe auswählen"
+                      placeholder={language.match({ english: () => "Select group", german: () => "Gruppe auswählen" })}
                     />
                   )}
                   <div className="flex gap-2 justify-end">
@@ -566,20 +568,19 @@ const SkriptePage = () => {
                       onClick={resetForm}
                       disabled={uploading}
                     >
-                      Abbrechen
+                      {language.match({ english: () => "Cancel", german: () => "Abbrechen" })}
                     </Button>
                     <Button onClick={addScript} disabled={uploading}>
                       {uploading ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Lädt
-                          hoch…
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> {language.match({ english: () => "Uploading…", german: () => "Lädt hoch…" })}
                         </>
                       ) : selectedFile ? (
                         <>
-                          <Upload className="h-4 w-4 mr-1" /> Skript hochladen
+                          <Upload className="h-4 w-4 mr-1" /> {language.match({ english: () => "Upload Script", german: () => "Skript hochladen" })}
                         </>
                       ) : (
-                        "Als Notiz speichern"
+                        language.match({ english: () => "Save as Note", german: () => "Als Notiz speichern" })
                       )}
                     </Button>
                   </div>
@@ -592,7 +593,7 @@ const SkriptePage = () => {
           <div className="relative mb-4">
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Skripte durchsuchen…"
+              placeholder={language.match({ english: () => "Search scripts…", german: () => "Skripte durchsuchen…" })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -612,7 +613,7 @@ const SkriptePage = () => {
                     : "bg-secondary/60 text-muted-foreground border-transparent hover:text-foreground"
                 }`}
               >
-                {s === "alle" ? "Alle Fächer" : s}
+                {s === "alle" ? language.match({ english: () => "All Subjects", german: () => "Alle Fächer" }) : s}
               </button>
             ))}
           </div>
@@ -622,7 +623,7 @@ const SkriptePage = () => {
             {filtered.length === 0 && (
               <div className="md:col-span-2 lg:col-span-3 glass-card p-10 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">Keine Skripte gefunden</p>
+                <p className="text-muted-foreground">{language.match({ english: () => "No scripts found", german: () => "Keine Skripte gefunden" })}</p>
               </div>
             )}
             {filtered.map((script, i) => (
@@ -646,17 +647,17 @@ const SkriptePage = () => {
                   <div className="flex items-center gap-1.5">
                     {script.visibility === "private" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <Lock className="h-3 w-3" /> Privat
+                        <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
                       </span>
                     )}
                     {script.visibility === "jahrgang" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <GraduationCap className="h-3 w-3" /> Kurs
+                        <GraduationCap className="h-3 w-3" /> {language.match({ english: () => "Course", german: () => "Kurs" })}
                       </span>
                     )}
                     {script.visibility === "group" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <Users className="h-3 w-3" /> Gruppe
+                        <Users className="h-3 w-3" /> {language.match({ english: () => "Group", german: () => "Gruppe" })}
                       </span>
                     )}
                     <span
@@ -745,11 +746,11 @@ const SkriptePage = () => {
       >
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>{openScript?.title || "Skript"}</DialogTitle>
+            <DialogTitle>{openScript?.title || language.match({ english: () => "Script", german: () => "Skript" })}</DialogTitle>
             <DialogDescription>
               {openScript
                 ? `${openScript.subject} · ${openScript.authorName} · ${openScript.date}`
-                : "Details zum Skript"}
+                : language.match({ english: () => "Script details", german: () => "Details zum Skript" })}
             </DialogDescription>
           </DialogHeader>
 
@@ -762,7 +763,7 @@ const SkriptePage = () => {
               </div>
 
               <p className="text-sm text-muted-foreground">
-                {openScript.description || "Keine Beschreibung vorhanden."}
+                {openScript.description || language.match({ english: () => "No description available.", german: () => "Keine Beschreibung vorhanden." })}
               </p>
 
               <div className="flex items-center justify-between rounded-xl border p-3 text-sm">
@@ -771,16 +772,16 @@ const SkriptePage = () => {
                     {openScript.fileName || openScript.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {openScript.pages > 0
-                      ? `${openScript.pages} Seiten`
-                      : "Notiz oder Datei ohne Seitenangabe"}
+                  {openScript.pages > 0
+                    ? `${openScript.pages} ${language.match({ english: () => "Pages", german: () => "Seiten" })}`
+                    : language.match({ english: () => "Note or file without page count", german: () => "Notiz oder Datei ohne Seitenangabe" })}
                   </p>
                 </div>
                 {openScript.url && (
                   <a href={openScript.url} target="_blank" download>
                     <Button className="gap-2">
                       <Download className="h-4 w-4" />
-                      Öffnen
+                      {language.match({ english: () => "Open", german: () => "Öffnen" })}
                     </Button>
                   </a>
                 )}
