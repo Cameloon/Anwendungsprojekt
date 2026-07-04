@@ -51,7 +51,9 @@ const GroupsPanel = ({ open, onOpenChange }: GroupsPanelProps) => {
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
 
-  const active = activeId ? groups.find((g) => g._id === activeId) ?? null : null;
+  const active = activeId
+    ? groups.find((g) => g._id === activeId) ?? archGroups.find((g) => g._id === activeId) ?? null
+    : null;
 
   const nameError = name.trim().length > 0 && name.trim().length < 3 ? "Mindestens 3 Zeichen." : "";
   const codeError = code.trim().length > 0 && code.trim().length !== 6 ? "Der Einladungscode hat 6 Zeichen." : "";

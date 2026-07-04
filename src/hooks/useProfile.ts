@@ -19,13 +19,13 @@ const useDemoProfile = (): AppProfile | null => {
   useEffect(() => demoStore.subscribe(() => setP(demoStore.getProfile())), []);
   if (!p) return null;
   return {
-    display_name: p.displayName ?? null,
+    display_name: p.display_name ?? null,
     studienfach: p.studienfach ?? null,
     matrikelnummer: p.matrikelnummer ?? null,
     hochschule: p.hochschule ?? null,
     kurs: p.kurs ?? null,
-    avatar_url: p.avatarUrl ?? null,
-    created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
+    avatar_url: p.avatar_url ?? null,
+    created_at: p.created_at ?? null,
     role: p.role ?? null,
   };
 };

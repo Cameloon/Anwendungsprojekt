@@ -94,6 +94,14 @@ interface Attachment {
   size: number;
   type: string;
   url: string;
+  uploadedBy?: string;
+}
+
+interface DeadlineMessage {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
 }
 
 import { useLanguage } from "@/hooks/useLanguage";
@@ -110,7 +118,7 @@ interface DeadlineItem {
   vorlesung?: string;
   priority: "low" | "med" | "high";
   attachments: Attachment[];
-  messages: { id: string; author: string; text: string; createdAt: string }[];
+  messageCount: number;
   visibility: "public" | "private";
   invitees: string[];
   allowedKurse: string[];
@@ -184,6 +192,17 @@ function PlannerPage() {
     size: a.size,
     type: a.type,
     url: a.url ?? "",
+    uploadedBy: a.uploadedBy,
+  }));
+  const openMessagesQuery = useQuery(
+    api.deadlines.getMessages,
+    openId ? { deadlineId: openId as Id<"deadlines"> } : "skip"
+  );
+  const openMessages: DeadlineMessage[] = (openMessagesQuery ?? []).map((m) => ({
+    id: m._id,
+    author: m.authorName,
+    text: m.text,
+    createdAt: new Date(m._creationTime).toLocaleDateString("de-DE"),
   }));
   const [doneOpen, setDoneOpen] = useState(true);
   const [archiveOpen, setArchiveOpen] = useState(true);
@@ -217,12 +236,7 @@ function PlannerPage() {
       type: a.type,
       url: a.url ?? "",
     })),
-    messages: (d.messages ?? []).map((m: any) => ({
-      id: m._id,
-      author: m.authorName,
-      text: m.text,
-      createdAt: new Date(m._creationTime).toLocaleDateString("de-DE"),
-    })),
+    messageCount: d.messageCount ?? 0,
     visibility: d.visibility,
     vorlesung: d.vorlesung,
     priority: d.priority ?? "med",
@@ -306,7 +320,7 @@ function PlannerPage() {
     let inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
     const inviteeNames = visibility === "private" ? selectedInvitees.map((s) => s.displayName) : [];
 
-    if (editingId) {
+    if (editingId && visibility === "private") {
       const existing = deadlines.find((d) => d.id === editingId);
       if (existing) {
         inviteeIds = [...new Set([...(existing.invitees ?? []), ...inviteeIds])];
@@ -585,6 +599,7 @@ function PlannerPage() {
       newMessage={newMessage}
       setNewMessage={setNewMessage}
       addMessage={addMessage}
+      openMessages={openMessages}
       openAttachments={openAttachments}
       handleAttachFiles={handleAttachFiles}
       removeAttachment={removeAttachment}
@@ -686,6 +701,7 @@ function PlannerLayout({
   newMessage,
   setNewMessage,
   addMessage,
+  openMessages,
   openAttachments,
   handleAttachFiles,
   removeAttachment,
@@ -762,6 +778,7 @@ function PlannerLayout({
   newMessage: string;
   setNewMessage: (v: string) => void;
   addMessage: () => void;
+  openMessages: DeadlineMessage[];
   openAttachments: Attachment[];
   handleAttachFiles: (files: FileList | null) => void;
   removeAttachment: (attachmentId: string) => void;
@@ -1188,7 +1205,7 @@ function PlannerLayout({
                     const diff = endOfDay(d.date) - Date.now();
                     const overdue = diff < 0 && !d.done;
                     const urgent = diff >= 0 && diff < URGENT_WINDOW_MS && !d.done;
-                    const messageCount = d.messages?.length ?? 0;
+                    const messageCount = d.messageCount;
                     const fileCount = d.attachments?.length ?? 0;
                     const isOwn = d.ownerId === me;
                     return (
@@ -1355,7 +1372,7 @@ function PlannerLayout({
                         <div className="flex-grow border-t border-border/30" />
                       </div>
                       {doneOpen && doneFiltered.map((d) => {
-                        const messageCount = d.messages?.length ?? 0;
+                        const messageCount = d.messageCount;
                         const fileCount = d.attachments?.length ?? 0;
                         const isOwn = d.ownerId === me;
                         return (
@@ -1503,7 +1520,7 @@ function PlannerLayout({
                         const diff = new Date(d.date).getTime() - Date.now();
                         const overdue = diff < 0 && !d.done;
                         const urgent = diff >= 0 && diff < 3 * 24 * 60 * 60 * 1000 && !d.done;
-                        const messageCount = d.messages?.length ?? 0;
+                        const messageCount = d.messageCount;
                         const fileCount = d.attachments?.length ?? 0;
                         const isOwn = d.ownerId === me;
                         return (
@@ -1692,7 +1709,7 @@ function PlannerLayout({
                 <Paperclip className="h-4 w-4" /> {language.match({ english: () => "Files", german: () => "Dateien" })} ({openAttachments.length})
               </TabsTrigger>
               <TabsTrigger value="forum" className="gap-1.5">
-                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Forum", german: () => "Forum" })} ({openDeadline?.messages?.length ?? 0})
+                <MessageSquare className="h-4 w-4" /> {language.match({ english: () => "Forum", german: () => "Forum" })} ({openMessages.length})
               </TabsTrigger>
             </TabsList>
 
@@ -1710,13 +1727,15 @@ function PlannerLayout({
                   <a href={a.url} download className="text-primary hover:underline text-xs inline-flex items-center gap-1">
                     <Download className="h-3.5 w-3.5" />
                   </a>
-                  <button
-                    onClick={() => removeAttachment(a.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
-                    title={language.match({ english: () => "Delete", german: () => "Löschen" })}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {(a.uploadedBy === me || openDeadline?.ownerId === me) && (
+                    <button
+                      onClick={() => removeAttachment(a.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      title={language.match({ english: () => "Delete", german: () => "Löschen" })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
               <div className="pt-2">
@@ -1736,10 +1755,10 @@ function PlannerLayout({
 
             <TabsContent value="forum" className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto space-y-2 mb-3">
-                {(!openDeadline || openDeadline.messages.length === 0) && (
+                {openMessages.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">{language.match({ english: () => "No messages.", german: () => "Keine Nachrichten." })}</p>
                 )}
-                {openDeadline?.messages.map((m) => (
+                {openMessages.map((m) => (
                   <div key={m.id} className="p-3 rounded-lg bg-secondary/40">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-semibold">{m.author}</span>

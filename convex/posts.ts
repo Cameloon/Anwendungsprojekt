@@ -537,14 +537,11 @@ export const listRecent = query({
       if (member) accessibleIds.push(forum._id);
     }
 
-    const allPosts = await ctx.db
-      .query("posts")
-      .order("desc")
-      .take(50);
+    const allPosts = await ctx.db.query("posts").order("desc").collect();
 
-    const accessiblePosts = allPosts.filter((p) =>
-      accessibleIds.includes(p.forumId)
-    );
+    const accessiblePosts = allPosts
+      .filter((p) => accessibleIds.includes(p.forumId))
+      .slice(0, 20);
 
     const forumMap = new Map(forums.map((f) => [f._id, f]));
 
@@ -556,7 +553,7 @@ export const listRecent = query({
       })
     );
 
-    return enriched.slice(0, 20);
+    return enriched;
   },
 });
 

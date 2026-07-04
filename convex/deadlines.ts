@@ -52,7 +52,7 @@ export const listForUser = query({
       myOwn.map((d) => `${d.title}|${d.date}|${d.category}`),
     );
 
-    return all.filter((d) => {
+    const visible = all.filter((d) => {
       if (d.ownerId === identity.subject) return true;
       if (d.visibility === "public") {
         if (d.declinedBy?.includes(identity.subject)) return false;
@@ -63,6 +63,18 @@ export const listForUser = query({
       if (d.invitees?.includes(identity.subject)) return true;
       return false;
     });
+
+    return await Promise.all(
+      visible.map(async (d) => ({
+        ...d,
+        messageCount: (
+          await ctx.db
+            .query("deadlineMessages")
+            .withIndex("by_deadline", (q) => q.eq("deadlineId", d._id))
+            .collect()
+        ).length,
+      }))
+    );
   },
 });
 
@@ -71,7 +83,12 @@ export const getById = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    return await ctx.db.get(args.deadlineId);
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) return null;
+    if (!(await canAccessDeadline(ctx, deadline, identity.subject))) {
+      throw new Error("Not authorized");
+    }
+    return deadline;
   },
 });
 
@@ -103,6 +120,11 @@ export const getMessages = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const deadline = await ctx.db.get(args.deadlineId);
+    if (!deadline) throw new Error("Deadline not found");
+    if (!(await canAccessDeadline(ctx, deadline, identity.subject))) {
+      throw new Error("Not authorized");
+    }
     return await ctx.db
       .query("deadlineMessages")
       .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
@@ -254,8 +276,39 @@ export const update = mutation({
     if (args.linkedScriptIds !== undefined) patch.linkedScriptIds = args.linkedScriptIds;
     if (args.linkedGroupIds !== undefined) patch.linkedGroupIds = args.linkedGroupIds;
     if (args.done !== undefined) patch.done = args.done;
+
     if (args.visibility === "public" && !args.invitees) {
-      patch.invitees = await getKursUserIds(ctx, identity.subject);
+      const kursInvitees = await getKursUserIds(ctx, identity.subject);
+      patch.invitees = kursInvitees;
+      const newInvitees = kursInvitees.filter((id) => !deadline.invitees?.includes(id));
+      if (newInvitees.length > 0) {
+        const title = (patch.title as string | undefined) ?? deadline.title;
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+          .unique();
+        const fromName = profile?.displayName || identity.name || "Unbekannt";
+        const now = Date.now();
+        for (const recipientId of newInvitees) {
+          const recipientProfile = await ctx.db
+            .query("profiles")
+            .withIndex("by_user", (q) => q.eq("userId", recipientId))
+            .unique();
+          const recipientName = recipientProfile?.displayName || recipientId;
+          await ctx.db.insert("notifications", {
+            type: "deadline_invite",
+            recipientId,
+            recipientName,
+            fromId: identity.subject,
+            fromName,
+            title,
+            message: `${fromName} hat dich zum Termin „${title}“ eingeladen (öffentlich).`,
+            deadlineId: args.deadlineId,
+            status: "pending",
+            createdAt: now,
+          });
+        }
+      }
     }
 
     await ctx.db.patch(args.deadlineId, patch);
@@ -514,7 +567,12 @@ export const deleteAttachment = mutation({
     if (!identity) throw new Error("Not authenticated");
     const attachment = await ctx.db.get(args.attachmentId);
     if (!attachment) throw new Error("Attachment not found");
-    if (attachment.uploadedBy !== identity.subject) throw new Error("Not authorized");
+    if (attachment.uploadedBy !== identity.subject) {
+      const deadline = await ctx.db.get(attachment.deadlineId);
+      if (!deadline || deadline.ownerId !== identity.subject) {
+        throw new Error("Not authorized");
+      }
+    }
     await ctx.storage.delete(attachment.storageId);
     await ctx.db.delete(args.attachmentId);
   },
@@ -537,6 +595,9 @@ export const addMessage = mutation({
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
+    if (!(await canAccessDeadline(ctx, deadline, identity.subject))) {
+      throw new Error("Not authorized");
+    }
     await ctx.db.insert("deadlineMessages", {
       deadlineId: args.deadlineId,
       authorId: identity.subject,
