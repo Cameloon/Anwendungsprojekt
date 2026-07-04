@@ -1,13 +1,13 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-07-04 08:02 UTC -->
+<!-- Letzte Aktualisierung: 2026-07-04 11:03 UTC -->
 
 ## Gesamtstatus
 
 | ✅ Bestanden | ❌ Fehlgeschlagen | 🔜 Todo | ⏸ Übersprungen |
 |-------------|------------------|---------|----------------|
-| 77 | 0 | 0 | 0 |
+| 105 | 0 | 0 | 0 |
 
 ## tests/admin-dashboard.test.tsx
 
@@ -20,6 +20,81 @@
 ### example
 
 - ✅ should pass
+
+## tests/convex/admin.permissions.test.ts
+
+### admin.approveUser — nur für Admins
+
+- ✅ Admin kann einen ausstehenden Nutzer freischalten
+- ✅ Nicht-Admin darf Nutzer NICHT freischalten
+
+### admin.rejectUser — nur für Admins
+
+- ✅ Admin kann einen ausstehenden Nutzer ablehnen
+- ✅ Nicht-Admin darf Nutzer NICHT ablehnen
+
+### admin.updateRole — nur für Admins
+
+- ✅ Admin kann die Rolle eines Nutzers ändern
+- ✅ Nicht-Admin darf Rollen NICHT ändern (auch nicht die eigene)
+
+### postReports.getAdminReports — nur für Admins sichtbar (BUG-009)
+
+- ✅ Admin sieht gemeldete Beiträge
+- ✅ Nicht-Admin darf gemeldete Beiträge NICHT abrufen
+
+## tests/convex/deadlines.permissions.test.ts
+
+### deadlines.update — Berechtigung unabhängig von visibility (BUG-005)
+
+- ✅ Besitzer darf eigenen (öffentlichen) Termin bearbeiten
+- ✅ Eingeladener darf öffentlichen Termin bearbeiten
+- ✅ Fremder Nutzer darf öffentlichen Termin NICHT bearbeiten (Regression BUG-005)
+- ✅ Fremder Nutzer darf privaten Termin NICHT bearbeiten
+
+### deadlines.deleteDeadline — nur Besitzer darf löschen (BUG-005)
+
+- ✅ Besitzer darf eigenen Termin löschen
+- ✅ Eingeladener darf öffentlichen Termin NICHT löschen (Regression BUG-005)
+- ✅ Fremder Nutzer darf privaten Termin eines anderen NICHT löschen
+
+## tests/convex/posts.permissions.test.ts
+
+### posts.deleteComment — Autor oder Admin (BUG-003)
+
+- ✅ Autor darf eigenen Kommentar löschen
+- ✅ Fremder Nutzer darf Kommentar NICHT löschen
+- ✅ Admin darf fremden Kommentar löschen (Moderation)
+
+### posts.updateComment — Autor oder Admin (BUG-003)
+
+- ✅ Autor darf eigenen Kommentar bearbeiten
+- ✅ Fremder Nutzer darf Kommentar NICHT bearbeiten
+
+## tests/convex/scripts.permissions.test.ts
+
+### scripts.getById — private
+
+- ✅ Autor sieht eigenes privates Skript
+- ✅ Fremder Nutzer sieht privates Skript NICHT
+
+### scripts.getById — group
+
+- ✅ Forum-Mitglied sieht group-Skript
+- ✅ Nicht-Mitglied sieht group-Skript NICHT
+
+### scripts.getById — jahrgang (kursweit)
+
+- ✅ Nutzer mit demselben Kurs sieht jahrgang-Skript
+- ✅ Nutzer mit anderem Kurs sieht jahrgang-Skript NICHT
+
+### scripts.getById — public
+
+- ✅ public-Skript ist für jeden authentifizierten Nutzer sichtbar
+
+### scripts.listVisible — filtert Sichtbarkeit korrekt
+
+- ✅ listVisible zeigt nur öffentliche, eigene und berechtigte Skripte
 
 ## tests/dashboard/filter.test.tsx
 
@@ -36,6 +111,22 @@
 
 - ✅ shows current forum and scripts widgets and links navigate
 - ✅ shows empty-state text when no lectures, posts and scripts exist
+
+## tests/forum/author_controls.test.tsx
+
+### Forum – Autor-Kontrolle: Edit/Delete-Buttons
+
+- ✅ Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag
+- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
+- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
+- ✅ Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
+
+## tests/forum/post_comment.test.tsx
+
+### Forum post and comment flow
+
+- ✅ creates a post and shows it with author and tag in the forum list
+- ✅ shows post detail with author, tag and content; adds comments in chronological order
 
 ## tests/planner/crud.test.tsx
 
@@ -71,22 +162,6 @@
 - ✅ validateFileSize(26214400 Bytes) → ""
 - ✅ validateFileSize(26214401 Bytes) → "Datei darf maximal 25 MB groß sein."
 - ✅ validateFileSize(52428800 Bytes) → "Datei darf maximal 25 MB groß sein."
-
-## tests/forum/author_controls.test.tsx
-
-### Forum – Autor-Kontrolle: Edit/Delete-Buttons
-
-- ✅ Autor sieht Bearbeiten-Button, aber keinen Löschen-Button am eigenen Beitrag
-- ✅ Fremder Nutzer sieht keine Bearbeiten/Löschen-Buttons am fremden Beitrag
-- ✅ Eigener Kommentar zeigt Löschen-Button, fremder Kommentar nicht
-- ✅ Klick auf Bearbeiten öffnet Inline-Formular mit vorausgefülltem Inhalt
-
-## tests/forum/post_comment.test.tsx
-
-### Forum post and comment flow
-
-- ✅ creates a post and shows it with author and tag in the forum list
-- ✅ shows post detail with author, tag and content; adds comments in chronological order
 
 ## tests/unit/demoStore.test.ts
 

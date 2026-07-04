@@ -9,6 +9,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.{test,spec}.{ts,tsx}"],
+    server: { deps: { inline: ["convex-test"] } },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
