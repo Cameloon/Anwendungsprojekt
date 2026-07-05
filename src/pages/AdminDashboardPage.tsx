@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   ShieldOff,
   Trash2,
+  Undo2,
   Users,
   FileWarning,
   MessageCircleHeart,
@@ -91,6 +92,7 @@ const AdminDashboardPage = () => {
   const markReportDone = useMutation(api.userReports.markDone);
   const postReports = useQuery(api.postReports.getAdminReports, {});
   const dismissPostReport = useMutation(api.postReports.markDone);
+  const reopenPostReport = useMutation(api.postReports.reopen);
   const deletePost = useMutation(api.posts.deletePost);
   const deleteComment = useMutation(api.posts.deleteComment);
   const [expandedReportType, setExpandedReportType] = useState<
@@ -99,6 +101,7 @@ const AdminDashboardPage = () => {
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [dismissingReport, setDismissingReport] = useState<string | null>(null);
   const [deletingReport, setDeletingReport] = useState<string | null>(null);
+  const [reopeningReport, setReopeningReport] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [banTarget, setBanTarget] = useState<{ userId: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -648,6 +651,31 @@ const AdminDashboardPage = () => {
                                   )}
                                 </Button>
                               </>
+                            )}
+                            {report.status !== "offen" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={async () => {
+                                  setReopeningReport(report._id);
+                                  try {
+                                    await reopenPostReport({ id: report._id });
+                                  } finally {
+                                    setReopeningReport(null);
+                                  }
+                                }}
+                                disabled={reopeningReport === report._id}
+                              >
+                                {reopeningReport === report._id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Undo2 className="h-3.5 w-3.5" />
+                                    {language.match({ english: () => "Undo", german: () => "Rückgängig" })}
+                                  </>
+                                )}
+                              </Button>
                             )}
                             {report.authorId && (
                               <Button

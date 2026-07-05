@@ -76,3 +76,18 @@ export const markDone = mutation({
     await ctx.db.patch(args.id, { status: "erledigt" });
   },
 });
+
+export const reopen = mutation({
+  args: { id: v.id("postReports") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Nicht authentifiziert");
+    const caller = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (caller?.role !== "admin") throw new Error("Nicht autorisiert");
+
+    await ctx.db.patch(args.id, { status: "offen" });
+  },
+});
