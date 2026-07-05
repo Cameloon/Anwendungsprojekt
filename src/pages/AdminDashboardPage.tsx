@@ -58,6 +58,7 @@ import {
 import Combobox from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/useLanguage";
+import type { languageSetting } from "@/lib/Enum";
 
 const SEMESTER_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 
@@ -1240,30 +1241,30 @@ const AdminDashboardPage = () => {
   );
 };
 
-function timeAgo(ts: number): string {
+function timeAgo(ts: number, language: languageSetting): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "gerade eben";
-  if (mins < 60) return `vor ${mins} Min.`;
+  if (mins < 1) return language.match({ english: () => "just now", german: () => "gerade eben" });
+  if (mins < 60) return language.match({ english: () => `${mins} min ago`, german: () => `vor ${mins} Min.` });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `vor ${hours} Std.`;
+  if (hours < 24) return language.match({ english: () => `${hours} h ago`, german: () => `vor ${hours} Std.` });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `vor ${days} Tagen`;
+  if (days < 30) return language.match({ english: () => `${days} days ago`, german: () => `vor ${days} Tagen` });
   return new Date(ts).toLocaleDateString("de-DE");
 }
 
-const actionMeta: Record<string, { label: string; color: string }> = {
-  approve_user: { label: "Freigabe", color: "bg-success/10 text-success" },
-  reject_user: { label: "Ablehnung", color: "bg-destructive/10 text-destructive" },
-  ban_user: { label: "Sperrung", color: "bg-destructive/10 text-destructive" },
-  unban_user: { label: "Entsperrung", color: "bg-success/10 text-success" },
-  delete_user: { label: "Löschung", color: "bg-destructive/10 text-destructive" },
-  update_role: { label: "Rolle", color: "bg-amber-500/10 text-amber-600" },
-  edit: { label: "Bearbeitung", color: "bg-info/10 text-info" },
-  delete: { label: "Beitrag gelöscht", color: "bg-destructive/10 text-destructive" },
-  delete_comment: { label: "Kommentar gelöscht", color: "bg-destructive/10 text-destructive" },
-  dismiss_report: { label: "Meldung erledigt", color: "bg-success/10 text-success" },
-  reopen_report: { label: "Meldung wieder geöffnet", color: "bg-amber-500/10 text-amber-600" },
+const actionMeta: Record<string, { label: (language: languageSetting) => string; color: string }> = {
+  approve_user: { label: (language) => language.match({ english: () => "Approval", german: () => "Freigabe" }), color: "bg-success/10 text-success" },
+  reject_user: { label: (language) => language.match({ english: () => "Rejection", german: () => "Ablehnung" }), color: "bg-destructive/10 text-destructive" },
+  ban_user: { label: (language) => language.match({ english: () => "Ban", german: () => "Sperrung" }), color: "bg-destructive/10 text-destructive" },
+  unban_user: { label: (language) => language.match({ english: () => "Unban", german: () => "Entsperrung" }), color: "bg-success/10 text-success" },
+  delete_user: { label: (language) => language.match({ english: () => "Deletion", german: () => "Löschung" }), color: "bg-destructive/10 text-destructive" },
+  update_role: { label: (language) => language.match({ english: () => "Role", german: () => "Rolle" }), color: "bg-amber-500/10 text-amber-600" },
+  edit: { label: (language) => language.match({ english: () => "Edit", german: () => "Bearbeitung" }), color: "bg-info/10 text-info" },
+  delete: { label: (language) => language.match({ english: () => "Post deleted", german: () => "Beitrag gelöscht" }), color: "bg-destructive/10 text-destructive" },
+  delete_comment: { label: (language) => language.match({ english: () => "Comment deleted", german: () => "Kommentar gelöscht" }), color: "bg-destructive/10 text-destructive" },
+  dismiss_report: { label: (language) => language.match({ english: () => "Report resolved", german: () => "Meldung erledigt" }), color: "bg-success/10 text-success" },
+  reopen_report: { label: (language) => language.match({ english: () => "Report reopened", german: () => "Meldung wieder geöffnet" }), color: "bg-amber-500/10 text-amber-600" },
 };
 
 function ModerationLogEntry({
@@ -1279,12 +1280,12 @@ function ModerationLogEntry({
   isReopened?: boolean;
   onReopenReport?: (reportId: any) => void;
 }) {
-  const meta = actionMeta[entry.action] ?? { label: entry.action, color: "bg-secondary text-muted-foreground" };
+  const meta = actionMeta[entry.action] ?? { label: () => entry.action, color: "bg-secondary text-muted-foreground" };
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-background/80 p-3">
       <div className="mt-0.5 shrink-0">
         <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${meta.color}`}>
-          {meta.label}
+          {meta.label(language)}
         </Badge>
       </div>
       <div className="min-w-0 flex-1">
