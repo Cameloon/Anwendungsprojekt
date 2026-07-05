@@ -127,11 +127,13 @@ const SkriptePage = () => {
   const createMutation = useMutation(api.scripts.create);
   const deleteMutation = useMutation(api.scripts.deleteScript);
   const generateUploadUrlMutation = useMutation(api.scripts.generateUploadUrl);
+  const discardUploadMutation = useMutation(api.scripts.discardUpload);
 
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
   const [lectureId, setLectureId] = useState("");
   const [description, setDescription] = useState("");
+  const [pages, setPages] = useState("");
   const [search, setSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState<string>("alle");
   const [visibility, setVisibility] = useState<Visibility>("public");
@@ -214,10 +216,17 @@ const SkriptePage = () => {
     : "";
 
   const addScript = async () => {
+    if (uploading) return;
+
     const nextTitleError =
       title.trim().length < 3 ? language.match({ english: () => "At least 3 characters.", german: () => "Mindestens 3 Zeichen." }) : "";
     const nextDescriptionError = validateScriptDescription(description);
     if (nextTitleError || nextDescriptionError) return;
+
+    if (!lectureId) {
+      toast.error(language.match({ english: () => "Please select a subject / module.", german: () => "Bitte ein Fach / Modul auswählen." }));
+      return;
+    }
 
     if (visibility === "group" && !forumId) {
       toast.error(language.match({ english: () => "Please select a forum.", german: () => "Bitte ein Forum auswählen." }));
@@ -226,27 +235,32 @@ const SkriptePage = () => {
 
     const forumArg =
       visibility === "group" ? (forumId as Id<"forums">) : undefined;
+    const pagesNum = Number(pages);
+    const pagesArg = Number.isFinite(pagesNum) && pagesNum > 0 ? Math.floor(pagesNum) : 0;
 
     if (!selectedFile) {
+      setUploading(true);
       try {
         await createMutation({
           title: title.trim(),
           subject: subjectArg,
           description: description.trim(),
-          pages: 0,
+          pages: pagesArg,
           type: "Notiz",
           visibility,
           forumId: forumArg,
         });
         toast.success(language.match({ english: () => "Script created", german: () => "Skript erstellt" }));
+        resetForm();
       } catch (e: any) {
         toast.error(e?.message ?? language.match({ english: () => "Error creating script", german: () => "Fehler beim Erstellen" }));
       }
-      resetForm();
+      setUploading(false);
       return;
     }
 
     setUploading(true);
+    let storageId: Id<"_storage"> | null = null;
     try {
       const uploadUrl = await generateUploadUrlMutation();
       const result = await fetch(uploadUrl, {
@@ -255,15 +269,13 @@ const SkriptePage = () => {
         body: selectedFile,
       });
       if (!result.ok) throw new Error(language.match({ english: () => "Upload failed", german: () => "Upload fehlgeschlagen" }));
-      const { storageId } = (await result.json()) as {
-        storageId: Id<"_storage">;
-      };
+      ({ storageId } = (await result.json()) as { storageId: Id<"_storage"> });
 
       await createMutation({
         title: title.trim(),
         subject: subjectArg,
         description: description.trim(),
-        pages: 0,
+        pages: pagesArg,
         type: inferScriptType(selectedFile),
         visibility,
         storageId,
@@ -273,17 +285,25 @@ const SkriptePage = () => {
         forumId: forumArg,
       });
       toast.success(language.match({ english: () => "Script uploaded", german: () => "Skript hochgeladen" }));
+      resetForm();
     } catch (e: any) {
       toast.error(e?.message ?? language.match({ english: () => "Error uploading", german: () => "Fehler beim Hochladen" }));
+      // Datei wurde bereits hochgeladen, aber nie einem Skript zugeordnet —
+      // aufräumen, damit kein verwaister Storage-Blob zurückbleibt.
+      if (storageId) {
+        discardUploadMutation({ storageId }).catch(() => {
+          // Best effort — kein zusätzlicher Nutzerhinweis nötig
+        });
+      }
     }
     setUploading(false);
-    resetForm();
   };
 
   const resetForm = () => {
     setTitle("");
     setLectureId("");
     setDescription("");
+    setPages("");
     setVisibility("public");
     setForumId("");
     setShowUpload(false);
@@ -357,6 +377,13 @@ const SkriptePage = () => {
       : "";
   const descriptionError =
     description.trim().length > 0 ? validateScriptDescription(description) : "";
+
+  const visibilityLabels: Record<Visibility, string> = {
+    public: language.match({ english: () => "Public", german: () => "Öffentlich" }),
+    private: language.match({ english: () => "Private", german: () => "Privat" }),
+    jahrgang: language.match({ english: () => "Course", german: () => "Kurs" }),
+    group: language.match({ english: () => "Group", german: () => "Gruppe" }),
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -464,6 +491,15 @@ const SkriptePage = () => {
                         {descriptionError}
                       </p>
                     )}
+                  </div>
+                  <div className="w-full md:w-40">
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder={language.match({ english: () => "Pages (optional)", german: () => "Seitenzahl (optional)" })}
+                      value={pages}
+                      onChange={(e) => setPages(e.target.value)}
+                    />
                   </div>
                   <div
                     role="button"
@@ -761,7 +797,7 @@ const SkriptePage = () => {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{openScript.subject}</Badge>
                 <Badge variant="outline">{openScript.type}</Badge>
-                <Badge variant="outline">{openScript.visibility}</Badge>
+                <Badge variant="outline">{visibilityLabels[openScript.visibility]}</Badge>
               </div>
 
               <p className="text-sm text-muted-foreground">
