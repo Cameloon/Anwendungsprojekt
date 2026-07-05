@@ -1249,7 +1249,7 @@ function timeAgo(ts: number, language: languageSetting): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return language.match({ english: () => `${hours} h ago`, german: () => `vor ${hours} Std.` });
   const days = Math.floor(hours / 24);
-  if (days < 30) return language.match({ english: () => `${days} days ago`, german: () => `vor ${days} Tagen` });
+  if (days <= 2) return language.match({ english: () => `${days} days ago`, german: () => `vor ${days} Tagen` });
   return new Date(ts).toLocaleDateString("de-DE");
 }
 
@@ -1263,6 +1263,7 @@ const actionMeta: Record<string, { label: (language: languageSetting) => string;
   edit: { label: (language) => language.match({ english: () => "Edit", german: () => "Bearbeitung" }), color: "bg-info/10 text-info" },
   delete: { label: (language) => language.match({ english: () => "Post deleted", german: () => "Beitrag gelöscht" }), color: "bg-destructive/10 text-destructive" },
   delete_comment: { label: (language) => language.match({ english: () => "Comment deleted", german: () => "Kommentar gelöscht" }), color: "bg-destructive/10 text-destructive" },
+  edit_comment: { label: (language) => language.match({ english: () => "Comment edited", german: () => "Kommentar bearbeitet" }), color: "bg-info/10 text-info" },
   dismiss_report: { label: (language) => language.match({ english: () => "Report resolved", german: () => "Meldung erledigt" }), color: "bg-success/10 text-success" },
   reopen_report: { label: (language) => language.match({ english: () => "Report reopened", german: () => "Meldung wieder geöffnet" }), color: "bg-amber-500/10 text-amber-600" },
 };
