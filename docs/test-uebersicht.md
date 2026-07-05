@@ -1,7 +1,7 @@
 # Test-Übersicht
 
 <!-- Automatisch generiert von scripts/update-test-status.ts — nicht manuell bearbeiten -->
-<!-- Letzte Aktualisierung: 2026-07-05 12:30 UTC -->
+<!-- Letzte Aktualisierung: 2026-07-05 14:57 UTC -->
 
 ## Gesamtstatus
 

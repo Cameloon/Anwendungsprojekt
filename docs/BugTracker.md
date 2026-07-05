@@ -125,36 +125,45 @@ Der Löschen-Button für Kommentare wird nur Admins angezeigt (`{isAdmin && …}
 ### BUG-008: Dashboard – Stat „Neue Beiträge" zeigt keine wirklich neuen Beiträge
 
 **Datum erfasst:** 25-06-2026
+**Datum erledigt:** 05-07-2026
 **Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
 **Komponente/Bereich:** Dashboard UI
 **Priorität:** Niedrig
 **Beschreibung:**
 Der Wert hinter „Neue Beiträge" ist immer `latestPosts.length` (maximal 5), unabhängig davon, ob der Nutzer die Beiträge bereits gesehen hat. Die Kennzahl suggeriert Aktualität, ist aber kein zuverlässiger Indikator für wirklich neue Inhalte.
 **Fundort:** `src/pages/DashboardPage.tsx`, Zeile 110
+**Fix:** Neue Kennzahl `recentPostsCount` ergänzt, die Beiträge anhand von `createdAt` gegen ein 24h-Zeitfenster (relativ zum reaktiven `now`-State) zählt, statt die auf 5 Einträge gedeckelte Vorschauliste `latestPosts` als Kennzahl zu missbrauchen. Anzeige-Wert und Hinweistext der Stat-Kachel nutzen jetzt `recentPostsCount`.
 
 ---
 
 ### BUG-010: Dashboard – Skriptbereich zeigt nur öffentliche Skripte
 
 Datum erfasst: 03-07-2026
+Datum erledigt: 05-07-2026
 Verfasser: SA
+Bearbeitet durch: SA
 Komponente/Bereich: Dashboard UI
 Priorität: Mittel
 Beschreibung:
 Im Dashboard werden Skripte über api.scripts.listPublic bzw. nur aus der öffentlichen Sicht geladen. Dadurch fehlen im Dashboard Skripte mit Sichtbarkeit jahrgang, group oder private eigene Skripte, obwohl diese in der Skript-Bibliothek sichtbar sind. Die Anzeige im Dashboard ist damit unvollständig und weicht vom tatsächlichen Datenbestand der Bibliothek ab.
 Fundort: src/pages/DashboardPage.tsx, Query für Skripte
+Fix: Query auf api.scripts.listVisible umgestellt, damit auch für den Nutzer sichtbare Skripte mit Sichtbarkeit jahrgang/group sowie eigene private Skripte im Dashboard erscheinen.
 
 ---
 
 ### BUG-011: Dashboard – Zeitabhängige Kennzahlen können ohne Re-Render veralten
 
 Datum erfasst: 03-07-2026
+Datum erledigt: 05-07-2026
 Verfasser: SA
+Bearbeitet durch: SA
 Komponente/Bereich: Dashboard UI
 Priorität: Niedrig
 Beschreibung:
 Kennzahlen wie „Nächster Termin“ und die Anzahl dringender Termine hängen direkt von der aktuellen Uhrzeit ab. Bleibt die Seite länger geöffnet, können diese Werte ohne regelmäßige Aktualisierung veralten und nicht mehr den tatsächlichen Stand widerspiegeln.
 Fundort: src/pages/DashboardPage.tsx, Berechnung von nextDeadline und urgentDeadlinesCount
+Fix: now-State wird per setInterval regelmäßig aktualisiert, wodurch nextDeadline, urgentDeadlinesCount und die neue recentPostsCount-Kennzahl (siehe BUG-008) automatisch neu berechnet werden, ohne dass der Nutzer die Seite neu laden muss.
 
 ---
 
@@ -387,22 +396,388 @@ Der aktuelle Lint-Status enthält Fehler in produktiven Dateien, darunter Verst�
 
 BUG-025: Dashboard-Deadline-Links öffnen keinen Eintrag im Planer
 Datum erfasst: 04-07-2026
+Datum erledigt: 05-07-2026
 Verfasser: SA 
+Bearbeitet durch: SA
 Komponente/Bereich: Dashboard UI / Planner Navigation
 Priorität: Hoch
 Beschreibung:
 Im Dashboard werden Deadline-Einträge mit Links wie /planner?deadline=... erzeugt ([src/pages/DashboardPage.tsx (line 153)], [src/pages/DashboardPage.tsx (line 202)]
 Der Planer verarbeitet diesen Query-Parameter aber aktuell nicht; in [src/pages/PlannerPage.tsx (line 1)] gibt es keine useSearchParams-Logik für deadline. Dadurch wirkt der Klick aus dem Dashboard wie eine Detail-Navigation, landet aber nur auf der allgemeinen Planer-Seite ohne den gewünschten Eintrag zu öffnen oder hervorzuheben.
+Fix: PlannerPage.tsx liest den deadline-Query-Parameter jetzt über useSearchParams, öffnet den passenden Termin-Dialog automatisch und entfernt den Parameter nach dem Schließen wieder aus der URL (Ref dismissedQueryScriptId-Muster analog zu BUG-013).
 
 ---
 
 BUG-026: Fehlerhafte Sonderzeichen in mehreren UI-Texten
 Datum erfasst: 04-07-2026
+Datum erledigt: 05-07-2026
 Verfasser: SA
+Bearbeitet durch: SA
 Komponente/Bereich: Mehrere Frontend-Seiten / Textdarstellung
 Priorität: Mittel
 Beschreibung:
 Mehrere Benutzertexte enthalten weiterhin fehlerhaft dargestellte Sonderzeichen wie Ã¤, Ã¼, Ã¶, â€ž oder RÃ¼ckgÃ¤ngig. Sichtbar ist das u. a. im Dashboard bei Texten wie „Neueste EintrÃ¤ge“, „Letzte BeitrÃ¤ge“ oder „NÃ¤chster Termin“ sowie in der Forum-Detailansicht bei Texten wie „ZurÃ¼ck“, „VerÃ¶ffentlichen“ oder Bestätigungsdialogen ([src/pages/DashboardPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/DashboardPage.tsx:1), [src/pages/ForumDetailPage.tsx (line 1)](/abs/path/C:/Users/Antropova_S/DHBW/Anwendungsprojekt-main/Anwendungsprojekt/src/pages/ForumDetailPage.tsx:1)).
 Dadurch wirkt die Oberfläche technisch beschädigt und teilweise schwer lesbar. Dieser Fehler scheint bereits sinngleich im BugTracker bekannt zu sein, tritt im aktuellen Code aber weiterhin sichtbar auf.
+Fix: Projektweite Prüfung (grep über src/ nach den gemeldeten Mojibake-Mustern) zeigt keine Treffer mehr in DashboardPage.tsx, ForumDetailPage.tsx oder anderen Dateien — der Fehler ist bereits durch BUG-012 behoben; kein weiterer Codeänderungsbedarf, nur die Nachpflege des BugTracker-Eintrags war offen.
+
+---
+
+### BUG-027: Planner – Öffentliche Termine ohne echten Kurs-Abgleich sichtbar und annehmbar
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer Backend
+**Priorität:** Hoch
+**Beschreibung:**
+`toggleDone` prüfte bei öffentlichen Terminen gar nicht, ob der aufrufende Nutzer eingeladen ist (`if (!isPublic && !isInvited)` statt immer `isInvited`) – jeder authentifizierte Nutzer konnte per Klick eine eigene Kopie eines fremden öffentlichen Termins anlegen. `listForUser` zeigte zusätzlich jeden öffentlichen Termin app-weit an, unabhängig vom Kurs des Betrachters, da das dafür vorgesehene Feld `allowedKurse` nirgends ausgewertet wurde. Eine erste Korrektur (strikte Prüfung auf das `invitees`-Array) entpuppte sich als zu streng: viele ältere öffentliche Termine haben ein leeres `invitees`-Array (vor Einführung der Auto-Einladung entstanden), wodurch echte Kurskolleg:innen ihre eigenen Kurs-Termine plötzlich nicht mehr sahen.
+**Fundort:** `convex/deadlines.ts`, `toggleDone`, `listForUser`, `acceptDeadline`, `declineDeadline`
+**Fix:** Sichtbarkeit und Annehmen/Ablehnen/Abhaken für öffentliche Termine hängen jetzt von einem **live Kurs-Abgleich** ab (`isSameKurs`/`canRespond`-Helper: Ersteller- und Betrachter-Profil werden bei jedem Zugriff verglichen) statt vom statischen `invitees`-Snapshot. Das ist robust gegenüber leeren/veralteten `invitees`-Arrays und nachträglichen Kurswechseln. `canAccessDeadline` (Lese-Zugriff auf Details/Anhänge/Nachrichten) wurde analog ergänzt.
+
+---
+
+### BUG-028: Planner – Invitee-Entfernen beim Bearbeiten eines privaten Termins wirkungslos
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Hoch
+**Beschreibung:**
+Beim Bearbeiten eines privaten Termins wurde die im Formular editierte Invitee-Liste (`selectedInvitees`, dort können Personen per X-Button entfernt werden) beim Speichern immer mit der bereits bestehenden `invitees`-Liste vereinigt (`[...new Set([...existing, ...selected])]`). Entfernte Personen blieben dadurch trotzdem eingeladen.
+**Fundort:** `src/pages/PlannerPage.tsx`, `submitDeadline`
+**Fix:** Union-Logik entfernt – `inviteeIds` entspricht jetzt exakt der vom Nutzer editierten Liste aus `selectedInvitees`.
+
+---
+
+### BUG-029: Planner – Abgelehnte öffentliche Termine werden bei Bearbeitung erneut zugestellt
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer Backend
+**Priorität:** Mittel
+**Beschreibung:**
+`declineDeadline` entfernte den Nutzer nur aus `invitees`, trug ihn aber nie in `declinedBy` ein – obwohl ein Kommentar in `update` explizit davon ausgeht, dass `declinedBy` „für beide Fälle" (Annehmen und Ablehnen) gesetzt wird. Bearbeitete der Termin-Ersteller danach den Termin, wurde der bereits ablehnende Nutzer über die `alreadyHandled`-Prüfung in `update` fälschlich wieder als „nicht behandelt" erkannt und erneut eingeladen (inkl. neuer Notification).
+**Fundort:** `convex/deadlines.ts`, `declineDeadline`
+**Fix:** `declineDeadline` trägt den Nutzer bei öffentlichen Terminen jetzt zusätzlich in `declinedBy` ein, analog zu `acceptDeadlineForUser`.
+
+---
+
+### BUG-030: Planner – Gelöschte Termine hinterlassen kaputte Einladungs-Benachrichtigungen
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer Backend
+**Priorität:** Niedrig
+**Beschreibung:**
+Löschte der Ersteller einen Termin, blieben offene `deadline_invite`-Notifications mit Status „pending" für noch nicht reagierende Eingeladene bestehen. Die Notification-Glocke zeigte weiterhin „Annehmen"/„Ablehnen" für einen nicht mehr existierenden Termin an; ein Klick führte zu einem stillen No-Op (kein Absturz, da `notifications.accept`/`decline` fehlende Termine bereits abfangen, aber irreführende „Angenommen"/„Abgelehnt"-Anzeige).
+**Fundort:** `convex/deadlines.ts`, `deleteDeadline`
+**Fix:** `deleteDeadline` löscht jetzt zusätzlich alle offenen `deadline_invite`-Notifications zu diesem Termin.
+
+---
+
+### BUG-031: Planner – Fragile Duplikat-Erkennung über Titel/Datum/Kategorie statt stabiler Referenz
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer Backend
+**Priorität:** Mittel
+**Beschreibung:**
+Die eigene „angenommene" Kopie eines öffentlichen Termins wurde über einen Abgleich von `(title, date, category)` gefunden (`findOwnCopy`, `listForUser`-Dedup, `deleteDeadline`-Original-Suche). Zwei unabhängig erstellte Termine mit zufällig gleichem Titel/Datum/Kategorie (z. B. „Klausur" am selben Tag) konnten dadurch fälschlich als dieselbe Kopie erkannt werden.
+**Fundort:** `convex/deadlines.ts`, `findOwnCopy`, `listForUser`, `deleteDeadline`
+**Fix:** Neues Feld `sourceDeadlineId` (plus Index `by_source_owner`) verweist explizit auf den Ursprungstermin einer Kopie. Alle Abgleiche laufen jetzt darüber statt über Titel/Datum/Kategorie.
+
+---
+
+### BUG-032: Planner – Mehrfach-Erinnerungen werden in der aktiven Liste falsch angezeigt
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Niedrig
+**Beschreibung:**
+`remindBefore` ist ein `number[]` (mehrere wählbare Erinnerungstage), wurde im aktiven Bereich der Terminliste aber wie ein einzelner Wert gerendert (`{d.remindBefore} Tage`), was bei mehreren gewählten Tagen zu einer verwirrenden Anzeige führte (z. B. „35 Tage" statt „3, 5 Tage"). Die Bereiche „Erledigt" und „Archiviert" waren bereits korrekt implementiert. Zusätzlich stellte sich heraus, dass die Erinnerungsfunktion insgesamt nie tatsächlich Erinnerungen verschickt (kein Scheduler/Cron im Projekt) und auch nicht in den Funktionalen Anforderungen gefordert ist.
+**Fundort:** `src/pages/PlannerPage.tsx`, aktive Terminliste
+**Fix:** Anzeige zunächst an das korrekte Muster der anderen Bereiche angeglichen; da die Funktion aber ohnehin folgenlos ist und nicht gefordert wird, wurde die komplette Erinnerungs-UI (Formularfeld, Anzeige, State) anschließend entfernt, um keine falschen Erwartungen zu wecken. Das Backend-Feld bleibt bestehen (harmlos, ungenutzt).
+
+---
+
+### BUG-033: Planner – Vergangenheits-Warnung wird beim Bearbeiten teils übersprungen
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Niedrig
+**Beschreibung:**
+Das Ref `pastDateConfirmed` merkt sich, ob der Nutzer die Warnung „Datum liegt in der Vergangenheit" bereits bestätigt hat, und wird nur über den gewrappten `setDate`-Handler im Formular zurückgesetzt. `startEdit` setzte das Datum beim Öffnen eines bestehenden Termins jedoch direkt über den rohen State-Setter, ohne das Ref zurückzusetzen – blieb es von einer vorherigen (evtl. fehlgeschlagenen) Bestätigung noch `true`, wurde die Warnung beim Bearbeiten eines weiteren Vergangenheits-Termins fälschlich übersprungen.
+**Fundort:** `src/pages/PlannerPage.tsx`, `startEdit`
+**Fix:** `startEdit` setzt `pastDateConfirmed.current` und `showPastWarning` jetzt explizit zurück.
+
+---
+
+### BUG-034: Planner – Überfällige, offene Termine verschwinden ins Archiv trotz Statistik-Zählung
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Planer
+**Priorität:** Niedrig
+**Beschreibung:**
+Die Einteilung in „Aktiv"/„Erledigt"/„Archiviert" richtete sich rein nach dem Alter (>30 Tage), unabhängig vom `done`-Status. Ein überfälliger, nicht erledigter Termin älter als 30 Tage wanderte dadurch ins Archiv, wurde aber weiterhin in der „Überfällig"-Statistik oben mitgezählt – die Zahl in der Kachel stimmte nicht mit der sichtbaren aktiven Liste überein. Zusätzlich sollten „Erledigt" und „Archiv" absteigend (neueste zuerst) statt aufsteigend sortiert sein.
+**Fundort:** `src/pages/PlannerPage.tsx`, Listen-Gruppierung
+**Fix:** Offene (nicht erledigte) Termine bleiben jetzt unabhängig vom Alter im aktiven Bereich; nur erledigte, alte Termine gelten als archiviert. Sortierung von „Erledigt"/„Archiv" auf absteigend (neueste zuerst) umgestellt, „Aktiv" bleibt aufsteigend.
+
+---
+
+### BUG-035: Forum – Fehlende Zugriffskontrolle beim Lesen privater Foren/Posts/Kommentare
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend
+**Priorität:** Hoch
+**Beschreibung:**
+`posts.listByForum`, `posts.getById`, `posts.getComments` sowie `forums.getById` prüften nur, ob überhaupt ein Nutzer eingeloggt ist – nicht, ob er Mitglied des jeweiligen privaten Forums ist. `posts.create` prüfte das bereits korrekt. Wer die ID eines privaten Forums/Posts kannte (z. B. aus einem alten Link), konnte dessen Inhalte vollständig lesen, ohne Mitglied zu sein.
+**Fundort:** `convex/posts.ts`, `listByForum`/`getById`/`getComments`; `convex/forums.ts`, `getById`
+**Fix:** Neuer Helper `canAccessForum` (öffentlich → immer erlaubt, privat → Mitglied oder Admin), in allen vier Queries ergänzt.
+
+---
+
+### BUG-036: Forum – Hassrede-Flag wird nach erstem Treffer nie zurückgesetzt
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend / Moderation
+**Priorität:** Hoch
+**Beschreibung:**
+Beim Bearbeiten eines Posts/Kommentars wurde `flagged` nur auf `true` gesetzt, nie zurück auf `false`. Die Bedingung für einen neuen automatischen Report (`flagged && !post.flagged`) griff dadurch nach dem ersten Treffer nie wieder – auch wenn eine spätere Bearbeitung ein komplett anderes beleidigendes Wort einfügte.
+**Fundort:** `convex/posts.ts`, `update` (Post), `updateComment`
+**Fix:** `flagged`/`detectedWord` werden jetzt immer aktuell gesetzt (auch zurück auf „sauber"); ein neuer Report entsteht, wenn `flagged` ist und entweder vorher nicht geflaggt war oder sich das erkannte Wort geändert hat.
+
+---
+
+### BUG-037: Forum – Keyword-Filter erzeugt False Positives bei „Opfer"
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend / Moderation
+**Priorität:** Mittel
+**Beschreibung:**
+Das Einzelwort „opfer" stand zusätzlich zur Phrase „du opfer" in der Hassrede-Wortliste. Dadurch wurde jede harmlose Verwendung („Verkehrsopfer", „die Opfer des Unfalls") automatisch als Hassrede geflaggt und ein Moderations-Report erzeugt.
+**Fundort:** `convex/hateSpeech.ts`
+**Fix:** Einzelwort „opfer" entfernt, die Phrase „du opfer" deckt den eigentlichen Beleidigungsfall weiterhin ab.
+
+---
+
+### BUG-038: Forum – Löschen eines Kommentars hinterlässt verwaiste Enkel-Antworten
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend
+**Priorität:** Mittel
+**Beschreibung:**
+`deleteComment` löschte beim Löschen eines Kommentars nur die direkten Antworten (eine Ebene über `by_parent`). Antworten auf Antworten blieben in der Datenbank, verwiesen aber auf eine gelöschte `parentId` – sie wurden im UI nicht mehr angezeigt und waren auch nicht mehr löschbar, zählten aber weiterhin in der „X Antworten"-Anzeige mit.
+**Fundort:** `convex/posts.ts`, `deleteComment`
+**Fix:** Neue rekursive Hilfsfunktion `deleteCommentSubtree` löscht Kommentare samt aller Antworten in beliebiger Tiefe.
+
+---
+
+### BUG-039: Dashboard – Forum-Feed verdrängt Posts selten genutzter Foren
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Dashboard UI / Forum Backend
+**Priorität:** Mittel
+**Beschreibung:**
+`listRecent` lieferte die global neuesten 20 Posts über alle zugänglichen Foren, `ForumFeed.tsx` filterte diese Liste erst danach pro Forum. War ein Nutzer in vielen aktiven Foren, fielen ältere (aber existierende) Posts selten genutzter Foren aus den globalen Top-20 heraus – das Dashboard zeigte dort fälschlich „Noch keine Beiträge."
+**Fundort:** `convex/posts.ts`, `listRecent`
+**Fix:** Für jedes zugängliche Forum werden jetzt einzeln die letzten 5 Posts geladen (über den `by_forum`-Index), statt eines globalen Top-20-Pools.
+
+---
+
+### BUG-040: Forum – Melden-Funktion ohne Validierung, Duplikatsschutz und mit spoofbarem Namen
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend / Moderation
+**Priorität:** Niedrig
+**Beschreibung:**
+`postReports.submit` prüfte nie, ob der gemeldete Post tatsächlich existiert, erlaubte beliebig viele Mehrfach-Meldungen desselben Nutzers für denselben Post, und übernahm den angezeigten Melder-Namen (`reportedBy`) unverändert vom Client statt ihn serverseitig abzuleiten.
+**Fundort:** `convex/postReports.ts`, `submit`
+**Fix:** Existenzprüfung des Posts ergänzt, Duplikat-Reports (gleicher Melder, gleicher Post, Status „offen") werden abgelehnt, `reportedBy` wird jetzt serverseitig aus dem Profil des Melders ermittelt (Prop dafür aus `ReportDialog.tsx`, `PostDetailPage.tsx` und `ForumPage.tsx` entfernt).
+
+---
+
+### BUG-041: Forum – Storage-Dateien und Meldungen bei Post-/Forum-Löschung nicht aufgeräumt
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend
+**Priorität:** Niedrig
+**Beschreibung:**
+`deletePost` löschte keine angehängten `postFiles` (weder Datenbank-Einträge noch Storage-Blobs) und keine zugehörigen `postReports` – letztere verwiesen danach dauerhaft auf einen nicht mehr existierenden Post. `deleteForum` löschte `forumFiles`-Einträge zwar aus der Datenbank, rief aber nie `ctx.storage.delete` auf (verwaiste Storage-Blobs), und räumte pro Post ebenfalls keine `postFiles`/`postReports` auf.
+**Fundort:** `convex/posts.ts`, `deletePost`; `convex/forums.ts`, `deleteForum`
+**Fix:** Beide Mutationen löschen jetzt zusätzlich `postFiles` (inkl. Storage) und zugehörige `postReports`; `deleteForum` löscht bei Forum-Dateien zusätzlich den Storage-Blob.
+
+---
+
+### BUG-042: Forum – Admin-Bearbeitung fremder Kommentare wird nicht protokolliert
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Forum Backend / Admin-Dashboard
+**Priorität:** Niedrig
+**Beschreibung:**
+Anders als beim Löschen eines Kommentars oder beim Bearbeiten/Löschen eines Posts erzeugte `updateComment` keinen Moderationslog-Eintrag, wenn ein Admin den Kommentar eines anderen Nutzers bearbeitete – Lücke im Audit-Trail. Zusätzlich fehlte im Admin-Dashboard ein Label für die neue Aktion `edit_comment` (wäre als roher String angezeigt worden), und Log-Zeitstempel älter als 2 Tage zeigten weiterhin „vor X Tagen" statt eines konkreten Datums.
+**Fundort:** `convex/posts.ts`, `updateComment`; `src/pages/AdminDashboardPage.tsx`, `actionMeta`/`timeAgo`
+**Fix:** `updateComment` protokolliert Admin-Fremdbearbeitungen jetzt über `logModeration` (Aktion `edit_comment`); passendes Label in `actionMeta` ergänzt; `timeAgo`-Schwelle für die Datumsanzeige von 30 Tagen auf 2 Tage reduziert (auf Wunsch, damit ältere Einträge das konkrete Datum statt einer relativen Angabe zeigen).
+
+---
+
+### BUG-043: Skripte – Verwaiste Storage-Datei bei fehlgeschlagenem Erstellen nach Upload
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte Backend/UI
+**Priorität:** Hoch
+**Beschreibung:**
+Der Upload-Flow lädt die Datei zuerst in den Storage hoch und ruft danach `createMutation` auf. Schlug diese fehl (z. B. Kontingent von 50 Skripten pro Nutzer erreicht, Netzwerkfehler), blieb die bereits hochgeladene Datei dauerhaft und unerreichbar im Storage zurück.
+**Fundort:** `src/pages/SkriptePage.tsx`, `addScript`
+**Fix:** Neue Mutation `scripts.discardUpload` löscht eine hochgeladene, aber nie zugeordnete Datei; wird im Fehlerfall nach erfolgreichem Upload automatisch aufgerufen.
+
+---
+
+### BUG-044: Skripte – Doppelter Klick bei „Als Notiz speichern" erzeugt Duplikate
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte UI
+**Priorität:** Hoch
+**Beschreibung:**
+Im Zweig ohne Datei-Upload („Notiz speichern") wurde `uploading` nie auf `true` gesetzt, wodurch der Speichern-Button während der laufenden Mutation aktiv blieb. Mehrfaches schnelles Klicken erzeugte mehrere identische Skript-Einträge.
+**Fundort:** `src/pages/SkriptePage.tsx`, `addScript`
+**Fix:** Lade-Sperre (`uploading`) greift jetzt in beiden Zweigen (mit und ohne Datei); zusätzlich Guard `if (uploading) return;` am Funktionsanfang.
+
+---
+
+### BUG-045: Skripte – Fehlende serverseitige Mitgliedschaftsprüfung bei Gruppen-Sichtbarkeit
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte Backend
+**Priorität:** Hoch
+**Beschreibung:**
+`create`/`update` prüften bei Sichtbarkeit „Gruppe" nur, dass überhaupt eine `forumId` angegeben wurde – nicht, ob der aufrufende Nutzer tatsächlich Mitglied dieses Forums ist. Über einen direkten API-Aufruf ließe sich ein Skript für ein beliebiges fremdes Forum sichtbar machen.
+**Fundort:** `convex/scripts.ts`, `create`, `update`
+**Fix:** Beide Mutationen prüfen jetzt per `forumMembers`-Index, ob der Nutzer tatsächlich Mitglied des angegebenen Forums ist.
+
+---
+
+### BUG-046: Skripte – Seitenzahl fest auf 0 statt einer echten Eingabe
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte UI
+**Priorität:** Mittel
+**Beschreibung:**
+Beim Erstellen eines Skripts wurde `pages: 0` hart codiert – es gab keine UI-Möglichkeit, eine Seitenzahl einzugeben. Der Detail-Dialog zeigte dadurch für jedes Skript „Notiz oder Datei ohne Seitenangabe", unabhängig vom tatsächlichen Umfang.
+**Fundort:** `src/pages/SkriptePage.tsx`, `addScript`
+**Fix:** Neues optionales Eingabefeld „Seitenzahl" ergänzt, Wert wird validiert (nicht-negative Ganzzahl) und an die Mutation übergeben.
+
+---
+
+### BUG-047: Skripte – Speichern ohne Fach/Modul-Auswahl möglich
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte UI
+**Priorität:** Mittel
+**Beschreibung:**
+`addScript` validierte Titel- und Beschreibungslänge, aber nicht, ob überhaupt ein Fach/Modul (`lectureId`) ausgewählt wurde. Ohne Auswahl wurde ein leerer `subject`-String gespeichert, was zu einem leeren, aber klickbaren Filter-Button in der Fächer-Leiste führte.
+**Fundort:** `src/pages/SkriptePage.tsx`, `addScript`
+**Fix:** Fehlende Fach/Modul-Auswahl wird jetzt vor dem Speichern mit einer Fehlermeldung abgefangen.
+
+---
+
+### BUG-048: Skripte – Sichtbarkeit „Kurs" ohne gesetzten Profil-Kurs macht Skript faktisch unsichtbar
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte Backend
+**Priorität:** Mittel
+**Beschreibung:**
+Wählte ein Nutzer ohne gesetzten Profil-Kurs die Sichtbarkeit „Kurs", wurde `authorKurs: undefined` gespeichert. Da der Sichtbarkeits-Check (`canAccess`) nie mit `undefined` übereinstimmt, sah außer dem Autor selbst niemand das Skript – ohne jeden Hinweis, dass die gewählte Freigabe wirkungslos war.
+**Fundort:** `convex/scripts.ts`, `create`, `update`, `canAccess`
+**Fix:** `create`/`update` lehnen die Sichtbarkeit „Kurs" jetzt mit klarer Fehlermeldung ab, wenn im Profil kein Kurs hinterlegt ist; `update` aktualisiert `authorKurs` außerdem korrekt, wenn nachträglich auf „Kurs" umgestellt wird.
+
+---
+
+### BUG-049: Skripte – Sichtbarkeits-Badge im Detail-Dialog zeigt unübersetzten Rohwert
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte UI
+**Priorität:** Niedrig
+**Beschreibung:**
+Der Detail-Dialog eines Skripts zeigte den internen Sichtbarkeitswert direkt an (`public`/`private`/`jahrgang`/`group`) statt der an anderer Stelle bereits vorhandenen übersetzten Labels („Öffentlich"/„Privat"/„Kurs"/„Gruppe").
+**Fundort:** `src/pages/SkriptePage.tsx`, Detail-Dialog
+**Fix:** Neue `visibilityLabels`-Zuordnung ergänzt und im Dialog verwendet.
+
+---
+
+### BUG-050: Skripte – Fehlende Sortierung der Skript-Liste
+
+**Datum erfasst:** 05-07-2026
+**Datum erledigt:** 05-07-2026
+**Verfasser:** DM (CC)
+**Bearbeitet durch:** DM (CC)
+**Komponente/Bereich:** Skripte Backend
+**Priorität:** Niedrig
+**Beschreibung:**
+`listVisible`/`listPublic` gaben Skripte ohne explizite Sortierung zurück (Reihenfolge folgte der internen Speicherreihenfolge, nicht „neueste zuerst").
+**Fundort:** `convex/scripts.ts`, `listVisible`, `listPublic`
+**Fix:** Beide Queries sortieren jetzt explizit absteigend (neueste zuerst).
 
 
