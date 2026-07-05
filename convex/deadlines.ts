@@ -279,8 +279,17 @@ export const update = mutation({
 
     if (args.visibility === "public" && !args.invitees) {
       const kursInvitees = await getKursUserIds(ctx, identity.subject);
-      patch.invitees = kursInvitees;
-      const newInvitees = kursInvitees.filter((id) => !deadline.invitees?.includes(id));
+      // Wer den Termin bereits angenommen oder abgelehnt hat (declinedBy wird für
+      // beide Fälle gesetzt) darf nicht erneut eingeladen werden — sonst entsteht
+      // bei jeder Bearbeitung eine neue Einladung/Kopie für diese Personen.
+      const alreadyHandled = new Set([
+        ...(deadline.invitees ?? []),
+        ...(deadline.declinedBy ?? []),
+      ]);
+      const newInvitees = kursInvitees.filter((id) => !alreadyHandled.has(id));
+      patch.invitees = [...(deadline.invitees ?? []), ...newInvitees].filter((id) =>
+        kursInvitees.includes(id)
+      );
       if (newInvitees.length > 0) {
         const title = (patch.title as string | undefined) ?? deadline.title;
         const profile = await ctx.db

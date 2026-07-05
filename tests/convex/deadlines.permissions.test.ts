@@ -16,6 +16,7 @@ async function createDeadline(
     ownerId: string;
     visibility: "public" | "private";
     invitees?: string[];
+    declinedBy?: string[];
   },
 ) {
   const now = Date.now();
@@ -27,6 +28,7 @@ async function createDeadline(
       done: false,
       visibility: overrides.visibility,
       invitees: overrides.invitees,
+      declinedBy: overrides.declinedBy,
       ownerId: overrides.ownerId,
       createdAt: now,
       updatedAt: now,
@@ -94,6 +96,64 @@ describe("deadlines.update — Berechtigung unabhängig von visibility (BUG-005)
         title: "Hack",
       }),
     ).rejects.toThrow(/Not authorized/);
+  });
+});
+
+describe("deadlines.update — invitees bei öffentlichen Terminen nicht komplett überschreiben", () => {
+  test("bereits angenommene/abgelehnte Kursmitglieder (declinedBy) werden beim Bearbeiten nicht erneut eingeladen", async () => {
+    const t = convexTest(schema);
+    await createProfile(t, "owner_1", { kurs: "TINF22" });
+    await createProfile(t, "invited_1", { kurs: "TINF22" });
+    await createProfile(t, "handled_1", { kurs: "TINF22" });
+    const deadlineId = await createDeadline(t, {
+      ownerId: "owner_1",
+      visibility: "public",
+      invitees: ["invited_1"],
+      declinedBy: ["handled_1"],
+    });
+
+    await t.withIdentity(identity("owner_1")).mutation(api.deadlines.update, {
+      deadlineId,
+      visibility: "public",
+      note: "kleine Änderung",
+    });
+
+    const updated = await t.run(async (ctx: any) => ctx.db.get(deadlineId));
+    expect(updated?.invitees).toContain("invited_1");
+    expect(updated?.invitees).not.toContain("handled_1");
+
+    const notifications = await t.run(async (ctx: any) =>
+      ctx.db.query("notifications").collect(),
+    );
+    expect(
+      notifications.some(
+        (n: any) => n.type === "deadline_invite" && n.recipientId === "handled_1",
+      ),
+    ).toBe(false);
+  });
+
+  test("neue Kursmitglieder werden beim Bearbeiten weiterhin eingeladen", async () => {
+    const t = convexTest(schema);
+    await createProfile(t, "owner_1", { kurs: "TINF22" });
+    await createProfile(t, "invited_1", { kurs: "TINF22" });
+    const deadlineId = await createDeadline(t, {
+      ownerId: "owner_1",
+      visibility: "public",
+      invitees: ["invited_1"],
+    });
+
+    // Neues Kursmitglied tritt nach Erstellung des Termins bei
+    await createProfile(t, "new_member_1", { kurs: "TINF22" });
+
+    await t.withIdentity(identity("owner_1")).mutation(api.deadlines.update, {
+      deadlineId,
+      visibility: "public",
+      note: "kleine Änderung",
+    });
+
+    const updated = await t.run(async (ctx: any) => ctx.db.get(deadlineId));
+    expect(updated?.invitees).toContain("invited_1");
+    expect(updated?.invitees).toContain("new_member_1");
   });
 });
 
