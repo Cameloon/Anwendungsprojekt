@@ -37,6 +37,8 @@ Für die vereinfachte Nutzung im Rahmen der Übergabe wurde dieser Freischaltung
 
 Für die Abnahme wurden zudem Testdaten für den Informatik-Kurs **TIF25B** am Standort **DHBW Lörrach** angelegt. Um diese Inhalte (z.B. Foren, Beiträge) einsehen zu können, muss bei der Registrierung entsprechend Kurs `TIF25B` und Standort `DHBW Lörrach` ausgewählt werden.
 
+Außerdem wurde in den Profileinstellungen vorübergehend die Option eingebaut, dass man sich selbst die **Rollen Benutzer oder Administator** zuteilen kann, sodass für die Abnahme die gesamte ANwendung begutachtet werden kann.
+
 ## 5. Rückblick & Ausblick
 
 Probleme während der Entwicklung, Abweichungen von der ursprünglichen Planung sowie offene Punkte und mögliche Erweiterungen für Folgegruppen sind ausführlich dokumentiert in [Rückblick_und_Ausblick.md](Rückblick_und_Ausblick.md).
