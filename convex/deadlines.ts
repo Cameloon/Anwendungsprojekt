@@ -133,6 +133,78 @@ export const getMessages = query({
   },
 });
 
+// Liefert die eigene Kopie des Termins für userId, falls bereits angenommen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function findOwnCopy(ctx: any, deadline: any, userId: string) {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return await ctx.db
+    .query("deadlines")
+    .filter((q: any) => q.eq(q.field("ownerId"), userId))
+    .filter((q: any) => q.eq(q.field("title"), deadline.title))
+    .filter((q: any) => q.eq(q.field("date"), deadline.date))
+    .filter((q: any) => q.eq(q.field("category"), deadline.category))
+    .first();
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
+// Nimmt für userId eine Einladung zu deadline an: legt (falls noch keine eigene
+// Kopie existiert) eine persönliche Kopie an, entfernt userId aus den invitees
+// des Originals, markiert es bei öffentlichen Terminen zusätzlich in
+// declinedBy (damit das Original für diesen Nutzer verschwindet) und setzt
+// eine offene Einladungs-Notification auf "accepted". Wird von acceptDeadline,
+// toggleDone und notifications.accept gemeinsam genutzt, damit es nur eine
+// einzige Stelle gibt, an der eine Kopie entstehen kann — vorher hatte jeder
+// der drei Annahme-Wege seine eigene, leicht unterschiedliche Prüfung, was zu
+// doppelten Kopien führen konnte.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function acceptDeadlineForUser(ctx: any, deadline: any, userId: string, opts: { done?: boolean } = {}) {
+  const existing = await findOwnCopy(ctx, deadline, userId);
+  if (existing) return existing._id;
+
+  const updatedInvitees = (deadline.invitees ?? []).filter(
+    (id: string) => id !== userId,
+  );
+  const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
+  if (deadline.visibility === "public") {
+    patchFields.declinedBy = [...(deadline.declinedBy ?? []), userId];
+  }
+  await ctx.db.patch(deadline._id, patchFields);
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const pendingNotif = await ctx.db
+    .query("notifications")
+    .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
+    .filter((q: any) => q.eq(q.field("recipientId"), userId))
+    .filter((q: any) => q.eq(q.field("deadlineId"), deadline._id))
+    .filter((q: any) => q.eq(q.field("status"), "pending"))
+    .first();
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  if (pendingNotif) {
+    await ctx.db.patch(pendingNotif._id, { status: "accepted" });
+  }
+
+  const now = Date.now();
+  return await ctx.db.insert("deadlines", {
+    title: deadline.title,
+    date: deadline.date,
+    time: deadline.time,
+    remindBefore: deadline.remindBefore,
+    category: deadline.category,
+    done: opts.done ?? false,
+    note: deadline.note,
+    vorlesung: deadline.vorlesung,
+    priority: deadline.priority,
+    visibility: deadline.visibility,
+    invitees: [],
+    allowedKurse: deadline.allowedKurse,
+    linkedScriptIds: deadline.linkedScriptIds,
+    linkedGroupIds: deadline.linkedGroupIds,
+    ownerId: userId,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 // ─── Mutations ───
 
 export const create = mutation({
@@ -345,14 +417,7 @@ export const toggleDone = mutation({
     const isInvited = deadline.invitees?.includes(identity.subject);
     if (!isPublic && !isInvited) throw new Error("Not authorized");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const existing = await ctx.db
-      .query("deadlines")
-      .filter((q: any) => q.eq(q.field("ownerId"), identity.subject))
-      .filter((q: any) => q.eq(q.field("title"), deadline.title))
-      .filter((q: any) => q.eq(q.field("date"), deadline.date))
-      .first();
-
+    const existing = await findOwnCopy(ctx, deadline, identity.subject);
     if (existing) {
       await ctx.db.patch(existing._id, {
         done: !existing.done,
@@ -361,33 +426,8 @@ export const toggleDone = mutation({
       return;
     }
 
-    const updatedInvitees = (deadline.invitees ?? []).filter(
-      (id) => id !== identity.subject,
-    );
-    const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
-    if (deadline.visibility === "public") {
-      const declined = [...(deadline.declinedBy ?? []), identity.subject];
-      patchFields.declinedBy = declined;
-    }
-    await ctx.db.patch(args.deadlineId, patchFields);
-
-    const now = Date.now();
-    await ctx.db.insert("deadlines", {
-      title: deadline.title,
-      date: deadline.date,
-      category: deadline.category,
-      done: !deadline.done,
-      note: deadline.note,
-      vorlesung: deadline.vorlesung,
-      visibility: deadline.visibility,
-      invitees: [],
-      allowedKurse: deadline.allowedKurse,
-      linkedScriptIds: deadline.linkedScriptIds,
-      linkedGroupIds: deadline.linkedGroupIds,
-      ownerId: identity.subject,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Noch keine eigene Kopie: Abhaken zählt als implizites Annehmen der Einladung.
+    await acceptDeadlineForUser(ctx, deadline, identity.subject, { done: true });
   },
 });
 
@@ -401,57 +441,7 @@ export const acceptDeadline = mutation({
     if (!deadline.invitees?.includes(identity.subject))
       throw new Error("Nicht eingeladen");
 
-    // Check if already accepted — has own copy
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const existing = await ctx.db
-      .query("deadlines")
-      .filter((q: any) => q.eq(q.field("ownerId"), identity.subject))
-      .filter((q: any) => q.eq(q.field("title"), deadline.title))
-      .filter((q: any) => q.eq(q.field("date"), deadline.date))
-      .first();
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-    if (existing) return existing._id;
-
-    // Remove user from original invitees
-    const updatedInvitees = (deadline.invitees ?? []).filter(
-      (id) => id !== identity.subject,
-    );
-    const patchFields: Record<string, unknown> = { invitees: updatedInvitees };
-
-    // For public: also add to declinedBy so the original stays hidden after accepting
-    if (deadline.visibility === "public") {
-      const declined = [...(deadline.declinedBy ?? []), identity.subject];
-      (patchFields as Record<string, unknown>).declinedBy = declined;
-    }
-
-    await ctx.db.patch(args.deadlineId, patchFields);
-
-    // Mark pending invitation notification as accepted
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pendingNotif = await ctx.db
-      .query("notifications")
-      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
-      .filter((q: any) => q.eq(q.field("recipientId"), identity.subject))
-      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
-      .filter((q: any) => q.eq(q.field("status"), "pending"))
-      .first();
-    if (pendingNotif) {
-      await ctx.db.patch(pendingNotif._id, { status: "accepted" });
-    }
-
-    const now = Date.now();
-    return await ctx.db.insert("deadlines", {
-      title: deadline.title,
-      date: deadline.date,
-      category: deadline.category,
-      done: false,
-      note: deadline.note,
-      vorlesung: deadline.vorlesung,
-      visibility: deadline.visibility,
-      ownerId: identity.subject,
-      createdAt: now,
-      updatedAt: now,
-    });
+    return await acceptDeadlineForUser(ctx, deadline, identity.subject);
   },
 });
 
