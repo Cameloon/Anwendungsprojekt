@@ -64,14 +64,14 @@ Für die vereinfachte Nutzung im Rahmen der Übergabe wurde dieser Freischaltung
 
 Außerdem wurde in den Profileinstellungen vorübergehend die Option eingebaut, dass man sich selbst die Rollen **Benutzer** oder **Administator** zuteilen kann, sodass für die Abnahme die gesamte Anwendung begutachtet werden kann.
 
-## 7. Development Setup
+## 6. Development Setup
 
 Nicht notwendig für testing,
 nur notwendig für Entwicklung und Datenbank-Änderungen:
 
 Siehe [README.md](../README.md).
 
-## 6. Rückblick & Ausblick
+## 7. Rückblick & Ausblick
 
 Probleme während der Entwicklung, Abweichungen von der ursprünglichen Planung sowie offene Punkte und mögliche Erweiterungen für Folgegruppen sind ausführlich dokumentiert in [Rückblick_und_Ausblick.md](Rückblick_und_Ausblick.md).
 
