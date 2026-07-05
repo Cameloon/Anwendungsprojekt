@@ -31,7 +31,7 @@ const DashboardPage = () => {
     ],
     german: () => [
       "Der Weg ist das Ziel",
-      "Kleine Schritte, grosse Wirkung",
+      "Kleine Schritte, große Wirkung",
       "Beginne - der Rest folgt.",
       "Heute ist ein guter Tag zum Lernen.",
     ],
@@ -142,11 +142,11 @@ const DashboardPage = () => {
     latestPostsCount > 0
       ? language.match({
           english: () => "Latest forum posts",
-          german: () => "Neueste Eintraege im Forum",
+          german: () => "Neueste Einträge im Forum",
         })
       : language.match({
           english: () => "No recent posts",
-          german: () => "Keine aktuellen Beitraege",
+          german: () => "Keine aktuellen Beiträge",
         });
   const latestScriptsHint =
     latestScriptsCount > 0
@@ -213,7 +213,7 @@ const DashboardPage = () => {
           })),
           emptyText: language.match({
             english: () => "No posts.",
-            german: () => "Keine Beitraege.",
+            german: () => "Keine Beiträge.",
           }),
         },
         {
@@ -291,7 +291,7 @@ const DashboardPage = () => {
           })),
           emptyText: language.match({
             english: () => "No posts.",
-            german: () => "Keine Beitraege.",
+            german: () => "Keine Beiträge.",
           }),
         },
         {
@@ -323,7 +323,7 @@ const DashboardPage = () => {
   const activeSubjectDescription = selectedSubject
     ? language.match({
         english: () => `Content for ${selectedSubject}`,
-        german: () => `Inhalte fuer ${selectedSubject}`,
+        german: () => `Inhalte für ${selectedSubject}`,
       })
     : language.match({
         english: () => "Overview of all lectures",
@@ -411,7 +411,7 @@ const DashboardPage = () => {
                 to="/planner"
               />
                 <HeroStat
-                label={language.match({ english: () => "Recent Posts", german: () => "Letzte Beitraege" })}
+                label={language.match({ english: () => "Recent Posts", german: () => "Letzte Beiträge" })}
                 value={latestPostsCount}
                 icon={<MessageSquare className="h-4 w-4" />}
                 hint={latestPostsHint}
@@ -440,7 +440,7 @@ const DashboardPage = () => {
                 <div className="rounded-3xl border border-border/60 bg-card p-8 text-sm text-muted-foreground sm:col-span-2 xl:col-span-4">
                   {language.match({
                     english: () => "No content for the selected filter.",
-                    german: () => "Keine Inhalte fuer die gewaehlte Filtereinstellung.",
+                    german: () => "Keine Inhalte für die gewählte Filtereinstellung.",
                   })}
                 </div>
               ) : (
