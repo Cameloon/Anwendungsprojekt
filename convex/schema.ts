@@ -184,9 +184,14 @@ export default defineSchema({
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
     linkedGroupIds: v.optional(v.array(v.id("forums"))),
     ownerId: v.string(),
+    // Gesetzt auf persönlichen Kopien, die durch Annehmen eines öffentlichen
+    // Termins entstanden sind; verweist auf den ursprünglichen Termin.
+    sourceDeadlineId: v.optional(v.id("deadlines")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_owner", ["ownerId"]),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_source_owner", ["sourceDeadlineId", "ownerId"]),
 
   deadlineAttachments: defineTable({
     deadlineId: v.id("deadlines"),

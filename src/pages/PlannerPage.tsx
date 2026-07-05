@@ -27,7 +27,6 @@ import {
   ChevronDown,
   MoreVertical,
   Users,
-  Bell,
   Filter as FilterIcon,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -114,7 +113,6 @@ interface DeadlineItem {
   title: string;
   date: string;
   time?: string;
-  remindBefore?: number[];
   category: "abgabe" | "pruefung" | "sonstiges";
   done: boolean;
   note?: string;
@@ -176,7 +174,6 @@ function PlannerPage() {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [remindBefore, setRemindBefore] = useState<number[]>([]);
   const [category, setCategory] = useState<"abgabe" | "pruefung" | "sonstiges">("abgabe");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -243,7 +240,6 @@ function PlannerPage() {
     title: d.title,
     date: d.date,
     time: d.time,
-    remindBefore: Array.isArray(d.remindBefore) ? d.remindBefore : d.remindBefore != null ? [d.remindBefore] : [],
     category: d.category,
     done: d.done,
     note: d.note,
@@ -269,7 +265,6 @@ function PlannerPage() {
     setTitle("");
     setDate("");
     setTime("");
-    setRemindBefore([]);
     setCategory("abgabe");
     setNote("");
     setPendingAttachments([]);
@@ -336,15 +331,8 @@ function PlannerPage() {
     if (title.trim().length > TITLE_MAX) {
       return;
     }
-    let inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
+    const inviteeIds = visibility === "private" ? selectedInvitees.map((s) => s.userId) : [];
     const inviteeNames = visibility === "private" ? selectedInvitees.map((s) => s.displayName) : [];
-
-    if (editingId && visibility === "private") {
-      const existing = deadlines.find((d) => d.id === editingId);
-      if (existing) {
-        inviteeIds = [...new Set([...(existing.invitees ?? []), ...inviteeIds])];
-      }
-    }
 
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -362,7 +350,6 @@ function PlannerPage() {
           title: title.trim(),
           date,
           time: time || undefined,
-          remindBefore: remindBefore.length ? remindBefore : undefined,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
@@ -392,7 +379,6 @@ function PlannerPage() {
           title: title.trim(),
           date,
           time: time || undefined,
-          remindBefore: remindBefore.length ? remindBefore : undefined,
           category: category as "abgabe" | "pruefung" | "sonstiges",
           note: note.trim() || undefined,
           vorlesung: vorlesung || undefined,
@@ -422,10 +408,11 @@ function PlannerPage() {
   };
 
   const startEdit = (d: DeadlineItem) => {
+    pastDateConfirmed.current = false;
+    setShowPastWarning(false);
     setTitle(d.title);
     setDate(d.date);
     setTime(d.time ?? "");
-    setRemindBefore(Array.isArray(d.remindBefore) ? d.remindBefore : []);
     setCategory(d.category);
     setNote(d.note ?? "");
     setLinkedScriptIds(d.linkedScriptIds ?? []);
@@ -609,8 +596,6 @@ function PlannerPage() {
       setDate={(v) => { setDate(v); pastDateConfirmed.current = false; setShowPastWarning(false); }}
       time={time}
       setTime={setTime}
-      remindBefore={remindBefore}
-      setRemindBefore={setRemindBefore}
       category={category}
       setCategory={setCategory}
       note={note}
@@ -719,8 +704,6 @@ function PlannerLayout({
   setDate,
   time,
   setTime,
-  remindBefore,
-  setRemindBefore,
   category,
   setCategory,
   note,
@@ -804,8 +787,6 @@ function PlannerLayout({
   setDate: (v: string) => void;
   time: string;
   setTime: (v: string) => void;
-  remindBefore: number[];
-  setRemindBefore: (v: number[]) => void;
   category: string;
   setCategory: (v: any) => void;
   note: string;
@@ -967,33 +948,9 @@ function PlannerLayout({
                     </div>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{language.match({ english: () => "Time (optional)", german: () => "Uhrzeit (optional)" })}</p>
-                      <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{language.match({ english: () => "Remind (optional)", german: () => "Erinnern (optional)" })}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[1, 2, 3, 5].map((d) => (
-                          <button
-                            key={d}
-                            onClick={() =>
-                              setRemindBefore((prev) =>
-                                prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
-                              )
-                            }
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                              remindBefore.includes(d)
-                                ? "bg-primary/10 text-primary border-primary/30"
-                                : "text-muted-foreground bg-secondary border-transparent"
-                            }`}
-                          >
-                            {d} {language.match({ english: () => `day${d > 1 ? "s" : ""}`, german: () => `Tag${d > 1 ? "e" : ""}` })}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{language.match({ english: () => "Time (optional)", german: () => "Uhrzeit (optional)" })}</p>
+                    <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                   </div>
                   <div className="flex gap-2">
                     {(["abgabe", "pruefung", "sonstiges"] as const).map((c) => (
@@ -1253,14 +1210,16 @@ function PlannerLayout({
           <div className="space-y-2">
             {(() => {
               const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+              // Offene Termine bleiben unabhängig vom Alter im aktiven Bereich sichtbar
+              // (sonst weicht die "Überfällig"-Statistik von der sichtbaren Liste ab).
               const activeFiltered = filtered
-                .filter((d) => !d.done && new Date(d.date).getTime() > thirtyDaysAgo)
+                .filter((d) => !d.done)
                 .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               const doneFiltered = filtered
                 .filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo)
                 .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               const archivedFiltered = filtered
-                .filter((d) => new Date(d.date).getTime() <= thirtyDaysAgo)
+                .filter((d) => d.done && new Date(d.date).getTime() <= thirtyDaysAgo)
                 .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               return (
                 <>
@@ -1349,11 +1308,6 @@ function PlannerLayout({
                                   {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
                                   {d.time && `, ${d.time}`}
                                 </span>
-                        {d.remindBefore && d.remindBefore > 0 && (
-                          <span className="inline-flex items-center gap-1 text-warning">
-                            <Bell className="h-3 w-3" /> {d.remindBefore} {language.match({ english: () => `day${d.remindBefore > 1 ? "s" : ""} before`, german: () => `Tag${d.remindBefore > 1 ? "e" : ""} vorher` })}
-                          </span>
-                        )}
                               {d.visibility === "private" && (
                                 <span className="inline-flex items-center gap-1">
                                   <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
@@ -1495,11 +1449,6 @@ function PlannerLayout({
                                       {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
                                       {d.time && `, ${d.time}`}
                                     </span>
-                                    {d.remindBefore && d.remindBefore.length > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-warning">
-                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} ${language.match({ english: () => `day${r > 1 ? "s" : ""}`, german: () => `Tag${r > 1 ? "e" : ""}` })}`).join(", ")} {language.match({ english: () => "before", german: () => "vorher" })}
-                                      </span>
-                                    )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
                                         <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
@@ -1662,11 +1611,6 @@ function PlannerLayout({
                                       {new Date(d.date).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}
                                       {d.time && `, ${d.time}`}
                                     </span>
-                                    {d.remindBefore && d.remindBefore.length > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-warning">
-                                        <Bell className="h-3 w-3" /> {d.remindBefore.sort((a, b) => a - b).map((r) => `${r} ${language.match({ english: () => `day${r > 1 ? "s" : ""}`, german: () => `Tag${r > 1 ? "e" : ""}` })}`).join(", ")} {language.match({ english: () => "before", german: () => "vorher" })}
-                                      </span>
-                                    )}
                                     {d.visibility === "private" && (
                                       <span className="inline-flex items-center gap-1">
                                         <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
