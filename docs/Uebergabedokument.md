@@ -4,7 +4,7 @@ Markdown am besten lesbar auf github
 https://github.com/Cameloon/Anwendungsprojekt/blob/main/docs/Uebergabedokument.md
 
 
-## 1. Team
+## 1. Namenszuordnung Github
 
 - Sofia Antropova → antropos-v
 - Daniel Beljaew → Cameloon, Dan
@@ -12,7 +12,6 @@ https://github.com/Cameloon/Anwendungsprojekt/blob/main/docs/Uebergabedokument.m
 - Alexia Dinu → dinua23
 - Daniela Maier → njela0
 
-Verantwortungsbereiche siehe [Rollenverteilung.md](Rollenverteilung.md).
 
 ---
 ## 2. Setup, Installation und Registrierung
