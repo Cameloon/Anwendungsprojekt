@@ -166,6 +166,7 @@ export const upsertMine = mutation({
     kurs: v.optional(v.string()),
     email: v.optional(v.string()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
+    languageSetting: v.optional(v.union(v.literal("english"), v.literal("german"))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

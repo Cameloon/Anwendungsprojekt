@@ -12,6 +12,7 @@ export interface AppProfile {
   avatar_url: string | null;
   created_at: string | null;
   role: "admin" | "user" | null;
+  language_setting: "english" | "german" | null;
 }
 
 const useDemoProfile = (): AppProfile | null => {
@@ -27,6 +28,7 @@ const useDemoProfile = (): AppProfile | null => {
     avatar_url: p.avatar_url ?? null,
     created_at: p.created_at ?? null,
     role: p.role ?? null,
+    language_setting: p.language_setting ?? null,
   };
 };
 
@@ -42,6 +44,7 @@ const useConvexProfile = (): AppProfile | null => {
     avatar_url: data.avatarUrl ?? null,
     created_at: data.createdAt ? new Date(data.createdAt).toISOString() : null,
     role: data.role ?? null,
+    language_setting: data.languageSetting ?? null,
   };
 };
 

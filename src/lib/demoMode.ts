@@ -24,6 +24,7 @@ export interface DemoProfile {
   avatar_url: string | null;
   created_at: string | null;
   role?: "admin" | "user";
+  language_setting?: "english" | "german";
 }
 
 const listeners = new Set<() => void>();

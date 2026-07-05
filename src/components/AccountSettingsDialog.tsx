@@ -218,8 +218,13 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
                   german: () => {return "german"},
                 })
               } onValueChange={(v) => {
-                console.log(v);
-                setLanguage(Enum.variant((v as any as "english" | "german" ), {}));
+                const lang = v as "english" | "german";
+                setLanguage(Enum.variant(lang, {}));
+                if (IS_DEMO) {
+                  demoStore.updateProfile({ language_setting: lang });
+                } else {
+                  upsertProfile!({ languageSetting: lang });
+                }
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder={language.match({ english: () => "Select location", german: () => "Standort wählen" })} />
