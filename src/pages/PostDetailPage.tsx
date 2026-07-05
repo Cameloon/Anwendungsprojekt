@@ -90,7 +90,6 @@ function PostDetailPage() {
   const profile = useProfile();
   const { language } = useLanguage();
   const me = user?.id || "";
-  const displayName = profile?.display_name || language.match({ english: () => "Unknown", german: () => "Unbekannt" });
   const isAdmin = profile?.role === "admin";
 
   const post = useQuery(
@@ -274,7 +273,6 @@ function PostDetailPage() {
       reportOpen={reportOpen}
       setReportOpen={setReportOpen}
       me={me}
-      reportedBy={displayName}
       linkedScripts={linkedScripts}
       linkedDeadlines={linkedDeadlines}
       isAdmin={isAdmin}
@@ -316,7 +314,6 @@ function PostDetailLayout({
   reportOpen,
   setReportOpen,
   me,
-  reportedBy,
   linkedScripts,
   linkedDeadlines,
   isAdmin,
@@ -352,7 +349,6 @@ function PostDetailLayout({
   reportOpen: boolean;
   setReportOpen: (open: boolean) => void;
   me: string;
-  reportedBy: string;
   linkedScripts: ScriptInfo[];
   linkedDeadlines: any[];
   isAdmin: boolean;
@@ -718,7 +714,6 @@ function PostDetailLayout({
         postId={post._id}
         postTitle={post.title}
         forumName={forumName ?? language.match({ english: () => "Forum", german: () => "Forum" })}
-        reportedBy={reportedBy}
       />
     </div>
   );

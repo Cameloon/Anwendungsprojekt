@@ -36,7 +36,6 @@ const HATE_SPEECH_KEYWORDS = [
   "hohlbirne",
   "dummfick",
   "nuttensohn",
-  "opfer",
 ];
 
 function escapeRegex(str: string): string {

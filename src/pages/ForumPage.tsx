@@ -681,7 +681,6 @@ function ForumPage() {
       myKurs={myKurs}
       reportTarget={reportTarget}
       setReportTarget={setReportTarget}
-      reportedBy={displayName}
       isAdmin={isAdmin}
       adminViewKurs={adminViewKurs}
       setAdminViewKurs={setAdminViewKurs}
@@ -819,7 +818,6 @@ function ForumPageLayout({
   myKurs,
   reportTarget,
   setReportTarget,
-  reportedBy,
   isAdmin,
   adminViewKurs,
   setAdminViewKurs,
@@ -914,7 +912,6 @@ function ForumPageLayout({
   myKurs?: string;
   reportTarget: { postId: string; postTitle: string } | null;
   setReportTarget: (v: { postId: string; postTitle: string } | null) => void;
-  reportedBy: string;
   isAdmin: boolean;
   adminViewKurs: string;
   setAdminViewKurs: (v: string) => void;
@@ -1552,7 +1549,6 @@ function ForumPageLayout({
         postId={reportTarget?.postId ?? ""}
         postTitle={reportTarget?.postTitle ?? ""}
         forumName={activeForum?.name ?? language.match({ english: () => "Forum", german: () => "Forum" })}
-        reportedBy={reportedBy}
       />
 
       {/* Create-forum dialog */}

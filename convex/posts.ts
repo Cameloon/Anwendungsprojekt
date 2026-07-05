@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { checkHateSpeech } from "./hateSpeech";
 import { logModeration } from "./moderationLog";
 
@@ -71,6 +71,20 @@ async function isAdmin(ctx: any, userId: string): Promise<boolean> {
   return profile?.role === "admin";
 }
 
+// Öffentliche Foren sind für jeden eingeloggten Nutzer lesbar; private nur für
+// Mitglieder oder Admins (gleiche Regel wie beim Erstellen von Posts).
+async function canAccessForum(ctx: any, forum: Doc<"forums">, userId: string): Promise<boolean> {
+  if (forum.visibility !== "private") return true;
+  const member = await ctx.db
+    .query("forumMembers")
+    .withIndex("by_forum_user", (q: any) =>
+      q.eq("forumId", forum._id).eq("userId", userId)
+    )
+    .unique();
+  if (member) return true;
+  return await isAdmin(ctx, userId);
+}
+
 // ─── Queries ───
 
 export const listByForum = query({
@@ -78,6 +92,12 @@ export const listByForum = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const forum = await ctx.db.get(args.forumId);
+    if (!forum) throw new Error("Forum not found");
+    if (!(await canAccessForum(ctx, forum, identity.subject))) {
+      throw new Error("Not authorized");
+    }
 
     const posts = await ctx.db
       .query("posts")
@@ -99,6 +119,10 @@ export const getById = query({
 
     const post = await ctx.db.get(args.postId);
     if (!post) return null;
+    const forum = await ctx.db.get(post.forumId);
+    if (!forum || !(await canAccessForum(ctx, forum, identity.subject))) {
+      throw new Error("Not authorized");
+    }
     return await enrichPost(ctx, post, identity.subject);
   },
 });
@@ -108,6 +132,13 @@ export const getComments = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+    const forum = await ctx.db.get(post.forumId);
+    if (!forum || !(await canAccessForum(ctx, forum, identity.subject))) {
+      throw new Error("Not authorized");
+    }
 
     return await ctx.db
       .query("postComments")
@@ -284,14 +315,12 @@ export const update = mutation({
       patch.linkedScriptIds = args.linkedScriptIds;
     if (args.linkedDeadlineIds !== undefined)
       patch.linkedDeadlineIds = args.linkedDeadlineIds;
-    if (flagged) {
-      patch.flagged = true;
-      patch.detectedWord = detectedWord;
-    }
+    patch.flagged = flagged || undefined;
+    patch.detectedWord = flagged ? detectedWord : undefined;
 
     await ctx.db.patch(args.postId, patch);
 
-    if (flagged && !post.flagged) {
+    if (flagged && (!post.flagged || post.detectedWord !== detectedWord)) {
       const forum = await ctx.db.get(post.forumId);
       await ctx.db.insert("postReports", {
         postId: args.postId,
@@ -383,6 +412,21 @@ export const deletePost = mutation({
       .collect();
     for (const l of likes) await ctx.db.delete(l._id);
 
+    const files = await ctx.db
+      .query("postFiles")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+    for (const f of files) {
+      await ctx.storage.delete(f.storageId);
+      await ctx.db.delete(f._id);
+    }
+
+    const reports = await ctx.db
+      .query("postReports")
+      .filter((q) => q.eq(q.field("postId"), args.postId))
+      .collect();
+    for (const r of reports) await ctx.db.delete(r._id);
+
     await ctx.db.delete(args.postId);
   },
 });
@@ -438,6 +482,30 @@ export const addComment = mutation({
   },
 });
 
+// Löscht einen Kommentar samt aller Antworten, beliebig tief verschachtelt
+// (nicht nur die direkte Kind-Ebene), damit keine verwaisten Kommentare
+// zurückbleiben, die auf eine gelöschte parentId verweisen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function deleteCommentSubtree(ctx: any, commentId: any) {
+  const children = await ctx.db
+    .query("postComments")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_parent", (q: any) => q.eq("parentId", commentId))
+    .collect();
+  for (const child of children) {
+    await deleteCommentSubtree(ctx, child._id);
+  }
+
+  const likes = await ctx.db
+    .query("commentLikes")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_comment", (q: any) => q.eq("commentId", commentId))
+    .collect();
+  for (const l of likes) await ctx.db.delete(l._id);
+
+  await ctx.db.delete(commentId);
+}
+
 export const deleteComment = mutation({
   args: { commentId: v.id("postComments"), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -467,27 +535,7 @@ export const deleteComment = mutation({
       });
     }
 
-    const likes = await ctx.db
-      .query("commentLikes")
-      .withIndex("by_comment", (q) => q.eq("commentId", args.commentId))
-      .collect();
-    for (const l of likes) await ctx.db.delete(l._id);
-
-    const childReplies = await ctx.db
-      .query("postComments")
-      .withIndex("by_parent", (q) => q.eq("parentId", args.commentId))
-      .collect();
-    for (const child of childReplies) {
-      const childLikes = await ctx.db
-        .query("commentLikes")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .withIndex("by_comment", (q: any) => q.eq("commentId", child._id))
-        .collect();
-      for (const cl of childLikes) await ctx.db.delete(cl._id);
-      await ctx.db.delete(child._id);
-    }
-
-    await ctx.db.delete(args.commentId);
+    await deleteCommentSubtree(ctx, args.commentId);
   },
 });
 
@@ -507,18 +555,32 @@ export const updateComment = mutation({
     if (comment.authorId !== identity.subject && !admin)
       throw new Error("Not authorized");
 
+    const isModeration = admin && comment.authorId !== identity.subject;
+
     const { flagged, detectedWord } = checkHateSpeech(args.content);
     const patch: Record<string, unknown> = {
       content: args.content.trim(),
       updatedAt: Date.now(),
     };
-    if (flagged) {
-      patch.flagged = true;
-      patch.detectedWord = detectedWord;
-    }
+    patch.flagged = flagged || undefined;
+    patch.detectedWord = flagged ? detectedWord : undefined;
     await ctx.db.patch(args.commentId, patch);
 
-    if (flagged && !comment.flagged) {
+    if (isModeration) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+        .unique();
+      await logModeration(ctx, identity.subject, profile?.displayName || "Admin", {
+        action: "edit_comment",
+        postId: comment.postId,
+        targetUserId: comment.authorId,
+        targetName: comment.authorName,
+        details: `Kommentar bearbeitet: "${comment.content.slice(0, 200)}" → "${args.content.trim().slice(0, 200)}"`,
+      });
+    }
+
+    if (flagged && (!comment.flagged || comment.detectedWord !== detectedWord)) {
       const post = await ctx.db.get(comment.postId);
       const forum = post ? await ctx.db.get(post.forumId) : null;
       await ctx.db.insert("postReports", {
@@ -632,11 +694,19 @@ export const listRecent = query({
       if (member) accessibleIds.push(forum._id);
     }
 
-    const allPosts = await ctx.db.query("posts").order("desc").collect();
-
-    const accessiblePosts = allPosts
-      .filter((p) => accessibleIds.includes(p.forumId))
-      .slice(0, 20);
+    // Pro Forum die letzten Posts laden statt eines globalen Top-N-Pools —
+    // sonst verdrängen aktive Foren die Posts selten genutzter Foren komplett
+    // aus der Liste, obwohl dort tatsächlich Beiträge existieren.
+    const postsPerForum = await Promise.all(
+      accessibleIds.map((forumId) =>
+        ctx.db
+          .query("posts")
+          .withIndex("by_forum", (q) => q.eq("forumId", forumId as Id<"forums">))
+          .order("desc")
+          .take(5)
+      )
+    );
+    const accessiblePosts = postsPerForum.flat();
 
     const forumMap = new Map(forums.map((f) => [f._id, f]));
 

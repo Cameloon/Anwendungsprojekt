@@ -8,18 +8,39 @@ export const submit = mutation({
     postTitle: v.string(),
     forumName: v.string(),
     reason: v.string(),
-    reportedBy: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Nicht authentifiziert");
+
+    const normalizedPostId = ctx.db.normalizeId("posts", args.postId);
+    const post = normalizedPostId ? await ctx.db.get(normalizedPostId) : null;
+    if (!post) throw new Error("Beitrag nicht gefunden");
+
+    const existing = await ctx.db
+      .query("postReports")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("postId"), args.postId),
+          q.eq(q.field("reporterUserId"), identity.tokenIdentifier),
+          q.eq(q.field("status"), "offen")
+        )
+      )
+      .first();
+    if (existing) throw new Error("Du hast diesen Beitrag bereits gemeldet.");
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    const reportedBy = profile?.displayName || identity.name || identity.email || "Unbekannt";
 
     await ctx.db.insert("postReports", {
       postId: args.postId,
       postTitle: args.postTitle,
       forumName: args.forumName,
       reason: args.reason,
-      reportedBy: args.reportedBy,
+      reportedBy,
       reporterUserId: identity.tokenIdentifier,
       status: "offen",
       createdAt: Date.now(),

@@ -14,7 +14,6 @@ interface ReportDialogProps {
   postId: string;
   postTitle: string;
   forumName: string;
-  reportedBy: string;
 }
 
 export function ReportDialog({
@@ -23,7 +22,6 @@ export function ReportDialog({
   postId,
   postTitle,
   forumName,
-  reportedBy,
 }: ReportDialogProps) {
   const { language } = useLanguage();
 
@@ -87,7 +85,7 @@ export function ReportDialog({
       : selectedReason;
 
     try {
-      await submitReport({ postId, postTitle, forumName, reason, reportedBy });
+      await submitReport({ postId, postTitle, forumName, reason });
 
       toast.success(strings.toastSuccess, {
         description: strings.toastSuccessDesc,
