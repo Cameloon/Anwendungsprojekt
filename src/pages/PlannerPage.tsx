@@ -1217,10 +1217,10 @@ function PlannerLayout({
                 .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
               const doneFiltered = filtered
                 .filter((d) => d.done && new Date(d.date).getTime() > thirtyDaysAgo)
-                .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
+                .sort((a, b) => (b.date + (b.time ?? ""))?.localeCompare(a.date + (a.time ?? "")));
               const archivedFiltered = filtered
                 .filter((d) => d.done && new Date(d.date).getTime() <= thirtyDaysAgo)
-                .sort((a, b) => (a.date + (a.time ?? ""))?.localeCompare(b.date + (b.time ?? "")));
+                .sort((a, b) => (b.date + (b.time ?? ""))?.localeCompare(a.date + (a.time ?? "")));
               return (
                 <>
                   {activeFiltered.length === 0 && doneFiltered.length === 0 && archivedFiltered.length === 0 ? (
