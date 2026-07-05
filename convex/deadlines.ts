@@ -29,11 +29,44 @@ async function isAdmin(ctx: any, userId: string): Promise<boolean> {
   return profile?.role === "admin";
 }
 
+// Prüft live, ob zwei Nutzer im selben Kurs sind — robuster als das statische
+// invitees-Snapshot, das bei älteren Terminen leer sein kann und bei
+// Kurswechseln nicht nachgeführt wird.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isSameKurs(ctx: any, userIdA: string, userIdB: string): Promise<boolean> {
+  if (userIdA === userIdB) return true;
+  const [a, b] = await Promise.all([
+    ctx.db
+      .query("profiles")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex("by_user", (q: any) => q.eq("userId", userIdA))
+      .unique(),
+    ctx.db
+      .query("profiles")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex("by_user", (q: any) => q.eq("userId", userIdB))
+      .unique(),
+  ]);
+  return !!a?.kurs && a.kurs === b?.kurs;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function canAccessDeadline(ctx: any, deadline: any, userId: string): Promise<boolean> {
   if (deadline.ownerId === userId) return true;
   if (deadline.invitees?.includes(userId)) return true;
+  if (deadline.visibility === "public" && !deadline.declinedBy?.includes(userId)) {
+    if (await isSameKurs(ctx, deadline.ownerId, userId)) return true;
+  }
   return await isAdmin(ctx, userId);
+}
+
+// Darf ein Nicht-Besitzer auf eine Einladung reagieren (annehmen/ablehnen/abhaken)?
+// Öffentliche Termine: jeder im selben Kurs wie der Besitzer, unabhängig vom
+// (evtl. leeren/veralteten) invitees-Snapshot. Private Termine: nur explizit Eingeladene.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function canRespond(ctx: any, deadline: any, userId: string): Promise<boolean> {
+  if (deadline.invitees?.includes(userId)) return true;
+  return deadline.visibility === "public" && (await isSameKurs(ctx, deadline.ownerId, userId));
 }
 
 // ─── Queries ───
@@ -44,17 +77,31 @@ export const listForUser = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    // Live-Abgleich statt statischem invitees-Snapshot: robust gegen ältere
+    // Termine ohne befüllte invitees und gegen nachträgliche Kurswechsel.
+    const myProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .unique();
+    const myKurs = myProfile?.kurs;
+    const kursMates = myKurs
+      ? new Set(
+          (await ctx.db.query("profiles").collect())
+            .filter((p) => p.kurs === myKurs)
+            .map((p) => p.userId),
+        )
+      : new Set<string>();
+
     const all = await ctx.db.query("deadlines").collect();
 
     const visible = all.filter((d) => {
       if (d.ownerId === identity.subject) return true;
       if (d.visibility === "public") {
-        // Sobald angenommen oder abgelehnt, wird der Nutzer aus invitees entfernt
-        // (und bei declinedBy eingetragen) — das Original verschwindet dann von
-        // selbst aus seiner Liste, die eigene Kopie bleibt über ownerId sichtbar.
-        if (!d.invitees?.includes(identity.subject)) return false;
+        // Sobald angenommen oder abgelehnt, wird der Nutzer bei declinedBy
+        // eingetragen — das Original verschwindet dann aus seiner Liste,
+        // die eigene Kopie bleibt über ownerId sichtbar.
         if (d.declinedBy?.includes(identity.subject)) return false;
-        return true;
+        return kursMates.has(d.ownerId);
       }
       if (d.invitees?.includes(identity.subject)) return true;
       return false;
@@ -408,8 +455,8 @@ export const toggleDone = mutation({
       return;
     }
 
-    const isInvited = deadline.invitees?.includes(identity.subject);
-    if (!isInvited) throw new Error("Not authorized");
+    if (!(await canRespond(ctx, deadline, identity.subject)))
+      throw new Error("Not authorized");
 
     const existing = await findOwnCopy(ctx, deadline, identity.subject);
     if (existing) {
@@ -432,7 +479,7 @@ export const acceptDeadline = mutation({
     if (!identity) throw new Error("Not authenticated");
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-    if (!deadline.invitees?.includes(identity.subject))
+    if (!(await canRespond(ctx, deadline, identity.subject)))
       throw new Error("Nicht eingeladen");
 
     return await acceptDeadlineForUser(ctx, deadline, identity.subject);
@@ -446,10 +493,10 @@ export const declineDeadline = mutation({
     if (!identity) throw new Error("Not authenticated");
     const deadline = await ctx.db.get(args.deadlineId);
     if (!deadline) throw new Error("Deadline not found");
-    if (!deadline.invitees?.includes(identity.subject))
+    if (!(await canRespond(ctx, deadline, identity.subject)))
       throw new Error("Nicht eingeladen");
 
-    const updated = deadline.invitees.filter((id) => id !== identity.subject);
+    const updated = (deadline.invitees ?? []).filter((id) => id !== identity.subject);
     const patch: Record<string, unknown> = { invitees: updated };
     if (deadline.visibility === "public") {
       patch.declinedBy = [...(deadline.declinedBy ?? []), identity.subject];
