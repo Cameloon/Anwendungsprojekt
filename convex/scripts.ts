@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { getType } from "./schema";
 
 // ─── Constants ───
@@ -65,7 +66,7 @@ export const listVisible = query({
     if (!identity) throw new Error("Not authenticated");
 
     const viewerId = identity.subject;
-    const all = await ctx.db.query("scripts").collect();
+    const all = await ctx.db.query("scripts").order("desc").collect();
 
     const visible: typeof all = [];
     for (const s of all) {
@@ -88,7 +89,7 @@ export const listPublic = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const all = await ctx.db.query("scripts").collect();
+    const all = await ctx.db.query("scripts").order("desc").collect();
     const publicScripts = all.filter((s) => s.visibility === "public");
 
     return await Promise.all(
@@ -177,6 +178,19 @@ export const generateUploadUrl = mutation({
   },
 });
 
+// Räumt eine bereits hochgeladene, aber nie einem Skript zugeordnete Datei
+// wieder auf — z.B. wenn die anschließende `create`-Mutation fehlschlägt
+// (Kontingent erreicht, Netzwerkfehler), damit keine verwaisten Storage-Blobs
+// zurückbleiben.
+export const discardUpload = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    await ctx.storage.delete(args.storageId);
+  },
+});
+
 export const create = mutation({
   args: {
     title: v.string(),
@@ -211,9 +225,18 @@ export const create = mutation({
       throw new Error("Datei darf maximal 25 MB groß sein.");
     }
 
-    // Group visibility requires a forumId
-    if (args.visibility === "group" && !args.forumId) {
-      throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
+    // Group visibility requires a forumId, and the caller must actually be a member
+    if (args.visibility === "group") {
+      if (!args.forumId) {
+        throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
+      }
+      const member = await ctx.db
+        .query("forumMembers")
+        .withIndex("by_forum_user", (q) =>
+          q.eq("forumId", args.forumId as Id<"forums">).eq("userId", identity.subject)
+        )
+        .unique();
+      if (!member) throw new Error("Du bist kein Mitglied dieses Forums.");
     }
 
     // Per-user quota
@@ -229,6 +252,13 @@ export const create = mutation({
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
+
+    // "Kurs"-Sichtbarkeit ohne gesetzten Kurs würde das Skript für niemanden
+    // außer dem Autor selbst sichtbar machen, ohne dass der Nutzer das merkt.
+    if (args.visibility === "jahrgang" && !profile?.kurs) {
+      throw new Error("Für die Sichtbarkeit „Kurs“ muss dein Profil einen Kurs hinterlegt haben.");
+    }
+
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
     const authorKurs = profile?.kurs ?? undefined;
 
@@ -295,8 +325,31 @@ export const update = mutation({
     if (args.pages !== undefined) patch.pages = args.pages;
     if (args.type !== undefined) patch.type = args.type;
     if (args.visibility !== undefined) {
-      if (args.visibility === "group" && !args.forumId && !script.forumId) {
-        throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
+      if (args.visibility === "group") {
+        const effectiveForumId = args.forumId ?? script.forumId;
+        if (!effectiveForumId) {
+          throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
+        }
+        const member = await ctx.db
+          .query("forumMembers")
+          .withIndex("by_forum_user", (q) =>
+            q.eq("forumId", effectiveForumId).eq("userId", identity.subject)
+          )
+          .unique();
+        if (!member) throw new Error("Du bist kein Mitglied dieses Forums.");
+      }
+      if (args.visibility === "jahrgang") {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+          .unique();
+        if (!profile?.kurs) {
+          throw new Error("Für die Sichtbarkeit „Kurs“ muss dein Profil einen Kurs hinterlegt haben.");
+        }
+        // Kurs des Autors zum Zeitpunkt der Freigabe übernehmen — sonst bliebe
+        // authorKurs von der Erstellung (evtl. leer) stehen und niemand könnte
+        // das Skript trotz bestandener Prüfung sehen.
+        patch.authorKurs = profile.kurs;
       }
       patch.visibility = args.visibility;
     }
