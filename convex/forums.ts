@@ -3,6 +3,27 @@ import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { parseKurs, calculateCurrentSemester } from "./semesterLectures";
 
+// Öffentliche Foren sind für jeden eingeloggten Nutzer lesbar; private nur für
+// Mitglieder oder Admins.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function canAccessForum(ctx: any, forum: any, userId: string): Promise<boolean> {
+  if (forum.visibility !== "private") return true;
+  const member = await ctx.db
+    .query("forumMembers")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_forum_user", (q: any) =>
+      q.eq("forumId", forum._id).eq("userId", userId)
+    )
+    .unique();
+  if (member) return true;
+  const profile = await ctx.db
+    .query("profiles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+  return profile?.role === "admin";
+}
+
 // ─── Queries ───
 
 export const getAllAccessible = query({
@@ -131,6 +152,9 @@ export const getById = query({
     if (!identity) throw new Error("Not authenticated");
     const forum = await ctx.db.get(args.forumId);
     if (!forum) return null;
+    if (!(await canAccessForum(ctx, forum, identity.subject))) {
+      throw new Error("Not authorized");
+    }
 
     const archiveState = await ctx.db
       .query("forumArchiveStates")
@@ -800,6 +824,21 @@ export const deleteForum = mutation({
         await ctx.db.delete(c._id);
       }
 
+      const postFiles = await ctx.db
+        .query("postFiles")
+        .withIndex("by_post", (q) => q.eq("postId", post._id))
+        .collect();
+      for (const f of postFiles) {
+        await ctx.storage.delete(f.storageId);
+        await ctx.db.delete(f._id);
+      }
+
+      const reports = await ctx.db
+        .query("postReports")
+        .filter((q) => q.eq(q.field("postId"), post._id))
+        .collect();
+      for (const r of reports) await ctx.db.delete(r._id);
+
       await ctx.db.delete(post._id);
     }
 
@@ -808,7 +847,10 @@ export const deleteForum = mutation({
       .query("forumFiles")
       .withIndex("by_forum", (q) => q.eq("forumId", args.forumId))
       .collect();
-    for (const f of forumFiles) await ctx.db.delete(f._id);
+    for (const f of forumFiles) {
+      await ctx.storage.delete(f.storageId);
+      await ctx.db.delete(f._id);
+    }
 
     await ctx.db.delete(args.forumId);
   },
