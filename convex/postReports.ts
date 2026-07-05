@@ -78,6 +78,7 @@ export const markDone = mutation({
     await ctx.db.patch(args.id, { status: "erledigt" });
     await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
       action: "dismiss_report",
+      reportId: args.id,
       details: report ? `Meldung "${report.postTitle}" im Forum "${report.forumName}" als erledigt markiert` : undefined,
     });
   },
@@ -98,6 +99,7 @@ export const reopen = mutation({
     await ctx.db.patch(args.id, { status: "offen" });
     await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
       action: "reopen_report",
+      reportId: args.id,
       details: report ? `Meldung "${report.postTitle}" im Forum "${report.forumName}" wieder geöffnet` : undefined,
     });
   },

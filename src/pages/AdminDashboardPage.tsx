@@ -104,6 +104,7 @@ const AdminDashboardPage = () => {
   const [dismissingReport, setDismissingReport] = useState<string | null>(null);
   const [deletingReport, setDeletingReport] = useState<string | null>(null);
   const [reopeningReport, setReopeningReport] = useState<string | null>(null);
+  const [reopeningLogId, setReopeningLogId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [banTarget, setBanTarget] = useState<{ userId: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -516,11 +517,11 @@ const AdminDashboardPage = () => {
             </div>
 
             <Panel
-              title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
+              title={language.match({ english: () => "Reports", german: () => "Meldungen" })}
               icon={<FileWarning className="h-4 w-4" />}
-              description={language.match({ english: () => "Reported forum posts and moderation actions must be documented traceably.", german: () => "Gemeldete Forum-Beiträge und Moderationsaktionen sollen nachvollziehbar dokumentiert werden." })}
+              description={language.match({ english: () => "Reported forum posts and comments flagged by users or automatic detection.", german: () => "Gemeldete Forenbeiträge und Kommentare von Nutzern oder automatischer Erkennung." })}
             >
-              <div className="space-y-3">
+              <div className="max-h-[400px] space-y-3 overflow-y-auto pr-1">
                 {postReports === undefined ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
@@ -532,15 +533,10 @@ const AdminDashboardPage = () => {
                 ) : (
                   (() => {
                     const openReports = postReports.filter((r) => r.status === "offen");
-                    const doneReports = postReports.filter((r) => r.status !== "offen");
                     const renderReport = (report: (typeof postReports)[number]) => (
                       <div
                         key={report._id}
-                        className={
-                          report.status === "offen"
-                            ? "rounded-2xl border border-border/60 bg-background/80 p-4"
-                            : "rounded-2xl border border-border/40 bg-background/40 p-4 opacity-60"
-                        }
+                        className="rounded-2xl border border-border/60 bg-background/80 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -566,119 +562,90 @@ const AdminDashboardPage = () => {
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-2">
-                            {report.status === "offen" && (
-                              <>
-                                {report.commentId ? (
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="gap-1"
-                                    disabled={deletingReport === report._id}
-                                    onClick={async () => {
-                                      setDeletingReport(report._id);
-                                      try {
-                                        await deleteComment({ commentId: report.commentId });
-                                        await dismissPostReport({ id: report._id });
-                                        toast({
-                                          title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
-                                          description: language.match({ english: () => "Comment has been deleted.", german: () => "Kommentar wurde gelöscht." }),
-                                        });
-                                      } catch (err) {
-                                        toast({
-                                          title: language.match({ english: () => "Error", german: () => "Fehler" }),
-                                          description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
-                                          variant: "destructive",
-                                        });
-                                      } finally {
-                                        setDeletingReport(null);
-                                      }
-                                    }}
-                                  >
-                                    {deletingReport === report._id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <>{language.match({ english: () => "Delete comment", german: () => "Kommentar löschen" })}</>
-                                    )}
-                                  </Button>
-                                ) : report.normalizedPostId ? (
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="gap-1"
-                                    disabled={deletingReport === report._id}
-                                    onClick={async () => {
-                                      setDeletingReport(report._id);
-                                      try {
-                                        await deletePost({ postId: report.normalizedPostId });
-                                        await dismissPostReport({ id: report._id });
-                                        toast({
-                                          title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
-                                          description: language.match({ english: () => "Post has been deleted.", german: () => "Beitrag wurde gelöscht." }),
-                                        });
-                                      } catch (err) {
-                                        toast({
-                                          title: language.match({ english: () => "Error", german: () => "Fehler" }),
-                                          description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
-                                          variant: "destructive",
-                                        });
-                                      } finally {
-                                        setDeletingReport(null);
-                                      }
-                                    }}
-                                  >
-                                    {deletingReport === report._id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    )}
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={async () => {
-                                    setDismissingReport(report._id);
-                                    try {
-                                      await dismissPostReport({ id: report._id });
-                                    } finally {
-                                      setDismissingReport(null);
-                                    }
-                                  }}
-                                  disabled={dismissingReport === report._id}
-                                >
-                                  {dismissingReport === report._id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    language.match({ english: () => "Done", german: () => "Erledigt" })
-                                  )}
-                                </Button>
-                              </>
-                            )}
-                            {report.status !== "offen" && (
+                            {report.commentId ? (
                               <Button
                                 size="sm"
-                                variant="outline"
+                                variant="destructive"
                                 className="gap-1"
+                                disabled={deletingReport === report._id}
                                 onClick={async () => {
-                                  setReopeningReport(report._id);
+                                  setDeletingReport(report._id);
                                   try {
-                                    await reopenPostReport({ id: report._id });
+                                    await deleteComment({ commentId: report.commentId });
+                                    await dismissPostReport({ id: report._id });
+                                    toast({
+                                      title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+                                      description: language.match({ english: () => "Comment has been deleted.", german: () => "Kommentar wurde gelöscht." }),
+                                    });
+                                  } catch (err) {
+                                    toast({
+                                      title: language.match({ english: () => "Error", german: () => "Fehler" }),
+                                      description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
+                                      variant: "destructive",
+                                    });
                                   } finally {
-                                    setReopeningReport(null);
+                                    setDeletingReport(null);
                                   }
                                 }}
-                                disabled={reopeningReport === report._id}
                               >
-                                {reopeningReport === report._id ? (
+                                {deletingReport === report._id ? (
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                 ) : (
-                                  <>
-                                    <Undo2 className="h-3.5 w-3.5" />
-                                    {language.match({ english: () => "Undo", german: () => "Rückgängig" })}
-                                  </>
+                                  <>{language.match({ english: () => "Delete comment", german: () => "Kommentar löschen" })}</>
                                 )}
                               </Button>
-                            )}
+                            ) : report.normalizedPostId ? (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="gap-1"
+                                disabled={deletingReport === report._id}
+                                onClick={async () => {
+                                  setDeletingReport(report._id);
+                                  try {
+                                    await deletePost({ postId: report.normalizedPostId });
+                                    await dismissPostReport({ id: report._id });
+                                    toast({
+                                      title: language.match({ english: () => "Deleted", german: () => "Gelöscht" }),
+                                      description: language.match({ english: () => "Post has been deleted.", german: () => "Beitrag wurde gelöscht." }),
+                                    });
+                                  } catch (err) {
+                                    toast({
+                                      title: language.match({ english: () => "Error", german: () => "Fehler" }),
+                                      description: err instanceof Error ? err.message : language.match({ english: () => "Deletion failed", german: () => "Löschen fehlgeschlagen" }),
+                                      variant: "destructive",
+                                    });
+                                  } finally {
+                                    setDeletingReport(null);
+                                  }
+                                }}
+                              >
+                                {deletingReport === report._id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                setDismissingReport(report._id);
+                                try {
+                                  await dismissPostReport({ id: report._id });
+                                } finally {
+                                  setDismissingReport(null);
+                                }
+                              }}
+                              disabled={dismissingReport === report._id}
+                            >
+                              {dismissingReport === report._id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                language.match({ english: () => "Done", german: () => "Erledigt" })
+                              )}
+                            </Button>
                             {report.authorId && (
                               <Button
                                 size="sm"
@@ -701,23 +668,12 @@ const AdminDashboardPage = () => {
                     );
                     return (
                       <>
-                        {openReports.length === 0 && (
+                        {openReports.length === 0 ? (
                           <p className="text-sm text-muted-foreground py-4 text-center">
                             {language.match({ english: () => "No open reports.", german: () => "Keine offenen Meldungen." })}
                           </p>
-                        )}
-                        {openReports.map(renderReport)}
-                        {doneReports.length > 0 && (
-                          <>
-                            <div className="flex items-center gap-3 py-1">
-                              <div className="h-px flex-1 bg-border/60" />
-                              <span className="text-[11px] text-muted-foreground">
-                                {language.match({ english: () => "Done", german: () => "Erledigt" })}
-                              </span>
-                              <div className="h-px flex-1 bg-border/60" />
-                            </div>
-                            {doneReports.map(renderReport)}
-                          </>
+                        ) : (
+                          openReports.map(renderReport)
                         )}
                       </>
                     );
@@ -726,6 +682,59 @@ const AdminDashboardPage = () => {
               </div>
             </Panel>
           </section>
+
+          <section className="grid gap-6 xl:grid-cols-1">
+            <Panel
+              title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
+              icon={<ScrollText className="h-4 w-4" />}
+              description={language.match({ english: () => "All moderation actions in chronological order — user management, post deletions, report handling.", german: () => "Alle Moderationsaktionen in chronologischer Reihenfolge — Nutzerverwaltung, Beitragslöschungen, Meldungsbearbeitung." })}
+            >
+              {moderationLog === undefined ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                </div>
+              ) : moderationLog.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  {language.match({ english: () => "No moderation actions recorded yet.", german: () => "Noch keine Moderationsaktionen aufgezeichnet." })}
+                </p>
+              ) : (
+                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                  {moderationLog.map((entry) => (
+                    <ModerationLogEntry
+                      key={entry._id}
+                      entry={entry}
+                      language={language}
+                      isReopened={
+                        entry.reportId && postReports
+                          ? (postReports as any[]).find((r: any) => r._id === entry.reportId)?.status === "offen"
+                          : false
+                      }
+                      reopening={reopeningLogId === entry._id}
+                      onReopenReport={async (reportId) => {
+                        setReopeningLogId(entry._id);
+                        try {
+                          await reopenPostReport({ id: reportId });
+                          toast({
+                            title: language.match({ english: () => "Reopened", german: () => "Wieder geöffnet" }),
+                            description: language.match({ english: () => "Report has been reopened.", german: () => "Meldung wurde wieder geöffnet." }),
+                          });
+                        } catch (err) {
+                          toast({
+                            title: language.match({ english: () => "Error", german: () => "Fehler" }),
+                            description: err instanceof Error ? err.message : language.match({ english: () => "Reopen failed", german: () => "Wiederöffnen fehlgeschlagen" }),
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setReopeningLogId(null);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </Panel>
+          </section>
+          
 
           <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <Panel
@@ -920,6 +929,8 @@ const AdminDashboardPage = () => {
                 </div>
               )}
             </Panel>
+
+
 
             <div className="flex flex-col gap-6">
               <Panel
@@ -1224,29 +1235,7 @@ const AdminDashboardPage = () => {
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-1">
-            <Panel
-              title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
-              icon={<ScrollText className="h-4 w-4" />}
-              description={language.match({ english: () => "All moderation actions in chronological order — user management, post deletions, report handling.", german: () => "Alle Moderationsaktionen in chronologischer Reihenfolge — Nutzerverwaltung, Beitragslöschungen, Meldungsbearbeitung." })}
-            >
-              {moderationLog === undefined ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                </div>
-              ) : moderationLog.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  {language.match({ english: () => "No moderation actions recorded yet.", german: () => "Noch keine Moderationsaktionen aufgezeichnet." })}
-                </p>
-              ) : (
-                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
-                  {moderationLog.map((entry) => (
-                    <ModerationLogEntry key={entry._id} entry={entry} language={language} />
-                  ))}
-                </div>
-              )}
-            </Panel>
-          </section>
+          
 
           <section className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1359,7 +1348,19 @@ const actionMeta: Record<string, { label: string; color: string }> = {
   reopen_report: { label: "Meldung wieder geöffnet", color: "bg-amber-500/10 text-amber-600" },
 };
 
-function ModerationLogEntry({ entry, language }: { entry: any; language: any }) {
+function ModerationLogEntry({
+  entry,
+  language,
+  reopening,
+  isReopened,
+  onReopenReport,
+}: {
+  entry: any;
+  language: any;
+  reopening?: boolean;
+  isReopened?: boolean;
+  onReopenReport?: (reportId: any) => void;
+}) {
   const meta = actionMeta[entry.action] ?? { label: entry.action, color: "bg-secondary text-muted-foreground" };
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-background/80 p-3">
@@ -1386,9 +1387,31 @@ function ModerationLogEntry({ entry, language }: { entry: any; language: any }) 
           <p className="mt-0.5 text-xs text-muted-foreground">{entry.details}</p>
         )}
       </div>
-      <span className="shrink-0 text-[11px] text-muted-foreground">
-        {timeAgo(entry.createdAt)}
-      </span>
+      <div className="flex shrink-0 items-center gap-2">
+        {entry.action === "dismiss_report" && entry.reportId && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={`h-7 gap-1 text-xs ${
+              isReopened
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-destructive hover:text-destructive"
+            }`}
+            disabled={reopening || isReopened}
+            onClick={() => !isReopened && onReopenReport?.(entry.reportId)}
+          >
+            {reopening ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Undo2 className="h-3 w-3" />
+            )}
+            {language.match({ english: () => "Reopen", german: () => "Wieder öffnen" })}
+          </Button>
+        )}
+        <span className="shrink-0 text-[11px] text-muted-foreground">
+          {timeAgo(entry.createdAt)}
+        </span>
+      </div>
     </div>
   );
 }

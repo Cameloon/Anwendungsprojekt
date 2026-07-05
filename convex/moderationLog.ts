@@ -11,6 +11,7 @@ export async function logModeration(
     targetName?: string;
     targetEmail?: string;
     postId?: any;
+    reportId?: any;
     postSnapshot?: any;
     reason?: string;
     details?: string;
@@ -24,6 +25,7 @@ export async function logModeration(
     targetName: args.targetName,
     targetEmail: args.targetEmail,
     postId: args.postId,
+    reportId: args.reportId,
     postSnapshot: args.postSnapshot,
     reason: args.reason,
     details: args.details,
@@ -67,6 +69,7 @@ export const insert = mutation({
     targetName: v.optional(v.string()),
     targetEmail: v.optional(v.string()),
     postId: v.optional(v.id("posts")),
+    reportId: v.optional(v.id("postReports")),
     postSnapshot: v.optional(
       v.object({
         title: v.string(),

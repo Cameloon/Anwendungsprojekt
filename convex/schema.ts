@@ -269,6 +269,7 @@ export default defineSchema({
     targetName: v.optional(v.string()),
     targetEmail: v.optional(v.string()),
     postId: v.optional(v.id("posts")),
+    reportId: v.optional(v.id("postReports")),
     postSnapshot: v.optional(
       v.object({
         title: v.string(),
