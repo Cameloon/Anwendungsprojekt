@@ -1,85 +1,32 @@
 # Architekturüberblick — DHBW-Studierenden-Plattform
 
-## 1. Systemkontext (C4 Level 1)
+## Systemkontext
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Externe Systeme                         │
 │                                                                 │
+│     Authentifizierung             Datenbank + File Storage      │
 │           ┌──────────────┐    ┌──────────────┐                  │
 │           │    Clerk     │    │   Convex     │                  │
-│           │  (Auth-SaaS) │    │  (BaaS/DB,   │                  │
-│           │              │    │   inkl. File │                  │
-│           │              │    │   Storage)   │                  │
+│           │              │    │              │                  │
 │           └──────┬───────┘    └──────┬───────┘                  │
-└──────────────────┼────────────────────┼─────────────────────────┘
-                    │ JWT-Token           │ WebSocket/HTTP
-                    ▼                    ▼
+└──────────────────┼───────────────────┼──────────────────────────┘
+                   │ JWT-Token         │ WebSocket/HTTP
+                   ▼                   ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    React SPA (Browser)                           │
-│                    Vite + React 18 + TypeScript                  │
+│                   Web Browser                                    │
+│                                                                  │
+│                   React: Single Page Application                 │
+│                    (Vite + React 18 + TypeScript)                │
 └──────────────────────────────────────────────────────────────────┘
-           ▲
-           │  Browser (HTTP)
-     DHBW-Studierende / Admins
+
 ```
 
 ---
 
-## 2. Container-Diagramm (C4 Level 2)
 
-```
-┌──────────────────────────── Browser ─────────────────────────────────┐
-│                                                                        │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                     React SPA (Frontend)                        │  │
-│  │                                                                  │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │  │
-│  │  │  Auth-Layer  │  │  Routing     │  │  UI-Komponenten       │  │  │
-│  │  │  (Clerk SDK) │  │  (React      │  │  (shadcn/ui +         │  │  │
-│  │  │  + Demo-Mode │  │   Router)    │  │   Radix UI +          │  │  │
-│  │  └──────┬───────┘  └──────┬───────┘  │   Tailwind CSS)      │  │  │
-│  │         │                 │          └──────────────────────┘  │  │
-│  │  ┌──────▼──────────────────▼────────────────────────────────┐  │  │
-│  │  │                  Feature-Module (Pages)                   │  │  │
-│  │  │  Dashboard │ Forum │ Planner │ Skripte │ Profil │ Admin   │  │  │
-│  │  └──────────────────────────────┬───────────────────────────┘  │  │
-│  │                                 │                               │  │
-│  │  ┌──────────────────────────────▼───────────────────────────┐  │  │
-│  │  │                  Datenzugriffs-Schicht                    │  │  │
-│  │  │  Convex React Client  │  LocalStorage Demo-Store          │  │  │
-│  │  │  (useQuery/useMutation│  (Auth/Profil, kein Backend       │  │  │
-│  │  │  aus convex/react)    │   nötig)                          │  │  │
-│  │  └──────────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────┘
-            │ WebSocket (Realtime)
-            ▼
-┌────────────────────────┐          ┌───────────────────────────┐
-│   Convex Backend       │◄────────►│   Clerk (Auth Provider)   │
-│   (Serverless BaaS,    │          │   JWT-Ausstellung +        │
-│    inkl. File Storage) │          │   Benutzerverwaltung       │
-│                        │          └───────────────────────────┘
-│  ┌──────────────────┐  │
-│  │  Convex-Datenbank│  │
-│  │  (26 Tabellen:   │  │
-│  │  profiles, forums│  │
-│  │  posts, deadlines│  │
-│  │  scripts, groups │  │
-│  │  sections u.v.m.)│  │
-│  └──────────────────┘  │
-│  ┌──────────────────┐  │
-│  │  Server Functions│  │
-│  │  (queries /      │  │
-│  │   mutations /    │  │
-│  │   actions)       │  │
-│  └──────────────────┘  │
-└────────────────────────┘
-```
-
----
-
-## 3. Hauptkomponenten
+## Hauptkomponenten
 
 | Komponente | Technologie | Aufgabe |
 |---|---|---|
@@ -88,7 +35,7 @@
 | **Backend (BaaS)** | Convex | Serverless-Funktionen, Echtzeit-Daten, Datenbank, Datei-Storage (Skripte/Uploads) |
 | **Lokaler State** | localStorage Stores | Demo-Modus, Forum- & Skripte-Daten (offline-fähig) |
 
-### 3.1 Convex-Datenbanktabellen (26)
+### Convex-Datenbanktabellen
 
 | Tabelle | Beschreibung |
 |---|---|
@@ -119,7 +66,7 @@
 | `userReports` | Bug- und Feature-Meldungen der Nutzer |
 | `notifications` | Einladungsbenachrichtigungen (Forum / Deadline) |
 
-### 3.2 Convex-Module
+### Convex-Module
 
 | Datei | Aufgabe |
 |---|---|
@@ -141,11 +88,11 @@
 
 ---
 
-## 4. Kommunikationswege
+## Kommunikationswege
 
 ```
-Browser SPA  ──── WebSocket (Realtime-Sync) ────►  Convex Backend
-Browser SPA  ──── HTTPS / JWT-Austausch ─────────►  Clerk Auth
+Web-Browser  ──── WebSocket (Realtime-Sync) ────►  Convex Backend
+Web-Browser  ──── HTTPS / JWT-Austausch ─────────►  Clerk Auth
 Convex       ──── JWT-Validierung ───────────────►  Clerk (issuer domain)
 ```
 
@@ -155,16 +102,8 @@ Convex       ──── JWT-Validierung ────────────�
 
 ---
 
-## 5. Architekturmuster
 
-- **Client-Server-Modell** mit serverlosem Backend (Convex BaaS)
-- **Layered Architecture** im Frontend: UI-Schicht → Feature-Module → Datenzugriffs-Schicht
-- **Demo-Mode Pattern**: vollständig localStorage-basierter Betrieb ohne externe Dienste — aktiviert automatisch, wenn Umgebungsvariablen fehlen
-- **Protected Routes**: rollenbasierte Zugriffskontrolle (User / Admin) direkt im Router
-
----
-
-## 6. Feature-Module (Routen)
+## Feature-Module (React Routen)
 
 | Route | Sichtbarkeit | Beschreibung |
 |---|---|---|
@@ -181,25 +120,14 @@ Convex       ──── JWT-Validierung ────────────�
 | `/datenschutz` | öffentlich | Datenschutzerklärung |
 | `/nutzungsordnung` | öffentlich | Nutzungsordnung |
 
----
-
-## 7. Externe Abhängigkeiten
-
-| Dienst | Typ | Zweck |
-|---|---|---|
-| **Clerk** | SaaS (Cloud) | Authentifizierung & Nutzerverwaltung |
-| **Convex** | BaaS (Cloud) | Datenbank, Echtzeit-Sync, Serverlogik, Datei-Storage (Skripte / PDFs) |
-
-Beide Dienste sind Cloud-basiert — kein On-Premise-Betrieb.
 
 ---
 
-## 8. Technologische Grundentscheidungen
+## Technologische Grundentscheidungen
 
 | Entscheidung | Ausprägung | Begründung |
 |---|---|---|
 | Hosting-Modell | Cloud-only (kein eigener Server) | Kein Infrastrukturaufwand; alle Services managed |
 | Typsicherheit | TypeScript end-to-end | Frontend und Convex-Backend teilen Typen via generierter API |
-| Offline-Fähigkeit | Demo-Mode (localStorage) | Entwicklung & Präsentation ohne konfigurierte Cloud-Dienste |
 | Datensynchronisation | Reaktiv (Convex Realtime) | Automatisches UI-Update bei Datenänderungen ohne Polling |
 | Komponentenbibliothek | shadcn/ui + Radix UI | Barrierefreiheit, Konsistenz, keine externe Laufzeitabhängigkeit |
