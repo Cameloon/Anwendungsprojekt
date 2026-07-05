@@ -14,6 +14,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Navbar from "@/components/Navbar";
+import BackToTopButton from "@/components/BackToTopButton";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -352,6 +353,7 @@ const DashboardPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <BackToTopButton />
       <main className="w-full px-4 pb-24 pt-32 sm:px-6 md:pt-24 lg:px-8">
         <div className="mx-auto w-full max-w-7xl space-y-6">
           <motion.section

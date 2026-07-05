@@ -1,21 +1,15 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   Ban,
-  BookMarked,
-  CheckCircle2,
   ChevronDown,
-  Eye,
   GraduationCap,
   Info,
-  LayoutGrid,
   Loader2,
   Plus,
   Shield,
-  ShieldCheck,
   ShieldOff,
   Trash2,
   Undo2,
@@ -50,6 +44,7 @@ import {
   Cell,
 } from "recharts";
 import Navbar from "@/components/Navbar";
+import BackToTopButton from "@/components/BackToTopButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -114,25 +109,6 @@ const AdminDashboardPage = () => {
   const [newLectureName, setNewLectureName] = useState("");
   const [lecturesOpen, setLecturesOpen] = useState(true);
   const [lectureSearch, setLectureSearch] = useState("");
-
-  const ruleCards = [
-    {
-      title: language.match({ english: () => "Approvals", german: () => "Freischaltungen" }),
-      text: language.match({ english: () => "Review new users, grant access or delete accounts.", german: () => "Neue Nutzer prüfen, Freigaben aussprechen oder Accounts löschen." }),
-      icon: <Users className="h-4 w-4" />,
-    },
-    {
-      title: language.match({ english: () => "Moderation", german: () => "Moderation" }),
-      text: language.match({ english: () => "Review reported posts, delete content and log actions.", german: () => "Gemeldete Posts prüfen, Beiträge löschen und Maßnahmen protokollieren." }),
-      icon: <ShieldCheck className="h-4 w-4" />,
-    },
-    {
-      title: language.match({ english: () => "Lectures", german: () => "Vorlesungen" }),
-      text: language.match({ english: () => "Import, edit and provide lectures as options in forms.", german: () => "Vorlesungen importieren, bearbeiten und als Auswahl in Formularen bereitstellen." }),
-      icon: <BookMarked className="h-4 w-4" />,
-    },
-  ];
-
 
   // Auto-seed base lecture data once on admin page load
   useEffect(() => {
@@ -313,20 +289,12 @@ const AdminDashboardPage = () => {
             transition={{ duration: 0.35 }}
             className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary via-primary/90 to-accent p-8 text-primary-foreground shadow-sm"
           >
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.24em] text-white/85">
-                  <Shield className="h-3.5 w-3.5" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-bold uppercase tracking-[0.24em] text-black/85">
+                  <Shield className="h-4 w-4" />
                   {language.match({ english: () => "Admin Dashboard", german: () => "Admin-Dashboard" })}
                 </div>
-                <h1 className="font-heading text-3xl font-bold leading-tight sm:text-4xl">
-                  {language.match({ english: () => "Moderation, approvals and lecture management in one place", german: () => "Moderation, Freischaltungen und Vorlesungsverwaltung an einem Ort" })}
-                </h1>
-                <p className="mt-4 max-w-2xl text-sm text-white/85 sm:text-base">
-                  {language.match({
-                    english: () => "approve users, review reported posts and administer lectures.",
-                    german: () => "Nutzer freischalten, gemeldete Beiträge prüfen und Vorlesungen administrieren." })}
-                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:min-w-[34rem] lg:flex-1">
@@ -351,26 +319,7 @@ const AdminDashboardPage = () => {
             </div>
           </motion.section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {ruleCards.map((card) => (
-              <div
-                key={card.title}
-                className="rounded-3xl border border-border/60 bg-card p-5 shadow-sm"
-              >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  {card.icon}
-                </div>
-                <h2 className="font-heading text-xl font-semibold">
-                  {card.title}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {card.text}
-                </p>
-              </div>
-            ))}
-          </section>
-
-          <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <section className="grid gap-6">
             <div className="flex flex-col gap-6">
             <Panel
               title={language.match({ english: () => "User Approvals", german: () => "Nutzerfreischaltungen" })}
@@ -736,7 +685,7 @@ const AdminDashboardPage = () => {
           </section>
           
 
-          <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <section className="grid gap-6">
             <Panel
               title={language.match({ english: () => "Lecture Management", german: () => "Vorlesungsverwaltung" })}
               icon={<GraduationCap className="h-4 w-4" />}
@@ -1234,40 +1183,9 @@ const AdminDashboardPage = () => {
               </Panel>
             </div>
           </section>
-
-          
-
-          <section className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h2 className="font-heading text-2xl font-semibold">
-                  {language.match({ english: () => "Further Admin Actions", german: () => "Weiterführende Admin-Aktionen" })}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {language.match({ english: () => "Direct jumps to the relevant areas.", german: () => "Direkte Sprünge in die fachlich relevanten Bereiche." })}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link to="/forum">
-                  <Button variant="outline" className="gap-2">
-                    <Eye className="h-4 w-4" /> {language.match({ english: () => "Review Forum", german: () => "Forum prüfen" })}
-                  </Button>
-                </Link>
-                <Link to="/planner">
-                  <Button variant="outline" className="gap-2">
-                    <LayoutGrid className="h-4 w-4" /> {language.match({ english: () => "Review Tasks", german: () => "Aufgaben prüfen" })}
-                  </Button>
-                </Link>
-                <Link to="/dashboard">
-                  <Button className="gap-2">
-                    <CheckCircle2 className="h-4 w-4" /> {language.match({ english: () => "Go to User View", german: () => "Zur Nutzeransicht" })}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </section>
         </div>
       </main>
+      <BackToTopButton />
 
       <AlertDialog open={!!banTarget} onOpenChange={(open) => !open && setBanTarget(null)}>
         <AlertDialogContent>
@@ -1426,12 +1344,12 @@ function MetricCard({
   hint: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-left text-white shadow-sm backdrop-blur-sm">
+    <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-left text-black shadow-sm backdrop-blur-sm">
       <p className="text-2xl font-semibold leading-none">{value}</p>
-      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/70">
+      <p className="mt-2 text-xs uppercase tracking-[0.18em] text-black/70">
         {label}
       </p>
-      <p className="mt-1 text-[11px] text-white/70">{hint}</p>
+      <p className="mt-1 text-[11px] text-black/70">{hint}</p>
     </div>
   );
 }

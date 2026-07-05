@@ -31,6 +31,7 @@ import {
   Filter as FilterIcon,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import BackToTopButton from "@/components/BackToTopButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -899,6 +900,7 @@ function PlannerLayout({
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <BackToTopButton />
       <div className="pt-32 md:pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-5xl">
           {/* Header */}

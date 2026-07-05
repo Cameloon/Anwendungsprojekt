@@ -27,6 +27,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import BackToTopButton from "@/components/BackToTopButton";
 import Whiteboard from "@/components/Whiteboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1026,6 +1027,7 @@ function ForumPageLayout({
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <BackToTopButton />
       <div className="pt-32 md:pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
