@@ -31,6 +31,7 @@ export default defineSchema({
       )
     ),
     createdAt: v.number(),
+    languageSetting: v.optional(v.union(v.literal("english"), v.literal("german"))),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]).index("by_kurs", ["kurs"]),
 
