@@ -33,11 +33,7 @@ describe("AdminDashboardPage", () => {
       </ThemeProvider>,
     );
 
-    expect(
-      screen.getByRole("heading", {
-        name: /Moderation, Freischaltungen und Vorlesungsverwaltung an einem Ort/i,
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Admin-Dashboard/i)).toBeInTheDocument();
     expect(screen.getByText(/Nutzerfreischaltungen/i)).toBeInTheDocument();
     expect(screen.getByText(/Moderationsprotokoll/i)).toBeInTheDocument();
     expect(

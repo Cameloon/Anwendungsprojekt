@@ -197,7 +197,7 @@ const DashboardPage = () => {
         {
           title: language.match({
             english: () => "Forum Posts",
-            german: () => "Forenbeitraege",
+            german: () => "Forenbeiträge",
           }),
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
@@ -275,7 +275,7 @@ const DashboardPage = () => {
         {
           title: language.match({
             english: () => "All Forum Posts",
-            german: () => "Alle Forenbeitraege",
+            german: () => "Alle Forenbeiträge",
           }),
           icon: <MessageSquare className="h-4 w-4" />,
           linkTo: "/forum",
@@ -526,7 +526,7 @@ const DashboardPage = () => {
                   onClick={() => setSelectedSubject(null)}
                   disabled={!selectedSubject}
                 >
-                  {language.match({ english: () => "Overall View", german: () => "Gesamtuebersicht" })}
+                  {language.match({ english: () => "Overall View", german: () => "Gesamtübersicht" })}
                 </Button>
               </div>
             </div>
