@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as deadlines from "../deadlines.js";
 import type * as feedback from "../feedback.js";
+import type * as forumAccess from "../forumAccess.js";
 import type * as forums from "../forums.js";
 import type * as groups from "../groups.js";
 import type * as hateSpeech from "../hateSpeech.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   deadlines: typeof deadlines;
   feedback: typeof feedback;
+  forumAccess: typeof forumAccess;
   forums: typeof forums;
   groups: typeof groups;
   hateSpeech: typeof hateSpeech;

@@ -122,7 +122,6 @@ interface DeadlineItem {
   messageCount: number;
   visibility: "public" | "private";
   invitees: string[];
-  allowedKurse: string[];
   linkedScriptIds?: string[];
   linkedGroupIds?: string[];
   ownerId: string;
@@ -232,6 +231,10 @@ function PlannerPage() {
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [showPastWarning, setShowPastWarning] = useState(false);
   const pastDateConfirmed = useRef(false);
+  const resetPastWarning = () => {
+    pastDateConfirmed.current = false;
+    setShowPastWarning(false);
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -255,7 +258,6 @@ function PlannerPage() {
     vorlesung: d.vorlesung,
     priority: d.priority ?? "med",
     invitees: d.invitees ?? [],
-    allowedKurse: d.allowedKurse ?? [],
     linkedScriptIds: d.linkedScriptIds ?? [],
     linkedGroupIds: d.linkedGroupIds ?? [],
     ownerId: d.ownerId,
@@ -277,8 +279,7 @@ function PlannerPage() {
     setSelectedInvitees([]);
     setEditingId(null);
     setShowForm(false);
-    pastDateConfirmed.current = false;
-    setShowPastWarning(false);
+    resetPastWarning();
   };
 
   const selectInvitee = (p: { userId: string; displayName: string }) => {
@@ -408,8 +409,7 @@ function PlannerPage() {
   };
 
   const startEdit = (d: DeadlineItem) => {
-    pastDateConfirmed.current = false;
-    setShowPastWarning(false);
+    resetPastWarning();
     setTitle(d.title);
     setDate(d.date);
     setTime(d.time ?? "");
@@ -593,7 +593,7 @@ function PlannerPage() {
       title={title}
       setTitle={setTitle}
       date={date}
-      setDate={(v) => { setDate(v); pastDateConfirmed.current = false; setShowPastWarning(false); }}
+      setDate={(v) => { setDate(v); resetPastWarning(); }}
       time={time}
       setTime={setTime}
       category={category}

@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { checkHateSpeech } from "./hateSpeech";
 import { logModeration } from "./moderationLog";
+import { canAccessForum } from "./forumAccess";
 
 async function enrichPost(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,26 +64,20 @@ async function enrichPost(
   };
 }
 
+// Setzt flagged/detectedWord auf einem Patch-Objekt konsistent — auch zurück
+// auf "sauber", wenn der neue Text keinen Treffer mehr enthält. Geteilt
+// zwischen Post- und Kommentar-Bearbeitung.
+function applyFlagPatch(patch: Record<string, unknown>, flagged: boolean, detectedWord?: string) {
+  patch.flagged = flagged || undefined;
+  patch.detectedWord = flagged ? detectedWord : undefined;
+}
+
 async function isAdmin(ctx: any, userId: string): Promise<boolean> {
   const profile = await ctx.db
     .query("profiles")
     .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .unique();
   return profile?.role === "admin";
-}
-
-// Öffentliche Foren sind für jeden eingeloggten Nutzer lesbar; private nur für
-// Mitglieder oder Admins (gleiche Regel wie beim Erstellen von Posts).
-async function canAccessForum(ctx: any, forum: Doc<"forums">, userId: string): Promise<boolean> {
-  if (forum.visibility !== "private") return true;
-  const member = await ctx.db
-    .query("forumMembers")
-    .withIndex("by_forum_user", (q: any) =>
-      q.eq("forumId", forum._id).eq("userId", userId)
-    )
-    .unique();
-  if (member) return true;
-  return await isAdmin(ctx, userId);
 }
 
 // ─── Queries ───
@@ -315,8 +310,7 @@ export const update = mutation({
       patch.linkedScriptIds = args.linkedScriptIds;
     if (args.linkedDeadlineIds !== undefined)
       patch.linkedDeadlineIds = args.linkedDeadlineIds;
-    patch.flagged = flagged || undefined;
-    patch.detectedWord = flagged ? detectedWord : undefined;
+    applyFlagPatch(patch, flagged, detectedWord);
 
     await ctx.db.patch(args.postId, patch);
 
@@ -359,6 +353,62 @@ export const update = mutation({
   },
 });
 
+// Löscht alle Unterressourcen eines Posts (Kommentare+Likes, Likes, Dateien
+// samt Storage-Blob, Meldungen) sowie den Post selbst. Exportiert, damit
+// forums.ts::deleteForum dieselbe Kaskade nutzen kann, statt sie zu duplizieren.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function deletePostCascade(ctx: any, postId: Id<"posts">) {
+  const comments = await ctx.db
+    .query("postComments")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_post", (q: any) => q.eq("postId", postId))
+    .collect();
+  await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    comments.map(async (c: any) => {
+      const commentLikeRecords = await ctx.db
+        .query("commentLikes")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .withIndex("by_comment", (q: any) => q.eq("commentId", c._id))
+        .collect();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await Promise.all(commentLikeRecords.map((cl: any) => ctx.db.delete(cl._id)));
+      await ctx.db.delete(c._id);
+    })
+  );
+
+  const likes = await ctx.db
+    .query("postLikes")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_post", (q: any) => q.eq("postId", postId))
+    .collect();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await Promise.all(likes.map((l: any) => ctx.db.delete(l._id)));
+
+  const files = await ctx.db
+    .query("postFiles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_post", (q: any) => q.eq("postId", postId))
+    .collect();
+  await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    files.map(async (f: any) => {
+      await ctx.storage.delete(f.storageId);
+      await ctx.db.delete(f._id);
+    })
+  );
+
+  const reports = await ctx.db
+    .query("postReports")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_post", (q: any) => q.eq("postId", postId))
+    .collect();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await Promise.all(reports.map((r: any) => ctx.db.delete(r._id)));
+
+  await ctx.db.delete(postId);
+}
+
 export const deletePost = mutation({
   args: {
     postId: v.id("posts"),
@@ -393,41 +443,7 @@ export const deletePost = mutation({
       createdAt: Date.now(),
     });
 
-    const comments = await ctx.db
-      .query("postComments")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
-      .collect();
-    for (const c of comments) {
-      const commentLikeRecords = await ctx.db
-        .query("commentLikes")
-        .withIndex("by_comment", (q: any) => q.eq("commentId", c._id))
-        .collect();
-      for (const cl of commentLikeRecords) await ctx.db.delete(cl._id);
-      await ctx.db.delete(c._id);
-    }
-
-    const likes = await ctx.db
-      .query("postLikes")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
-      .collect();
-    for (const l of likes) await ctx.db.delete(l._id);
-
-    const files = await ctx.db
-      .query("postFiles")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
-      .collect();
-    for (const f of files) {
-      await ctx.storage.delete(f.storageId);
-      await ctx.db.delete(f._id);
-    }
-
-    const reports = await ctx.db
-      .query("postReports")
-      .filter((q) => q.eq(q.field("postId"), args.postId))
-      .collect();
-    for (const r of reports) await ctx.db.delete(r._id);
-
-    await ctx.db.delete(args.postId);
+    await deletePostCascade(ctx, args.postId);
   },
 });
 
@@ -492,16 +508,14 @@ async function deleteCommentSubtree(ctx: any, commentId: any) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .withIndex("by_parent", (q: any) => q.eq("parentId", commentId))
     .collect();
-  for (const child of children) {
-    await deleteCommentSubtree(ctx, child._id);
-  }
+  await Promise.all(children.map((child) => deleteCommentSubtree(ctx, child._id)));
 
   const likes = await ctx.db
     .query("commentLikes")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .withIndex("by_comment", (q: any) => q.eq("commentId", commentId))
     .collect();
-  for (const l of likes) await ctx.db.delete(l._id);
+  await Promise.all(likes.map((l) => ctx.db.delete(l._id)));
 
   await ctx.db.delete(commentId);
 }
@@ -562,8 +576,7 @@ export const updateComment = mutation({
       content: args.content.trim(),
       updatedAt: Date.now(),
     };
-    patch.flagged = flagged || undefined;
-    patch.detectedWord = flagged ? detectedWord : undefined;
+    applyFlagPatch(patch, flagged, detectedWord);
     await ctx.db.patch(args.commentId, patch);
 
     if (isModeration) {

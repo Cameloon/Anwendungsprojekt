@@ -3,6 +3,19 @@ import { mutation, query } from "./_generated/server";
 
 // ─── Helpers ───
 
+// Alle Profile mit einem bestimmten Kurs — nutzt den vorhandenen by_kurs-Index
+// statt die gesamte profiles-Tabelle zu laden und in JS zu filtern. Einzige
+// Stelle, die "wer ist in Kurs X" beantwortet; von getKursUserIds und
+// listForUser genutzt.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getKursMates(ctx: any, kurs: string): Promise<any[]> {
+  return await ctx.db
+    .query("profiles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_kurs", (q: any) => q.eq("kurs", kurs))
+    .collect();
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getKursUserIds(ctx: any, userId: string): Promise<string[]> {
   const profile = await ctx.db
@@ -11,12 +24,33 @@ async function getKursUserIds(ctx: any, userId: string): Promise<string[]> {
     .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .unique();
   if (!profile?.kurs) return [];
-  const all = await ctx.db.query("profiles").collect();
-  return all
+  const mates = await getKursMates(ctx, profile.kurs);
+  return mates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((p: any) => p.kurs === profile.kurs && p.userId !== userId)
+    .filter((p: any) => p.userId !== userId)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((p: any) => p.userId);
+}
+
+// Baut die Query für offene "deadline_invite"-Notifications zu einem Termin,
+// optional auf einen Empfänger eingeschränkt. Wird für das Markieren einzelner
+// Einladungen (accept/decline) sowie das Aufräumen aller offenen Einladungen
+// beim Löschen des Termins genutzt.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pendingInviteQuery(ctx: any, deadlineId: any, recipientId?: string) {
+  let q = ctx.db
+    .query("notifications")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("deadlineId"), deadlineId))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) => q.eq(q.field("status"), "pending"));
+  if (recipientId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    q = q.filter((q: any) => q.eq(q.field("recipientId"), recipientId));
+  }
+  return q;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,11 +119,7 @@ export const listForUser = query({
       .unique();
     const myKurs = myProfile?.kurs;
     const kursMates = myKurs
-      ? new Set(
-          (await ctx.db.query("profiles").collect())
-            .filter((p) => p.kurs === myKurs)
-            .map((p) => p.userId),
-        )
+      ? new Set((await getKursMates(ctx, myKurs)).map((p) => p.userId))
       : new Set<string>();
 
     const all = await ctx.db.query("deadlines").collect();
@@ -211,15 +241,7 @@ export async function acceptDeadlineForUser(ctx: any, deadline: any, userId: str
   }
   await ctx.db.patch(deadline._id, patchFields);
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const pendingNotif = await ctx.db
-    .query("notifications")
-    .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
-    .filter((q: any) => q.eq(q.field("recipientId"), userId))
-    .filter((q: any) => q.eq(q.field("deadlineId"), deadline._id))
-    .filter((q: any) => q.eq(q.field("status"), "pending"))
-    .first();
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  const pendingNotif = await pendingInviteQuery(ctx, deadline._id, userId).first();
   if (pendingNotif) {
     await ctx.db.patch(pendingNotif._id, { status: "accepted" });
   }
@@ -229,7 +251,6 @@ export async function acceptDeadlineForUser(ctx: any, deadline: any, userId: str
     title: deadline.title,
     date: deadline.date,
     time: deadline.time,
-    remindBefore: deadline.remindBefore,
     category: deadline.category,
     done: opts.done ?? false,
     note: deadline.note,
@@ -237,7 +258,6 @@ export async function acceptDeadlineForUser(ctx: any, deadline: any, userId: str
     priority: deadline.priority,
     visibility: deadline.visibility,
     invitees: [],
-    allowedKurse: deadline.allowedKurse,
     linkedScriptIds: deadline.linkedScriptIds,
     linkedGroupIds: deadline.linkedGroupIds,
     ownerId: userId,
@@ -254,7 +274,6 @@ export const create = mutation({
     title: v.string(),
     date: v.string(),
     time: v.optional(v.string()),
-    remindBefore: v.optional(v.array(v.number())),
     category: v.union(
       v.literal("abgabe"),
       v.literal("pruefung"),
@@ -267,7 +286,6 @@ export const create = mutation({
     ),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
-    allowedKurse: v.optional(v.array(v.string())),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
     linkedGroupIds: v.optional(v.array(v.id("forums"))),
   },
@@ -287,7 +305,6 @@ export const create = mutation({
       title,
       date: args.date,
       time: args.time,
-      remindBefore: args.remindBefore?.filter(Boolean),
       category: args.category,
       done: false,
       note: args.note?.trim(),
@@ -295,7 +312,6 @@ export const create = mutation({
       priority: args.priority ?? "med",
       visibility: args.visibility,
       invitees,
-      allowedKurse: args.allowedKurse?.filter(Boolean),
       linkedScriptIds: args.linkedScriptIds,
       linkedGroupIds: args.linkedGroupIds,
       ownerId: identity.subject,
@@ -341,7 +357,6 @@ export const update = mutation({
     title: v.optional(v.string()),
     date: v.optional(v.string()),
     time: v.optional(v.string()),
-    remindBefore: v.optional(v.array(v.number())),
     category: v.optional(
       v.union(v.literal("abgabe"), v.literal("pruefung"), v.literal("sonstiges"))
     ),
@@ -354,7 +369,6 @@ export const update = mutation({
       v.union(v.literal("public"), v.literal("private"))
     ),
     invitees: v.optional(v.array(v.string())),
-    allowedKurse: v.optional(v.array(v.string())),
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
     linkedGroupIds: v.optional(v.array(v.id("forums"))),
     done: v.optional(v.boolean()),
@@ -379,14 +393,12 @@ export const update = mutation({
     if (args.title !== undefined) patch.title = args.title.trim();
     if (args.date !== undefined) patch.date = args.date;
     if (args.time !== undefined) patch.time = args.time;
-    if (args.remindBefore !== undefined) patch.remindBefore = args.remindBefore;
     if (args.category !== undefined) patch.category = args.category;
     if (args.note !== undefined) patch.note = args.note?.trim();
     if (args.vorlesung !== undefined) patch.vorlesung = args.vorlesung?.trim();
     if (args.priority !== undefined) patch.priority = args.priority;
     if (args.visibility !== undefined) patch.visibility = args.visibility;
     if (args.invitees !== undefined) patch.invitees = args.invitees?.filter(Boolean);
-    if (args.allowedKurse !== undefined) patch.allowedKurse = args.allowedKurse?.filter(Boolean);
     if (args.linkedScriptIds !== undefined) patch.linkedScriptIds = args.linkedScriptIds;
     if (args.linkedGroupIds !== undefined) patch.linkedGroupIds = args.linkedGroupIds;
     if (args.done !== undefined) patch.done = args.done;
@@ -504,14 +516,7 @@ export const declineDeadline = mutation({
     await ctx.db.patch(args.deadlineId, patch);
 
     // Mark pending invitation notification as declined
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pendingNotif = await ctx.db
-      .query("notifications")
-      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
-      .filter((q: any) => q.eq(q.field("recipientId"), identity.subject))
-      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
-      .filter((q: any) => q.eq(q.field("status"), "pending"))
-      .first();
+    const pendingNotif = await pendingInviteQuery(ctx, args.deadlineId, identity.subject).first();
     if (pendingNotif) {
       await ctx.db.patch(pendingNotif._id, { status: "declined" });
     }
@@ -554,14 +559,8 @@ export const deleteDeadline = mutation({
       .collect();
     for (const m of messages) await ctx.db.delete(m._id);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pendingInvites = await ctx.db
-      .query("notifications")
-      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
-      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
-      .filter((q: any) => q.eq(q.field("status"), "pending"))
-      .collect();
-    for (const n of pendingInvites) await ctx.db.delete(n._id);
+    const pendingInvites = await pendingInviteQuery(ctx, args.deadlineId).collect();
+    await Promise.all(pendingInvites.map((n) => ctx.db.delete(n._id)));
 
     await ctx.db.delete(args.deadlineId);
   },

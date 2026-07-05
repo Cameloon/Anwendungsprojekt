@@ -569,14 +569,10 @@ const SkriptePage = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {(
                       [
-                        { value: "public", label: language.match({ english: () => "Public", german: () => "Öffentlich" }), icon: Globe },
-                        { value: "private", label: language.match({ english: () => "Private", german: () => "Privat" }), icon: Lock },
-                        {
-                          value: "jahrgang",
-                          label: language.match({ english: () => "Course", german: () => "Kurs" }),
-                          icon: GraduationCap,
-                        },
-                        { value: "group", label: language.match({ english: () => "Group", german: () => "Gruppe" }), icon: Users },
+                        { value: "public", label: visibilityLabels.public, icon: Globe },
+                        { value: "private", label: visibilityLabels.private, icon: Lock },
+                        { value: "jahrgang", label: visibilityLabels.jahrgang, icon: GraduationCap },
+                        { value: "group", label: visibilityLabels.group, icon: Users },
                       ] as const
                     ).map(({ value, label, icon: Icon }) => (
                       <button
@@ -685,17 +681,17 @@ const SkriptePage = () => {
                   <div className="flex items-center gap-1.5">
                     {script.visibility === "private" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <Lock className="h-3 w-3" /> {language.match({ english: () => "Private", german: () => "Privat" })}
+                        <Lock className="h-3 w-3" /> {visibilityLabels.private}
                       </span>
                     )}
                     {script.visibility === "jahrgang" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <GraduationCap className="h-3 w-3" /> {language.match({ english: () => "Course", german: () => "Kurs" })}
+                        <GraduationCap className="h-3 w-3" /> {visibilityLabels.jahrgang}
                       </span>
                     )}
                     {script.visibility === "group" && (
                       <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                        <Users className="h-3 w-3" /> {language.match({ english: () => "Group", german: () => "Gruppe" })}
+                        <Users className="h-3 w-3" /> {visibilityLabels.group}
                       </span>
                     )}
                     <span

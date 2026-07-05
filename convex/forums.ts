@@ -2,27 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { parseKurs, calculateCurrentSemester } from "./semesterLectures";
-
-// Öffentliche Foren sind für jeden eingeloggten Nutzer lesbar; private nur für
-// Mitglieder oder Admins.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function canAccessForum(ctx: any, forum: any, userId: string): Promise<boolean> {
-  if (forum.visibility !== "private") return true;
-  const member = await ctx.db
-    .query("forumMembers")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_forum_user", (q: any) =>
-      q.eq("forumId", forum._id).eq("userId", userId)
-    )
-    .unique();
-  if (member) return true;
-  const profile = await ctx.db
-    .query("profiles")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
-    .unique();
-  return profile?.role === "admin";
-}
+import { deletePostCascade } from "./posts";
+import { canAccessForum } from "./forumAccess";
 
 // ─── Queries ───
 
@@ -797,60 +778,27 @@ export const deleteForum = mutation({
       .query("forumMembers")
       .withIndex("by_forum", (q) => q.eq("forumId", args.forumId))
       .collect();
-    for (const m of members) await ctx.db.delete(m._id);
+    await Promise.all(members.map((m) => ctx.db.delete(m._id)));
 
-    // Delete all posts and their comments/likes
+    // Delete all posts (samt Kommentaren, Likes, Dateien, Meldungen) über
+    // dieselbe Kaskade wie posts.deletePost, statt sie hier zu duplizieren.
     const posts = await ctx.db
       .query("posts")
       .withIndex("by_forum", (q) => q.eq("forumId", args.forumId))
       .collect();
-    for (const post of posts) {
-      const likes = await ctx.db
-        .query("postLikes")
-        .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect();
-      for (const l of likes) await ctx.db.delete(l._id);
-
-      const comments = await ctx.db
-        .query("postComments")
-        .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect();
-      for (const c of comments) {
-        const commentLikes = await ctx.db
-          .query("commentLikes")
-          .withIndex("by_comment", (q) => q.eq("commentId", c._id))
-          .collect();
-        for (const cl of commentLikes) await ctx.db.delete(cl._id);
-        await ctx.db.delete(c._id);
-      }
-
-      const postFiles = await ctx.db
-        .query("postFiles")
-        .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect();
-      for (const f of postFiles) {
-        await ctx.storage.delete(f.storageId);
-        await ctx.db.delete(f._id);
-      }
-
-      const reports = await ctx.db
-        .query("postReports")
-        .filter((q) => q.eq(q.field("postId"), post._id))
-        .collect();
-      for (const r of reports) await ctx.db.delete(r._id);
-
-      await ctx.db.delete(post._id);
-    }
+    await Promise.all(posts.map((post) => deletePostCascade(ctx, post._id)));
 
     // Delete forum files
     const forumFiles = await ctx.db
       .query("forumFiles")
       .withIndex("by_forum", (q) => q.eq("forumId", args.forumId))
       .collect();
-    for (const f of forumFiles) {
-      await ctx.storage.delete(f.storageId);
-      await ctx.db.delete(f._id);
-    }
+    await Promise.all(
+      forumFiles.map(async (f) => {
+        await ctx.storage.delete(f.storageId);
+        await ctx.db.delete(f._id);
+      })
+    );
 
     await ctx.db.delete(args.forumId);
   },

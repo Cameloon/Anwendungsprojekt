@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
 import { getType } from "./schema";
 
 // ─── Constants ───
@@ -45,16 +44,31 @@ async function canAccess(ctx: any, script: any, viewerId: string): Promise<boole
 
   if (script.visibility === "group") {
     if (!script.forumId) return false;
-    const member = await ctx.db
-      .query("forumMembers")
-      .withIndex("by_forum_user", (q: any) =>
-        q.eq("forumId", script.forumId).eq("userId", viewerId)
-      )
-      .unique();
-    return !!member;
+    return await isForumMember(ctx, script.forumId, viewerId);
   }
 
   return false;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isForumMember(ctx: any, forumId: any, userId: string): Promise<boolean> {
+  const member = await ctx.db
+    .query("forumMembers")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_forum_user", (q: any) =>
+      q.eq("forumId", forumId).eq("userId", userId)
+    )
+    .unique();
+  return !!member;
+}
+
+// "Kurs"-Sichtbarkeit ohne gesetzten Kurs würde das Skript für niemanden
+// außer dem Autor selbst sichtbar machen, ohne dass der Nutzer das merkt.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function requireKurs(profile: any) {
+  if (!profile?.kurs) {
+    throw new Error("Für die Sichtbarkeit „Kurs“ muss dein Profil einen Kurs hinterlegt haben.");
+  }
 }
 
 // ─── Queries ───
@@ -230,13 +244,9 @@ export const create = mutation({
       if (!args.forumId) {
         throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
       }
-      const member = await ctx.db
-        .query("forumMembers")
-        .withIndex("by_forum_user", (q) =>
-          q.eq("forumId", args.forumId as Id<"forums">).eq("userId", identity.subject)
-        )
-        .unique();
-      if (!member) throw new Error("Du bist kein Mitglied dieses Forums.");
+      if (!(await isForumMember(ctx, args.forumId, identity.subject))) {
+        throw new Error("Du bist kein Mitglied dieses Forums.");
+      }
     }
 
     // Per-user quota
@@ -253,11 +263,7 @@ export const create = mutation({
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    // "Kurs"-Sichtbarkeit ohne gesetzten Kurs würde das Skript für niemanden
-    // außer dem Autor selbst sichtbar machen, ohne dass der Nutzer das merkt.
-    if (args.visibility === "jahrgang" && !profile?.kurs) {
-      throw new Error("Für die Sichtbarkeit „Kurs“ muss dein Profil einen Kurs hinterlegt haben.");
-    }
+    if (args.visibility === "jahrgang") requireKurs(profile);
 
     const authorName = profile?.displayName || identity.name || identity.email || "Unbekannt";
     const authorKurs = profile?.kurs ?? undefined;
@@ -330,22 +336,16 @@ export const update = mutation({
         if (!effectiveForumId) {
           throw new Error("Für Gruppen-Sichtbarkeit muss ein Forum ausgewählt werden.");
         }
-        const member = await ctx.db
-          .query("forumMembers")
-          .withIndex("by_forum_user", (q) =>
-            q.eq("forumId", effectiveForumId).eq("userId", identity.subject)
-          )
-          .unique();
-        if (!member) throw new Error("Du bist kein Mitglied dieses Forums.");
+        if (!(await isForumMember(ctx, effectiveForumId, identity.subject))) {
+          throw new Error("Du bist kein Mitglied dieses Forums.");
+        }
       }
       if (args.visibility === "jahrgang") {
         const profile = await ctx.db
           .query("profiles")
           .withIndex("by_user", (q) => q.eq("userId", identity.subject))
           .unique();
-        if (!profile?.kurs) {
-          throw new Error("Für die Sichtbarkeit „Kurs“ muss dein Profil einen Kurs hinterlegt haben.");
-        }
+        requireKurs(profile);
         // Kurs des Autors zum Zeitpunkt der Freigabe übernehmen — sonst bliebe
         // authorKurs von der Erstellung (evtl. leer) stehen und niemand könnte
         // das Skript trotz bestandener Prüfung sehen.

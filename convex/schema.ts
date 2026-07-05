@@ -166,7 +166,7 @@ export default defineSchema({
     title: v.string(),
     date: v.string(),
     time: v.optional(v.string()),
-    remindBefore: v.optional(v.array(v.number())),
+    remindBefore: v.optional(v.array(v.number())), // @deprecated nie tatsächlich verschickt, UI entfernt
     category: v.union(
       v.literal("abgabe"),
       v.literal("pruefung"),
@@ -181,7 +181,7 @@ export default defineSchema({
     declinedBy: v.optional(v.array(v.string())),
     visibility: v.union(v.literal("public"), v.literal("private")),
     invitees: v.optional(v.array(v.string())),
-    allowedKurse: v.optional(v.array(v.string())),
+    allowedKurse: v.optional(v.array(v.string())), // @deprecated nie ausgewertet, Sichtbarkeit läuft über invitees/isSameKurs
     linkedScriptIds: v.optional(v.array(v.id("scripts"))),
     linkedGroupIds: v.optional(v.array(v.id("forums"))),
     ownerId: v.string(),
@@ -266,6 +266,7 @@ export default defineSchema({
       v.literal("delete_user"),
       v.literal("update_role"),
       v.literal("delete_comment"),
+      v.literal("edit_comment"),
       v.literal("dismiss_report"),
       v.literal("reopen_report"),
     ),
@@ -370,7 +371,9 @@ export default defineSchema({
     reporterUserId: v.string(),
     status: v.union(v.literal("offen"), v.literal("erledigt")),
     createdAt: v.number(),
-  }).index("by_status", ["status"]),
+  })
+    .index("by_status", ["status"])
+    .index("by_post", ["postId"]),
 
   notifications: defineTable({
     type: v.union(
