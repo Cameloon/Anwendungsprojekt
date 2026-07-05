@@ -46,18 +46,14 @@ export const listForUser = query({
 
     const all = await ctx.db.query("deadlines").collect();
 
-    // For public deadlines: hide originals the user already accepted (owns a copy)
-    const myOwn = all.filter((d) => d.ownerId === identity.subject);
-    const acceptedSignatures = new Set(
-      myOwn.map((d) => `${d.title}|${d.date}|${d.category}`),
-    );
-
     const visible = all.filter((d) => {
       if (d.ownerId === identity.subject) return true;
       if (d.visibility === "public") {
+        // Sobald angenommen oder abgelehnt, wird der Nutzer aus invitees entfernt
+        // (und bei declinedBy eingetragen) — das Original verschwindet dann von
+        // selbst aus seiner Liste, die eigene Kopie bleibt über ownerId sichtbar.
+        if (!d.invitees?.includes(identity.subject)) return false;
         if (d.declinedBy?.includes(identity.subject)) return false;
-        const sig = `${d.title}|${d.date}|${d.category}`;
-        if (acceptedSignatures.has(sig)) return false;
         return true;
       }
       if (d.invitees?.includes(identity.subject)) return true;
@@ -136,15 +132,13 @@ export const getMessages = query({
 // Liefert die eigene Kopie des Termins für userId, falls bereits angenommen.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function findOwnCopy(ctx: any, deadline: any, userId: string) {
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   return await ctx.db
     .query("deadlines")
-    .filter((q: any) => q.eq(q.field("ownerId"), userId))
-    .filter((q: any) => q.eq(q.field("title"), deadline.title))
-    .filter((q: any) => q.eq(q.field("date"), deadline.date))
-    .filter((q: any) => q.eq(q.field("category"), deadline.category))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_source_owner", (q: any) =>
+      q.eq("sourceDeadlineId", deadline._id).eq("ownerId", userId),
+    )
     .first();
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 // Nimmt für userId eine Einladung zu deadline an: legt (falls noch keine eigene
@@ -200,6 +194,7 @@ export async function acceptDeadlineForUser(ctx: any, deadline: any, userId: str
     linkedScriptIds: deadline.linkedScriptIds,
     linkedGroupIds: deadline.linkedGroupIds,
     ownerId: userId,
+    sourceDeadlineId: deadline._id,
     createdAt: now,
     updatedAt: now,
   });
@@ -413,9 +408,8 @@ export const toggleDone = mutation({
       return;
     }
 
-    const isPublic = deadline.visibility === "public";
     const isInvited = deadline.invitees?.includes(identity.subject);
-    if (!isPublic && !isInvited) throw new Error("Not authorized");
+    if (!isInvited) throw new Error("Not authorized");
 
     const existing = await findOwnCopy(ctx, deadline, identity.subject);
     if (existing) {
@@ -456,7 +450,11 @@ export const declineDeadline = mutation({
       throw new Error("Nicht eingeladen");
 
     const updated = deadline.invitees.filter((id) => id !== identity.subject);
-    await ctx.db.patch(args.deadlineId, { invitees: updated });
+    const patch: Record<string, unknown> = { invitees: updated };
+    if (deadline.visibility === "public") {
+      patch.declinedBy = [...(deadline.declinedBy ?? []), identity.subject];
+    }
+    await ctx.db.patch(args.deadlineId, patch);
 
     // Mark pending invitation notification as declined
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -484,18 +482,10 @@ export const deleteDeadline = mutation({
     if (deadline.ownerId !== identity.subject)
       throw new Error("Not authorized — nur der Besitzer darf löschen");
 
-    // For public copies: add user to declinedBy on the ORIGINAL only, not other copies
-    if (deadline.visibility === "public" && deadline.ownerId === identity.subject) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const original = await ctx.db
-        .query("deadlines")
-        .filter((q: any) => q.eq(q.field("title"), deadline.title))
-        .filter((q: any) => q.eq(q.field("date"), deadline.date))
-        .filter((q: any) => q.eq(q.field("category"), deadline.category))
-        .filter((q: any) => q.eq(q.field("visibility"), "public"))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((q: any) => q.neq(q.field("ownerId"), identity.subject))
-        .first();
+    // Wird die eigene (angenommene) Kopie eines öffentlichen Termins gelöscht,
+    // im Original als abgelehnt vermerken, damit es nicht erneut vorgeschlagen wird.
+    if (deadline.sourceDeadlineId) {
+      const original = await ctx.db.get(deadline.sourceDeadlineId);
       if (original) {
         const declined = [...(original.declinedBy ?? []), identity.subject];
         await ctx.db.patch(original._id, { declinedBy: declined });
@@ -516,6 +506,15 @@ export const deleteDeadline = mutation({
       .withIndex("by_deadline", (q) => q.eq("deadlineId", args.deadlineId))
       .collect();
     for (const m of messages) await ctx.db.delete(m._id);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pendingInvites = await ctx.db
+      .query("notifications")
+      .filter((q: any) => q.eq(q.field("type"), "deadline_invite"))
+      .filter((q: any) => q.eq(q.field("deadlineId"), args.deadlineId))
+      .filter((q: any) => q.eq(q.field("status"), "pending"))
+      .collect();
+    for (const n of pendingInvites) await ctx.db.delete(n._id);
 
     await ctx.db.delete(args.deadlineId);
   },
