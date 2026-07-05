@@ -171,7 +171,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
     <>
       {!IS_DEMO && <ClerkUserBridge onUser={setClerkUser} />}
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{language.match({ english: () => "Account settings", german: () => "Account-Einstellungen" })}</DialogTitle>
           <DialogDescription>{language.match({ english: () => "Manage your profile and password.", german: () => "Verwalte dein Profil und dein Passwort." })}</DialogDescription>
