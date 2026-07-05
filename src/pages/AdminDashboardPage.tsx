@@ -22,6 +22,7 @@ import {
   Users,
   FileWarning,
   MessageCircleHeart,
+  ScrollText,
 } from "lucide-react";
 import {
   Tooltip,
@@ -91,6 +92,7 @@ const AdminDashboardPage = () => {
   const userReports = useQuery(api.userReports.getAdminReports, {});
   const markReportDone = useMutation(api.userReports.markDone);
   const postReports = useQuery(api.postReports.getAdminReports, {});
+  const moderationLog = useQuery(api.moderationLog.listAll, {});
   const dismissPostReport = useMutation(api.postReports.markDone);
   const reopenPostReport = useMutation(api.postReports.reopen);
   const deletePost = useMutation(api.posts.deletePost);
@@ -1222,6 +1224,30 @@ const AdminDashboardPage = () => {
             </div>
           </section>
 
+          <section className="grid gap-6 xl:grid-cols-1">
+            <Panel
+              title={language.match({ english: () => "Moderation Log", german: () => "Moderationsprotokoll" })}
+              icon={<ScrollText className="h-4 w-4" />}
+              description={language.match({ english: () => "All moderation actions in chronological order — user management, post deletions, report handling.", german: () => "Alle Moderationsaktionen in chronologischer Reihenfolge — Nutzerverwaltung, Beitragslöschungen, Meldungsbearbeitung." })}
+            >
+              {moderationLog === undefined ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                </div>
+              ) : moderationLog.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  {language.match({ english: () => "No moderation actions recorded yet.", german: () => "Noch keine Moderationsaktionen aufgezeichnet." })}
+                </p>
+              ) : (
+                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                  {moderationLog.map((entry) => (
+                    <ModerationLogEntry key={entry._id} entry={entry} language={language} />
+                  ))}
+                </div>
+              )}
+            </Panel>
+          </section>
+
           <section className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -1306,6 +1332,66 @@ const AdminDashboardPage = () => {
     </div>
   );
 };
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "gerade eben";
+  if (mins < 60) return `vor ${mins} Min.`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `vor ${hours} Std.`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `vor ${days} Tagen`;
+  return new Date(ts).toLocaleDateString("de-DE");
+}
+
+const actionMeta: Record<string, { label: string; color: string }> = {
+  approve_user: { label: "Freigabe", color: "bg-success/10 text-success" },
+  reject_user: { label: "Ablehnung", color: "bg-destructive/10 text-destructive" },
+  ban_user: { label: "Sperrung", color: "bg-destructive/10 text-destructive" },
+  unban_user: { label: "Entsperrung", color: "bg-success/10 text-success" },
+  delete_user: { label: "Löschung", color: "bg-destructive/10 text-destructive" },
+  update_role: { label: "Rolle", color: "bg-amber-500/10 text-amber-600" },
+  edit: { label: "Bearbeitung", color: "bg-info/10 text-info" },
+  delete: { label: "Beitrag gelöscht", color: "bg-destructive/10 text-destructive" },
+  delete_comment: { label: "Kommentar gelöscht", color: "bg-destructive/10 text-destructive" },
+  dismiss_report: { label: "Meldung erledigt", color: "bg-success/10 text-success" },
+  reopen_report: { label: "Meldung wieder geöffnet", color: "bg-amber-500/10 text-amber-600" },
+};
+
+function ModerationLogEntry({ entry, language }: { entry: any; language: any }) {
+  const meta = actionMeta[entry.action] ?? { label: entry.action, color: "bg-secondary text-muted-foreground" };
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-background/80 p-3">
+      <div className="mt-0.5 shrink-0">
+        <Badge variant="secondary" className={`text-[10px] uppercase tracking-wider ${meta.color}`}>
+          {meta.label}
+        </Badge>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">
+          {entry.moderatorName}
+          {entry.targetName && (
+            <span className="font-normal text-muted-foreground">
+              {" → "}{entry.targetName}
+            </span>
+          )}
+        </p>
+        {entry.reason && (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {language.match({ english: () => "Reason", german: () => "Grund" })}: {entry.reason}
+          </p>
+        )}
+        {entry.details && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{entry.details}</p>
+        )}
+      </div>
+      <span className="shrink-0 text-[11px] text-muted-foreground">
+        {timeAgo(entry.createdAt)}
+      </span>
+    </div>
+  );
+}
 
 function MetricCard({
   label,

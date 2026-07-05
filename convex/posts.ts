@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { checkHateSpeech } from "./hateSpeech";
+import { logModeration } from "./moderationLog";
 
 async function enrichPost(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -438,7 +439,7 @@ export const addComment = mutation({
 });
 
 export const deleteComment = mutation({
-  args: { commentId: v.id("postComments") },
+  args: { commentId: v.id("postComments"), reason: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
@@ -447,8 +448,24 @@ export const deleteComment = mutation({
     if (!comment) throw new Error("Comment not found");
 
     const admin = await isAdmin(ctx, identity.subject);
+    const isModeration = admin && comment.authorId !== identity.subject;
     if (comment.authorId !== identity.subject && !admin)
       throw new Error("Not authorized");
+
+    if (isModeration) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+        .unique();
+      await logModeration(ctx, identity.subject, profile?.displayName || "Admin", {
+        action: "delete_comment",
+        postId: comment.postId,
+        targetUserId: comment.authorId,
+        targetName: comment.authorName,
+        reason: args.reason,
+        details: `Kommentar gelöscht: "${comment.content.slice(0, 200)}"`,
+      });
+    }
 
     const likes = await ctx.db
       .query("commentLikes")

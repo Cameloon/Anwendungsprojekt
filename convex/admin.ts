@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { logModeration } from "./moderationLog";
 
 export const getAll = query({
   args: {},
@@ -34,6 +35,12 @@ export const updateRole = mutation({
       .unique();
     if (!profile) throw new Error("Profile not found");
     await ctx.db.patch(profile._id, { role: args.role, updatedAt: Date.now() });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "update_role",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+      details: `Rolle geändert auf "${args.role}"`,
+    });
   },
 });
 
@@ -53,6 +60,12 @@ export const approveUser = mutation({
       .unique();
     if (!profile) throw new Error("Profile not found");
     await ctx.db.patch(profile._id, { status: "active", role: "user", updatedAt: Date.now() });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "approve_user",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+      targetEmail: profile.email,
+    });
   },
 });
 
@@ -72,6 +85,11 @@ export const rejectUser = mutation({
       .unique();
     if (!profile) throw new Error("Profile not found");
     await ctx.db.patch(profile._id, { status: "rejected", updatedAt: Date.now() });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "reject_user",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+    });
   },
 });
 
@@ -107,6 +125,13 @@ export const banUser = mutation({
       status: "pending",
       createdAt: Date.now(),
     });
+
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "ban_user",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+      reason: args.reason,
+    });
   },
 });
 
@@ -126,6 +151,11 @@ export const unbanUser = mutation({
       .unique();
     if (!profile) throw new Error("Profile not found");
     await ctx.db.patch(profile._id, { status: "active", updatedAt: Date.now() });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "unban_user",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+    });
   },
 });
 
@@ -164,5 +194,11 @@ export const deleteUser = mutation({
     if (profile.role === "admin") throw new Error("Admins können nicht gelöscht werden");
 
     await ctx.db.delete(profile._id);
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "delete_user",
+      targetUserId: profile.userId,
+      targetName: profile.displayName || profile.email || profile.userId,
+      targetEmail: profile.email,
+    });
   },
 });

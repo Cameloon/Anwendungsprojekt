@@ -15,6 +15,7 @@ import type * as forums from "../forums.js";
 import type * as groups from "../groups.js";
 import type * as hateSpeech from "../hateSpeech.js";
 import type * as migrations from "../migrations.js";
+import type * as moderationLog from "../moderationLog.js";
 import type * as notifications from "../notifications.js";
 import type * as postReports from "../postReports.js";
 import type * as posts from "../posts.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   groups: typeof groups;
   hateSpeech: typeof hateSpeech;
   migrations: typeof migrations;
+  moderationLog: typeof moderationLog;
   notifications: typeof notifications;
   postReports: typeof postReports;
   posts: typeof posts;

@@ -250,11 +250,25 @@ export default defineSchema({
   }).index("by_author", ["authorId"]),
 
   moderationLog: defineTable({
-    postId: v.id("posts"),
-    action: v.union(v.literal("edit"), v.literal("delete")),
+    action: v.union(
+      v.literal("edit"),
+      v.literal("delete"),
+      v.literal("approve_user"),
+      v.literal("reject_user"),
+      v.literal("ban_user"),
+      v.literal("unban_user"),
+      v.literal("delete_user"),
+      v.literal("update_role"),
+      v.literal("delete_comment"),
+      v.literal("dismiss_report"),
+      v.literal("reopen_report"),
+    ),
     moderatorId: v.string(),
     moderatorName: v.string(),
-    reason: v.optional(v.string()),
+    targetUserId: v.optional(v.string()),
+    targetName: v.optional(v.string()),
+    targetEmail: v.optional(v.string()),
+    postId: v.optional(v.id("posts")),
     postSnapshot: v.optional(
       v.object({
         title: v.string(),
@@ -263,6 +277,8 @@ export default defineSchema({
         authorName: v.string(),
       })
     ),
+    reason: v.optional(v.string()),
+    details: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_post", ["postId"]),
 

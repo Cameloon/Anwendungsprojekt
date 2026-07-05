@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { logModeration } from "./moderationLog";
 
 export const submit = mutation({
   args: {
@@ -73,7 +74,12 @@ export const markDone = mutation({
       .unique();
     if (caller?.role !== "admin") throw new Error("Nicht autorisiert");
 
+    const report = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { status: "erledigt" });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "dismiss_report",
+      details: report ? `Meldung "${report.postTitle}" im Forum "${report.forumName}" als erledigt markiert` : undefined,
+    });
   },
 });
 
@@ -88,6 +94,11 @@ export const reopen = mutation({
       .unique();
     if (caller?.role !== "admin") throw new Error("Nicht autorisiert");
 
+    const report = await ctx.db.get(args.id);
     await ctx.db.patch(args.id, { status: "offen" });
+    await logModeration(ctx, caller.userId, caller.displayName || "Admin", {
+      action: "reopen_report",
+      details: report ? `Meldung "${report.postTitle}" im Forum "${report.forumName}" wieder geöffnet` : undefined,
+    });
   },
 });
