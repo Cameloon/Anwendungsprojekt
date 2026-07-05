@@ -68,6 +68,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
   const [matrikelnummer, setMatrikelnummer] = useState("");
   const [hochschule, setHochschule] = useState("");
   const [kurs, setKurs] = useState("");
+  const [pendingLanguage, setPendingLanguage] = useState<"english" | "german">("german");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [savingProfile, setSavingProfile] = useState(false);
   // derive profile field errors from current inputs so messages clear on correction
@@ -85,6 +86,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
     setHochschule(profile?.hochschule ?? "");
     setKurs(profile?.kurs ?? "");
     setRole(profile?.role ?? "user");
+    setPendingLanguage(profile?.language_setting ?? "german");
   }, [open, profile]);
 
   const displayNameError = !displayName.trim() ? language.match({ english: () => "Required.", german: () => "Erforderlich." }) : displayName.trim().length < 2 ? language.match({ english: () => "At least 2 characters.", german: () => "Mindestens 2 Zeichen." }) : "";
@@ -117,6 +119,7 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
           matrikelnummer: matrikelnummer || null,
           hochschule: hochschule || null,
           kurs: kurs || null,
+          language_setting: pendingLanguage,
         });
       } else {
         await upsertProfile!({
@@ -126,8 +129,10 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
           hochschule: hochschule || undefined,
           kurs: kurs || undefined,
           email: user.email ?? undefined,
+          languageSetting: pendingLanguage,
         });
       }
+      setLanguage(Enum.variant(pendingLanguage, {}));
       toast({ title: language.match({ english: () => "Saved", german: () => "Gespeichert" }), description: language.match({ english: () => "Your profile has been updated.", german: () => "Dein Profil wurde aktualisiert." }) });
     } catch (err: any) {
       toast({ title: language.match({ english: () => "Error", german: () => "Fehler" }), description: err?.message ?? language.match({ english: () => "Save failed", german: () => "Speichern fehlgeschlagen" }), variant: "destructive" });
@@ -212,19 +217,8 @@ const AccountSettingsDialog = ({ open, onOpenChange}: Props) => {
             <div className="space-y-2">
               <Label>{language.match({ english: () => "Language", german: () => "Sprache" })}</Label>
 
-              <Select value={
-                language.match({
-                  english: () => {return "english"},
-                  german: () => {return "german"},
-                })
-              } onValueChange={(v) => {
-                const lang = v as "english" | "german";
-                setLanguage(Enum.variant(lang, {}));
-                if (IS_DEMO) {
-                  demoStore.updateProfile({ language_setting: lang });
-                } else {
-                  upsertProfile!({ languageSetting: lang });
-                }
+              <Select value={pendingLanguage} onValueChange={(v) => {
+                setPendingLanguage(v as "english" | "german");
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder={language.match({ english: () => "Select location", german: () => "Standort wählen" })} />

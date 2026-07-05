@@ -178,11 +178,10 @@ export const upsertMine = mutation({
       .unique();
 
     const now = Date.now();
-    const patch = {
-      ...args,
-      kurs: args.kurs ? args.kurs.toUpperCase() : args.kurs,
-      updatedAt: now,
-    };
+    const patch: Record<string, unknown> = { ...args, updatedAt: now };
+    if (args.kurs) {
+      patch.kurs = args.kurs.toUpperCase();
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, patch);
