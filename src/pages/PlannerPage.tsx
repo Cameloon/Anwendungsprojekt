@@ -235,6 +235,7 @@ function PlannerPage() {
   const [showPastWarning, setShowPastWarning] = useState(false);
   const pastDateConfirmed = useRef(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const deadlines: DeadlineItem[] = rawDeadlines.map((d: any) => ({
     id: d._id,
@@ -318,6 +319,7 @@ function PlannerPage() {
   };
 
   const submitDeadline = async () => {
+    if (isSubmitting) return;
     if (!title.trim() || !date || (!vorlesung && category !== "sonstiges")) {
       //"Bitte ein Datum wählen"
       if (!date) toast.error(
@@ -351,6 +353,7 @@ function PlannerPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editingId) {
         await updateMutation({
@@ -412,6 +415,8 @@ function PlannerPage() {
       resetForm();
     } catch {
       toast.error(language.match({ english: () => "Error saving", german: () => "Fehler beim Speichern" }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -614,6 +619,7 @@ function PlannerPage() {
       setShowForm={setShowForm}
       resetForm={resetForm}
       submitDeadline={submitDeadline}
+      isSubmitting={isSubmitting}
       startEdit={startEdit}
       toggleDone={toggleDone}
       removeDeadline={removeDeadline}
@@ -723,6 +729,7 @@ function PlannerLayout({
   setShowForm,
   resetForm,
   submitDeadline,
+  isSubmitting,
   startEdit,
   toggleDone,
   removeDeadline,
@@ -807,6 +814,7 @@ function PlannerLayout({
   setShowForm: (v: boolean) => void;
   resetForm: () => void;
   submitDeadline: () => void;
+  isSubmitting: boolean;
   startEdit: (d: DeadlineItem) => void;
   toggleDone: (id: string) => void;
   removeDeadline: (id: string) => void;
@@ -1173,7 +1181,7 @@ function PlannerLayout({
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={resetForm}>{language.match({ english: () => "Cancel", german: () => "Abbrechen" })}</Button>
-                    <Button onClick={submitDeadline}>{editingId ? language.match({ english: () => "Update", german: () => "Aktualisieren" }) : language.match({ english: () => "Create", german: () => "Erstellen" })}</Button>
+                    <Button onClick={submitDeadline} disabled={isSubmitting}>{editingId ? language.match({ english: () => "Update", german: () => "Aktualisieren" }) : language.match({ english: () => "Create", german: () => "Erstellen" })}</Button>
                   </div>
                 </div>
               </motion.div>
