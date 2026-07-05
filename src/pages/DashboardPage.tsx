@@ -135,11 +135,17 @@ const DashboardPage = () => {
       }).length,
     [now, openDeadlines],
   );
-  const latestPostsCount = latestPosts.length;
+  const recentPostsCount = useMemo(
+    () =>
+      posts.filter(
+        (post) => now.getTime() - post.createdAt <= 24 * 60 * 60 * 1000,
+      ).length,
+    [posts, now],
+  );
   const latestScriptsCount = latestScripts.length;
 
   const latestPostsHint =
-    latestPostsCount > 0
+    recentPostsCount > 0
       ? language.match({
           english: () => "Latest forum posts",
           german: () => "Neueste Einträge im Forum",
@@ -412,7 +418,7 @@ const DashboardPage = () => {
               />
                 <HeroStat
                 label={language.match({ english: () => "Recent Posts", german: () => "Letzte Beiträge" })}
-                value={latestPostsCount}
+                value={recentPostsCount}
                 icon={<MessageSquare className="h-4 w-4" />}
                 hint={latestPostsHint}
                 tone="blue"
