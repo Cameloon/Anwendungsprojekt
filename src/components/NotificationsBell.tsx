@@ -92,14 +92,17 @@ const NotificationsBell = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 max-h-[28rem] overflow-hidden flex flex-col">
+      <PopoverContent
+        align="end"
+        className="flex max-h-[28rem] w-[min(20rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] flex-col overflow-hidden p-0"
+      >
         <div className="px-4 py-3 border-b">
           <p className="font-heading font-semibold text-sm">{language.match({ english: () => "Notifications", german: () => "Benachrichtigungen" })}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {language.match({ english: () => "Invitations to forums and deadlines", german: () => "Einladungen zu Foren und Terminen" })}
           </p>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="notifications-scroll flex-1 overflow-x-hidden overflow-y-auto">
           {items.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -115,9 +118,11 @@ const NotificationsBell = () => {
                       <Ban className="h-3.5 w-3.5 text-destructive" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs leading-snug font-semibold">{n.title}</p>
+                      <p className="break-words text-xs font-semibold leading-snug">{n.title}</p>
                       {n.message && (
-                        <p className="text-xs leading-snug mt-0.5 text-muted-foreground">{n.message}</p>
+                        <p className="mt-0.5 break-words text-xs leading-snug text-muted-foreground">
+                          {n.message}
+                        </p>
                       )}
                       <div className="flex items-center justify-between mt-1.5">
                         <p className="text-[10px] text-muted-foreground">{formatTime(n.createdAt)}</p>
@@ -141,7 +146,7 @@ const NotificationsBell = () => {
                     <Icon className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs leading-snug">
+                    <p className="break-words text-xs leading-snug">
                       <span className="font-semibold">{n.fromName}</span>
                       {language.match({ english: () => " invites ", german: () => " lädt " })}
                       <span className="font-semibold">{n.recipientName}</span>

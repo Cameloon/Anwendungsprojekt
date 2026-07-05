@@ -305,4 +305,36 @@
   .bg-gradient-hero {
     background: var(--gradient-hero);
   }
+
+  .notifications-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.9) hsl(var(--secondary) / 0.55);
+  }
+
+  .notifications-scroll::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .notifications-scroll::-webkit-scrollbar-track {
+    background: hsl(var(--secondary) / 0.45);
+    border-radius: 9999px;
+  }
+
+  .notifications-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--primary) / 0.95),
+      hsl(var(--accent) / 0.9)
+    );
+    border: 2px solid hsl(var(--popover));
+    border-radius: 9999px;
+  }
+
+  .notifications-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--primary-glow) / 1),
+      hsl(var(--accent) / 1)
+    );
+  }
 }
